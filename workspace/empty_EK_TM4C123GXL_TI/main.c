@@ -73,7 +73,7 @@
 
 // TI GRLIB
 #include <grlib/grlib.h>
-#define TASKSTACKSIZE   4096
+#define TASKSTACKSIZE   10000
 
 Task_Struct task0Struct;
 Char task0Stack[TASKSTACKSIZE];
@@ -188,34 +188,41 @@ Void taskFxn(UArg arg0, UArg arg1)
     display.pvDisplayData = &displayData; // A pointer to display driver-specific data.
     display.ui16Width = 480; // 480 pixels wide
     display.ui16Height = 320; // 320 pixels high
-    display.pfnPixelDraw = NULL; // A pointer to the function to draw a pixel on this display
-    display.pfnPixelDrawMultiple = NULL; //A pointer to the function to draw multiple pixels on this display.
-    display.pfnLineDrawV = NULL; // A pointer to the function to draw a vertical line on this display
-    display.pfnLineDrawH = NULL; // A pointer to the function to draw a horizontal line on this display.
-    display.pfnRectFill = NULL; // A pointer to the function to draw a filled rectangle on this display
-    display.pfnColorTranslate = NULL; // A pointer to the function to translate 24-bit RGB colors to display-specific colors
-    display.pfnFlush = NULL; // A pointer to the function to flush any cached drawing operations on this display.
+    display.pfnPixelDraw = &PixelDraw; // A pointer to the function to draw a pixel on this display
+    display.pfnPixelDrawMultiple = &PixelDrawMultiple; //A pointer to the function to draw multiple pixels on this display.
+    display.pfnLineDrawV = &LineDrawV; // A pointer to the function to draw a vertical line on this display
+    display.pfnLineDrawH = &LineDrawH; // A pointer to the function to draw a horizontal line on this display.
+    display.pfnRectFill = &RectFill; // A pointer to the function to draw a filled rectangle on this display
+    display.pfnColorTranslate = &ColorTranslate; // A pointer to the function to translate 24-bit RGB colors to display-specific colors
+    display.pfnFlush = &Flush; // A pointer to the function to flush any cached drawing operations on this display.
+
+    // Initialize GRLIB:
+    tContext grlibContext;
+    GrContextInit(&grlibContext, &display);
+    GrContextForegroundSet(&grlibContext, 0xFFFFFFFF); // white foreground
+    GrContextBackgroundSet(&grlibContext, 0); // black background
+    GrContextFontSet(&grlibContext, &g_sFontCm14);
+    GrStringCodepageSet(&grlibContext, CODEPAGE_UTF_8);
+
+
+    tGrLibDefaults grlibDefaults;
+    GrLibInit(&grlibDefaults);
 
     // Sleep for 1 ms
     usleep(1000);
-    int col;
+
 #define BLACKOUT_SCREEN
 //#define PIXELDRAW_TEST
 //#define LINEDRAWH_TEST
 //#define LINEDRAWV_TEST
 #define DRAW_RECTANGLE_TEST
+//#define TEXT_TEST
     uint16_t color = HX8357_BLACK;
 #ifdef BLACKOUT_SCREEN
-    /*
-    memset(screenBuf, color, sizeof(screenBuf));
-    for(col = 0 ; col < 480 ; col++){
-        setAddressWindow(spi, 0, col, 320, 1);
-        sendLcdCommand(spi, HX8357_RAMWR, screenBuf, sizeof(screenBuf), 0);
-    }
-    */
+
     tRectangle rect;
     rect.i16XMin = 0;
-    rect.i16XMax = 480; // 480 is the entire screen
+    rect.i16XMax = 320; // 480 is the entire screen
     rect.i16YMin = 0;
     rect.i16YMax = 320; // 320 is the entire screen
     RectFill(display.pvDisplayData, &rect, color);
@@ -378,12 +385,31 @@ Void taskFxn(UArg arg0, UArg arg1)
 
 #endif
 
-        /*
+#ifdef TEXT_TEST
 
-        color = color+10;
-        memset(screenBuf, color, sizeof(screenBuf));
-        while(1);
-        */
+        tRectangle rect;
+        rect.i16XMin = 0;
+        rect.i16XMax = 480; // 480 is the entire screen
+        rect.i16YMin = 0;
+        rect.i16YMax = 320; // 320 is the entire screen
+        GrContextForegroundSet(&grlibContext, 0); // black foreground
+        GrRectFill(&grlibContext, &rect);
+        GrContextForegroundSet(&grlibContext, 0xFFFFFFFF); // white foreground
+        GrCircleDraw(&grlibContext, 200, 50, 30);
+
+        GrLineDrawH(&grlibContext, 250, 300, 50); // start at xy=(50,50), and end at (100, 50)
+        GrLineDrawV(&grlibContext, 100, 50, 100); // Start at (50, 100), and end up at (100,100)
+        GrLineDraw(&grlibContext, 50, 50, 100, 100);
+
+        char string[11] = "Hello world";
+        // Status: It's upside down and mirrored.. Probably the orientation of the display
+        // is off, as I had to switch X and Y before.. So: I think the orientation of how the pixels
+        // are written to the screen is wrong.
+        GrStringDraw(&grlibContext, string, 11, 100, 100, false);
+        usleep(500000); // Sleep for 500 ms
+#endif
+
+
     }
 
 }
@@ -413,8 +439,6 @@ int main(void)
     // Board_initWiFi();
     // Board_initPWM();
 
-    // Init LVGL:
-    //lv_init();
     Task_Params_init(&taskParams);
     taskParams.arg0 = 10000;
     taskParams.stackSize = TASKSTACKSIZE;

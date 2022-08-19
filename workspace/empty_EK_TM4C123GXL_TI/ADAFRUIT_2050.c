@@ -73,7 +73,7 @@ void sendLcdCommandNoCS(SPI_Handle spiHandle, char command, char* pData, uint16_
 
 // Function to set the address window. Note that sendLcdCommand cannot be used, as it toggles the DC & CS pins
 // CS must be set outside of this function, while DC is set inside this function.
-void setAddressWindow(SPI_Handle spiHandle, uint16_t x, uint16_t y, uint16_t width, uint32_t height){
+void setAddressWindow(SPI_Handle spiHandle, uint16_t y, uint16_t x, uint16_t height, uint32_t width){
     char colAddr[4];
     colAddr[0] = (x & 0xFF00)>>8;
     colAddr[1] = (x & 0xFF);
@@ -194,8 +194,12 @@ void HX8357_init(SPI_Handle masterSpi){
    pCmdBuf[0] = 0x55; // 16 bit per pixel
    sendLcdCommand(masterSpi, HX8357_COLMOD, pCmdBuf, 1, 0);
 
-   // Send MADCTL command
-   pCmdBuf[0] = 0xC0;
+   // Send MADCTL command, see page 61 and 157
+   uint8_t MV, MX, MY;
+   MX = 0;
+   MY = 1;
+   MV = 1;
+   pCmdBuf[0] = MY<<7 | MX <<6 | MV << 5;//0xC0; // [MV, MX, MY] =
    sendLcdCommand(masterSpi, HX8357_MADCTL, pCmdBuf, 1, 0);
 
    // Send TEON command
@@ -238,7 +242,7 @@ uint32_t ui32ulValue){
     tDisplayData *pDisplayData = (tDisplayData *)pvDisplayData;
     SPI_Handle spiHandle = pDisplayData->spiHandle;
     // Set the address window to 1 pixel
-    setAddressWindow(spiHandle, i32X, i32Y, 1, 1);
+    setAddressWindow(spiHandle, i32Y, i32X, 1, 1);
     // As the 32 bit value is another bit format than what is accepted by the
     // screen, we need to rotate the bits. Done here since it's where the
     // issue is, otherwise we could rotate it in the colorTranslate function,
