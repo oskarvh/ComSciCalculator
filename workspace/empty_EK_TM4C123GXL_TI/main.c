@@ -37,10 +37,15 @@
 #include <xdc/std.h>
 #include <xdc/runtime/System.h>
 #include <stdbool.h>
+#include <stdio.h>
+
 /* BIOS Header files */
 #include <ti/sysbios/BIOS.h>
 #include <ti/sysbios/knl/Task.h>
-// POSIX header files:
+#include <ti/sysbios/knl/Semaphore.h>
+#include <ti/sysbios/knl/Mailbox.h>
+
+/* POSIX header files */
 #include <pthread.h>
 #include <semaphore.h>
 #include <unistd.h>
@@ -49,18 +54,13 @@
 #include <ti/drivers/GPIO.h>
 #include <ti/drivers/PWM.h>
 #include <ti/drivers/SPI.h>
+#include <ti/drivers/UART.h>
+
 /* TI driverlib functions */
 #include <driverlib/sysctl.h> // Used for PWM
 #include <driverlib/gpio.h>    // used for PWM
 #include <driverlib/pin_map.h> // used for PWm
 #include <inc/hw_memmap.h>     // Used for PWM
-
-// #include <ti/drivers/I2C.h>
-// #include <ti/drivers/SDSPI.h>
-// #include <ti/drivers/SPI.h>
-// #include <ti/drivers/UART.h>
-// #include <ti/drivers/Watchdog.h>
-// #include <ti/drivers/WiFi.h>
 
 /* Board Header file */
 #include "Board.h"
@@ -68,22 +68,33 @@
 // Display driver:
 #include "ADAFRUIT_2050.h"
 
-// LVGL:
-//#include "lvgl/lvgl.h"
-
 // TI GRLIB
 #include <grlib/grlib.h>
-#define TASKSTACKSIZE   10000
 
-Task_Struct task0Struct;
-Char task0Stack[TASKSTACKSIZE];
+// Task related items
+#define MAINTASKSTACKSIZE   10000
+#define UARTTASKSTACKSIZE   2048
+Task_Struct task0Struct; // Main task
+Task_Struct task1Struct; // UART task
+Char task0Stack[MAINTASKSTACKSIZE];
+Char task1Stack[UARTTASKSTACKSIZE];
 
+// Semaphores
+// Semaphores for letting the UART task know that there is data waiting
+Semaphore_Struct uartReadSemStruct;
+Semaphore_Handle uartReadSemHandle;
 
-
+// Mailboxes
+// Mailbox between UART and screen threads
+Mailbox_Handle uartMailBoxHandle;
 
 #define PWM_PERIOD 255
 // Initialize the PWM module. Pin is PB5
 PWM_Handle pwm0 = NULL;
+
+
+
+
 PWM_Handle initPWM(void){
     // This is done instead of Board_initPWM:
     // Enable PWM peripherals
@@ -201,8 +212,8 @@ Void taskFxn(UArg arg0, UArg arg1)
     GrContextInit(&grlibContext, &display);
     GrContextForegroundSet(&grlibContext, 0xFFFFFFFF); // white foreground
     GrContextBackgroundSet(&grlibContext, 0); // black background
-    GrContextFontSet(&grlibContext, &g_sFontCm14);
-    GrStringCodepageSet(&grlibContext, CODEPAGE_UTF_8);
+    GrContextFontSet(&grlibContext, &g_sFontCmtt38);
+    GrStringCodepageSet(&grlibContext, CODEPAGE_ISO8859_1);
 
 
     tGrLibDefaults grlibDefaults;
@@ -215,19 +226,20 @@ Void taskFxn(UArg arg0, UArg arg1)
 //#define PIXELDRAW_TEST
 //#define LINEDRAWH_TEST
 //#define LINEDRAWV_TEST
-#define DRAW_RECTANGLE_TEST
+//#define DRAW_RECTANGLE_TEST
 //#define TEXT_TEST
+#define UART_SCREEN_TEST
     uint16_t color = HX8357_BLACK;
 #ifdef BLACKOUT_SCREEN
 
     tRectangle rect;
     rect.i16XMin = 0;
-    rect.i16XMax = 320; // 480 is the entire screen
+    rect.i16XMax = 480; // 480 is the entire screen
     rect.i16YMin = 0;
     rect.i16YMax = 320; // 320 is the entire screen
     RectFill(display.pvDisplayData, &rect, color);
 #endif
-    while(1){
+    do{
 #ifdef PIXELDRAW_TEST
         // PixelDraw test:
         color = HX8357_BLUE;
@@ -386,7 +398,7 @@ Void taskFxn(UArg arg0, UArg arg1)
 #endif
 
 #ifdef TEXT_TEST
-
+/*
         tRectangle rect;
         rect.i16XMin = 0;
         rect.i16XMax = 480; // 480 is the entire screen
@@ -400,15 +412,126 @@ Void taskFxn(UArg arg0, UArg arg1)
         GrLineDrawH(&grlibContext, 250, 300, 50); // start at xy=(50,50), and end at (100, 50)
         GrLineDrawV(&grlibContext, 100, 50, 100); // Start at (50, 100), and end up at (100,100)
         GrLineDraw(&grlibContext, 50, 50, 100, 100);
+*/
+
+        int i;
+        tFont* fonts[6];
+        fonts[0] = &g_sFontCmtt28;
+        fonts[1] = &g_sFontCmtt30;
+        fonts[2] = &g_sFontCmtt32;
+        fonts[3] = &g_sFontCmtt34; // This looks like the one!
+        fonts[4] = &g_sFontCmtt36;
+        fonts[5] = &g_sFontCmtt38;
 
         char string[11] = "Hello world";
-        // Status: It's upside down and mirrored.. Probably the orientation of the display
-        // is off, as I had to switch X and Y before.. So: I think the orientation of how the pixels
-        // are written to the screen is wrong.
-        GrStringDraw(&grlibContext, string, 11, 100, 100, false);
+        for(i = 0 ; i < 6 ; i++){
+            //GrContextFontSet(&grlibContext, fonts[i]);
+            GrStringDraw(&grlibContext, string, 11, 100, 20+40*i, false);
+        }
+
+#endif
+#ifdef UART_SCREEN_TEST
+        char uartInputBuf;
+        uint16_t x,y;
+        x = y = 0;
+        uint16_t charCounter = 0; // Character counter
+#define Y_INCREASE 40
+#define X_INCREASE 20
+        while(1){
+            Mailbox_pend(uartMailBoxHandle, &uartInputBuf, BIOS_WAIT_FOREVER);
+            if(uartInputBuf != 0x7F){
+                GrStringDraw(&grlibContext, &uartInputBuf, 1, x, y, false);
+                charCounter++;
+                x += X_INCREASE;
+                if(x >= 480-X_INCREASE*2){
+                    y += Y_INCREASE;
+                    x = 0;
+                }
+                if(y >= 320-Y_INCREASE-1){
+                    y = 0;
+                    x = 0;
+                }
+            }
+            else{
+                // Handle backspace
+                // Calculate where the backspace should be done:
+                if(charCounter > 0){
+                    tRectangle rect;
+                    if(x < X_INCREASE){
+                        if(y < Y_INCREASE){
+                            y = 320 - Y_INCREASE*2;
+                        }
+                        else{
+                            y -= Y_INCREASE;
+                        }
+
+                        x = 480 - X_INCREASE*3;
+                    }
+                    else{
+                        x -= X_INCREASE;
+                    }
+                    rect.i16XMin = x;
+                    rect.i16XMax = x + X_INCREASE;
+                    rect.i16YMin = y;
+                    rect.i16YMax = y + Y_INCREASE;
+                    RectFill(display.pvDisplayData, &rect, HX8357_BLACK);
+                    charCounter--;
+                }
+            }
+            tRectangle rect;
+            rect.i16XMin = 0;
+            rect.i16XMax = 4*X_INCREASE;
+            rect.i16YMin = 200;
+            rect.i16YMax = 200 + 2*Y_INCREASE;
+            RectFill(display.pvDisplayData, &rect, HX8357_BLACK);
+            char numChars[3];
+            sprintf(numChars, "%i", charCounter);
+            GrStringDraw(&grlibContext, numChars, 3, 0, 200, false);
+
+        }
+
+
         usleep(500000); // Sleep for 500 ms
 #endif
 
+
+    } while(0);
+
+}
+
+char uartTmpBuf[50];
+Void uartFxn(UArg arg0, UArg arg1)
+{
+    UART_Handle uart;
+    UART_Params uartParams;
+    uint16_t tmpCount = 0;
+    /* Create a UART with data processing off. */
+    UART_Params_init(&uartParams);
+    uartParams.writeDataMode = UART_DATA_BINARY;
+    uartParams.readDataMode = UART_DATA_BINARY;
+    uartParams.readReturnMode = UART_RETURN_NEWLINE;
+    uartParams.readEcho = UART_ECHO_OFF;
+    uartParams.baudRate = arg0;
+    uartParams.readMode = UART_MODE_BLOCKING;//UART_MODE_CALLBACK;
+    uartParams.readCallback = NULL; //&uartReadCallback;
+    uart = UART_open(Board_UART0, &uartParams);
+
+    if (uart == NULL) {
+        System_abort("Error opening the UART");
+    }
+
+    char readBuf;
+    while(1){
+        // Read one character at a time
+        UART_read(uart, &readBuf, 1);
+        if(readBuf != 0x7F){
+            tmpCount++;
+        }
+        else {
+            tmpCount--;
+        }
+        // Send the read character to the screen task in a mailbox event:
+        Mailbox_post(uartMailBoxHandle, &readBuf, BIOS_WAIT_FOREVER);
 
     }
 
@@ -416,7 +539,10 @@ Void taskFxn(UArg arg0, UArg arg1)
 
 int main(void)
 {
-    Task_Params taskParams;
+    Task_Params mainTaskParams;
+    Task_Params uartTaskParams;
+    Semaphore_Params uartSemParams;
+    Mailbox_Params mailboxParams;
 
     /* Call board init functions */
     Board_initGeneral();
@@ -433,20 +559,36 @@ int main(void)
 
     // Driver the reset pin high to get out of reset.
     GPIO_write(GPIO_SCREEN_RESET, 1);
-    // Board_initUART();
+    Board_initUART();
     // Board_initUSB(Board_USBDEVICE);
     // Board_initWatchdog();
     // Board_initWiFi();
     // Board_initPWM();
 
-    Task_Params_init(&taskParams);
-    taskParams.arg0 = 10000;
-    taskParams.stackSize = TASKSTACKSIZE;
-    taskParams.stack = &task0Stack;
-    Task_construct(&task0Struct, (Task_FuncPtr)taskFxn, &taskParams, NULL);
+    // Construct the main task
+    Task_Params_init(&mainTaskParams);
+    mainTaskParams.arg0 = 10000;
+    mainTaskParams.stackSize = MAINTASKSTACKSIZE;
+    mainTaskParams.stack = &task0Stack;
+    Task_construct(&task0Struct, (Task_FuncPtr)taskFxn, &mainTaskParams, NULL);
 
-    /* Turn on user LED */
-    //GPIO_write(Board_LED0, Board_LED_ON);
+    // Construct the UART task:
+    Task_Params_init(&uartTaskParams);
+    uartTaskParams.arg0 = 115200; // Baud rate
+    uartTaskParams.stackSize = UARTTASKSTACKSIZE;
+    uartTaskParams.stack = &task1Stack;
+    Task_construct(&task1Struct, (Task_FuncPtr)uartFxn, &uartTaskParams, NULL);
+
+    // Construct semaphores
+    Semaphore_Params_init(&uartSemParams);
+    Semaphore_construct(&uartReadSemStruct, 1, &uartSemParams);
+    uartReadSemHandle = Semaphore_handle(&uartReadSemStruct);
+
+
+    // Construct mailbox between UART thread and screen thread
+    Mailbox_Params_init(&mailboxParams);
+    // Create a mailbox of size 1 byte, 1 buffer.
+    uartMailBoxHandle =  Mailbox_create(1, 1, &mailboxParams, NULL);
 
     System_printf("Starting the example\nSystem provider is set to SysMin. "
                   "Halt the target to view any SysMin contents in ROV.\n");

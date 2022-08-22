@@ -7,8 +7,10 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
 #include <xdc/std.h>
-#include "ADAFRUIT_2050.h";
+#include "ADAFRUIT_2050.h"
 #include "board.h"
 #include <ti/drivers/GPIO.h>
 
