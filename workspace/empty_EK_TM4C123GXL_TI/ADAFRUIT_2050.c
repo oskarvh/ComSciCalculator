@@ -421,8 +421,6 @@ int32_t i32Y2, uint32_t ui32ulValue){
 // None.
 
 // DEBUG VARIABLES:
-uint32_t numPixels = 0;
-uint32_t numWritten = 0;
 void RectFill(void *pvDisplayData, const tRectangle *psRect,
 uint32_t ui32ulValue){
     // Get the SPI handle
@@ -467,7 +465,6 @@ uint32_t ui32ulValue){
                      psRect->i16XMin,
                      psRect->i16YMax-psRect->i16YMin
                      , psRect->i16XMax-psRect->i16XMin);
-    numPixels = (psRect->i16YMax-psRect->i16YMin)*(psRect->i16XMax-psRect->i16XMin);
     // Send the color to that address range. All colors are 2 bytes.
     int x,y;
 
@@ -485,7 +482,6 @@ uint32_t ui32ulValue){
         while(y < psRect->i16YMax){
             sendLcdCommandNoCS(spiHandle, HX8357_NO_COMMAND, pScreenBuf, 2*n*numPixelsInARow, 0);
             y += n;
-            numWritten += n*numPixelsInARow;
         }
         // If the exact number of rows haven't been written, then that means that
         // y%n != 0, which means that we need to write a shorter burst.
@@ -494,20 +490,6 @@ uint32_t ui32ulValue){
             // Write the remainder of the pixels
             sendLcdCommandNoCS(spiHandle, HX8357_NO_COMMAND, pScreenBuf, 2*numPixelsInARow*(psRect->i16YMax-y), 0);
         }
-        //y -= n;
-        /*
-        for(y = psRect->i16YMin ; y <= psRect->i16YMax-n ; y += n){
-            sendLcdCommandNoCS(spiHandle, HX8357_NO_COMMAND, pScreenBuf, 2*n*numPixelsInARow, 0);
-        }
-        */
-        // Check if there are rows left not sent due to y_size % n != 0:
-        /*
-        if(y < psRect->i16YMax){
-            // Write the remainder of the pixels
-            sendLcdCommandNoCS(spiHandle, HX8357_NO_COMMAND, pScreenBuf, 2*(n*numPixelsInARow-(psRect->i16YMax-y)), 0);
-            numWritten += (n*numPixelsInARow-(psRect->i16YMax-y));
-        }
-        */
     }
     else{
         // Send the command for every pixel
