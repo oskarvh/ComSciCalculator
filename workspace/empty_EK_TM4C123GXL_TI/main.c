@@ -72,17 +72,24 @@
 #include <grlib/grlib.h>
 
 // Task related items
-#define MAINTASKSTACKSIZE   10000
+#define MAINTASKSTACKSIZE   4096
+#define INITTASKSTACKSIZE   8192
+#define CONSTRUCTTASKSTACKSIZE   2048
 #define UARTTASKSTACKSIZE   2048
-Task_Struct task0Struct; // Main task
-Task_Struct task1Struct; // UART task
-Char task0Stack[MAINTASKSTACKSIZE];
-Char task1Stack[UARTTASKSTACKSIZE];
+Task_Struct initTaskStruct; // Init task
+Task_Struct constructTaskStruct; // Init task
+Task_Struct mainTaskStruct; // Main task
+Task_Struct uartTaskStruct; // UART task
+Char initTaskStack[INITTASKSTACKSIZE];
+Char mainTaskStack[MAINTASKSTACKSIZE];
+Char uartTaskStack[UARTTASKSTACKSIZE];
+Char constructTaskStack[CONSTRUCTTASKSTACKSIZE];
 
 // Semaphores
 // Semaphores for letting the UART task know that there is data waiting
-Semaphore_Struct uartReadSemStruct;
 Semaphore_Handle uartReadSemHandle;
+// Semaphore to let other tasks wait for init done.
+Semaphore_Handle initDoneSemHandle;
 
 // Mailboxes
 // Mailbox between UART and screen threads
@@ -90,12 +97,14 @@ Mailbox_Handle uartMailBoxHandle;
 
 #define PWM_PERIOD 255
 // Initialize the PWM module. Pin is PB5
-PWM_Handle pwm0 = NULL;
+PWM_Handle backLightPwmHandle;
+SPI_Handle spiHandle;
+tDisplay display;
+tDisplayData displayData;
+tContext grlibContext;
 
 
-
-
-PWM_Handle initPWM(void){
+void initPWM(PWM_Handle *pPwmHandle){
     // This is done instead of Board_initPWM:
     // Enable PWM peripherals
     // NOTE: Need to change the PWM_config table in the board file EK_TM4C123GXL.
@@ -110,12 +119,10 @@ PWM_Handle initPWM(void){
     PWM_Params_init(&params);
     params.period = PWM_PERIOD;// Period and duty in microseconds
     params.polarity = PWM_POL_ACTIVE_HIGH; // Set active low as we pull the backlight down.
-    pwm0 = PWM_open(Board_PWM3, &params);
-    if (pwm0 == NULL) {
+    *pPwmHandle = PWM_open(Board_PWM3, &params);
+    if (*pPwmHandle == NULL) {
         System_abort("Board_PWM0 did not open");
     }
-    // Set the duty cycle:
-    return pwm0;
 }
 // function to set the PWM module.
 // Input is in percent
@@ -174,334 +181,75 @@ bool masterSpiTransmit(SPI_Handle masterSpi, unsigned char* pTxBuf, unsigned cha
 // GPIO CS (Software controlled CS) : PA7
 // SPI DC (data/command pin for screen) : PA6
 
-//char screenBuf[320*2];
-PWM_Handle pwm0;
-SPI_Handle spi;
-tDisplay display;
-tDisplayData displayData;
 Void taskFxn(UArg arg0, UArg arg1)
 {
-    // Init SPI and PWM (needs to be set in a task)
-    PWM_Handle pwm0 = initPWM();
-    //setBacklight(pwm0, 0); // sets backlight to 0%
-    SPI_Handle spi = initSpi();
-    // Set the backlight strength:
-    setBacklight(pwm0, 10); // sets backlight to 10%
-    // Sleep for a small amount of time in order for the display to boot:
-    usleep(100000); // Sleep for 10 ms
+    Semaphore_pend(initDoneSemHandle, BIOS_WAIT_FOREVER);
+    char uartInputBuf = 'd';
+    uint16_t x,y;
+    x = y = 0;
+    uint16_t charCounter = 0; // Character counter
 
-    // Init the screen
-    HX8357_init(spi);
-
-    displayData.spiHandle = spi;
-    // Populate the GRLIB tDisplay variable
-    display.i32Size = 0; // The size of this structure
-    display.pvDisplayData = &displayData; // A pointer to display driver-specific data.
-    display.ui16Width = 480; // 480 pixels wide
-    display.ui16Height = 320; // 320 pixels high
-    display.pfnPixelDraw = &PixelDraw; // A pointer to the function to draw a pixel on this display
-    display.pfnPixelDrawMultiple = &PixelDrawMultiple; //A pointer to the function to draw multiple pixels on this display.
-    display.pfnLineDrawV = &LineDrawV; // A pointer to the function to draw a vertical line on this display
-    display.pfnLineDrawH = &LineDrawH; // A pointer to the function to draw a horizontal line on this display.
-    display.pfnRectFill = &RectFill; // A pointer to the function to draw a filled rectangle on this display
-    display.pfnColorTranslate = &ColorTranslate; // A pointer to the function to translate 24-bit RGB colors to display-specific colors
-    display.pfnFlush = &Flush; // A pointer to the function to flush any cached drawing operations on this display.
-
-    // Initialize GRLIB:
-    tContext grlibContext;
-    GrContextInit(&grlibContext, &display);
-    GrContextForegroundSet(&grlibContext, 0xFFFFFFFF); // white foreground
-    GrContextBackgroundSet(&grlibContext, 0); // black background
-    GrContextFontSet(&grlibContext, &g_sFontCmtt38);
-    GrStringCodepageSet(&grlibContext, CODEPAGE_ISO8859_1);
-
-
-    tGrLibDefaults grlibDefaults;
-    GrLibInit(&grlibDefaults);
-
-    // Sleep for 1 ms
-    usleep(1000);
-
-#define BLACKOUT_SCREEN
-//#define PIXELDRAW_TEST
-//#define LINEDRAWH_TEST
-//#define LINEDRAWV_TEST
-//#define DRAW_RECTANGLE_TEST
-//#define TEXT_TEST
-#define UART_SCREEN_TEST
-    uint16_t color = HX8357_BLACK;
-#ifdef BLACKOUT_SCREEN
-
-    tRectangle rect;
-    rect.i16XMin = 0;
-    rect.i16XMax = 480; // 480 is the entire screen
-    rect.i16YMin = 0;
-    rect.i16YMax = 320; // 320 is the entire screen
-    RectFill(display.pvDisplayData, &rect, color);
-#endif
-    do{
-#ifdef PIXELDRAW_TEST
-        // PixelDraw test:
-        color = HX8357_BLUE;
-        for(col = 0 ; col < 480 ; col++){
-            PixelDraw(display.pvDisplayData, 50, col, color);
-
-        }
-
-#endif
-
-#ifdef LINEDRAWH_TEST
-        LineDrawH(display.pvDisplayData, 100, 380, 100, color);
-#endif
-
-#ifdef LINEDRAWV_TEST
-        LineDrawV(display.pvDisplayData, 100, 100, 220, color);
-#endif
-
-#ifdef DRAW_RECTANGLE_TEST
-        tRectangle rect, lastRect, diffRect;
-        int16_t x_start = 0;//480-50-5;
-        int16_t y_start = 0;//320-50-2;
-        int16_t x_size = 50;
-        int16_t y_size = 50;
-        uint8_t x_speed = 5; // how many pixels are increased per loop
-        uint8_t y_speed = 4;
-        bool x_pos = true;
-        bool y_pos = true;
-        while(1){
-
-            // Move the rectangle 5 pixels diagonally:
-            // X-location:
-            if(x_pos){
-                x_start += x_speed;
-                // If the rectangle is outside of the screen, then change direction:
-                if(x_start+x_size >= 480-1){
-                    x_start -= x_speed;
-                    x_pos = false;
-                }
-            }
-            else {
-                x_start -= x_speed;
-                // If the rectangle is outside of the screen, then change direction:
-                if(x_start < 0){
-                    x_start += x_speed;
-                    x_pos = true;
-                }
-            }
-            //y-location:
-            if(y_pos){
-                y_start += y_speed;
-                // If the rectangle is outside of the screen, then change direction:
-                if(y_start+y_size >= 320-1){
-                    y_start -= y_speed;
-                    y_pos = false;
-                }
-            }
-            else {
-                y_start -= y_speed;
-                // If the rectangle is outside of the screen, then change direction:
-                if(y_start < 0){
-                    y_start += y_speed;
-                    y_pos = true;
-                }
-            }
-
-            // Save the last rectangle
-            lastRect.i16XMin = rect.i16XMin;
-            lastRect.i16XMax = rect.i16XMax;
-            lastRect.i16YMin = rect.i16YMin;
-            lastRect.i16YMax = rect.i16YMax;
-            //lastRect = rect;
-
-            // Draw the new rectangle
-            rect.i16XMin = x_start;
-            rect.i16XMax = x_start+x_size;
-            rect.i16YMin = y_start;
-            rect.i16YMax = y_start+y_size;
-            RectFill(display.pvDisplayData, &rect, color);
-
-            // Change the color
-            color+=5;
-
-
-            // remove the trail by setting it to black.
-            // First, remove the last rectangle diff in x-axis
-            if (rect.i16XMin <= lastRect.i16XMin){
-                // If the current x start value is less than the previous x start value,
-                // then the rectangle is moving in negative direction (i.e. to the left).
-                // Therefore, the rectangle that needs to be removed is on the right hand
-                // side of the current rectangle, starting with the current max value +1
-                // and ending with the last max value plus the speed
-                diffRect.i16XMin = rect.i16XMax;
-                diffRect.i16XMax = lastRect.i16XMax;
-            }
-            else{
-                // Otherwise, the old rectangle that needs to be removed is on the left hand side.
-                diffRect.i16XMin = lastRect.i16XMin;
-                diffRect.i16XMax = rect.i16XMin;
-            }
-
-            if (rect.i16YMin <= lastRect.i16YMin){
-                // If the current Y start value is smaller than the last,
-                // that means that the rectangle is moving in a negative Y-direction (i.e. down).
-                // Therefore, the span should be this rectangles minimum and last rectagles maximum
-                diffRect.i16YMin = rect.i16YMin;
-                diffRect.i16YMax = lastRect.i16YMax;
-            }
-            else{
-                // Otherwise, the last values should be the last rectangle start values,
-                // plus the speed.
-                diffRect.i16YMin = lastRect.i16YMin;
-                diffRect.i16YMax = lastRect.i16YMax+y_speed;
-            }
-            // Fill the trail on the x-axis with black:
-            RectFill(display.pvDisplayData, &diffRect, HX8357_BLACK);
-
-            // Then remove the trailing y-axis part:
-            if (rect.i16YMin <= lastRect.i16YMin){
-                // If the current Y start value is less than the previous Y start value,
-                // then the rectangle is moving in negative direction.
-                // Therefore, the rectangle that needs to be cleared is on the top
-                // side of the current rectangle, starting with the current max value +1
-                // and ending with the last max value plus the speed
-                diffRect.i16YMin = rect.i16YMax;
-                diffRect.i16YMax = lastRect.i16YMax;
-            }
-            else{
-                // Otherwise, the old rectangle that needs to be removed is on the bottom side.
-                diffRect.i16YMin = lastRect.i16YMin;
-                diffRect.i16YMax = rect.i16YMin;
-            }
-
-            if (rect.i16XMin <= lastRect.i16XMin){
-                // If the current X start value is smaller than the last,
-                // that means that the rectangle is moving in a negative X-direction.
-                // Therefore, the start value should be the last rectangles end-value
-                // minus the speed:
-                diffRect.i16XMin = rect.i16XMin;
-                diffRect.i16XMax = lastRect.i16XMax;
-            }
-            else{
-                // Otherwise, the last values should be the last rectangle start values,
-                // plus the speed.
-                diffRect.i16XMin = lastRect.i16XMin;
-                diffRect.i16XMax = lastRect.i16XMax+x_speed;
-            }
-
-            // Fill the trail with black:
-            RectFill(display.pvDisplayData, &diffRect, HX8357_BLACK);
-
-            // Wait for 50 ms
-            usleep(50000);
-        }
-
-#endif
-
-#ifdef TEXT_TEST
-/*
-        tRectangle rect;
-        rect.i16XMin = 0;
-        rect.i16XMax = 480; // 480 is the entire screen
-        rect.i16YMin = 0;
-        rect.i16YMax = 320; // 320 is the entire screen
-        GrContextForegroundSet(&grlibContext, 0); // black foreground
-        GrRectFill(&grlibContext, &rect);
-        GrContextForegroundSet(&grlibContext, 0xFFFFFFFF); // white foreground
-        GrCircleDraw(&grlibContext, 200, 50, 30);
-
-        GrLineDrawH(&grlibContext, 250, 300, 50); // start at xy=(50,50), and end at (100, 50)
-        GrLineDrawV(&grlibContext, 100, 50, 100); // Start at (50, 100), and end up at (100,100)
-        GrLineDraw(&grlibContext, 50, 50, 100, 100);
-*/
-
-        int i;
-        tFont* fonts[6];
-        fonts[0] = &g_sFontCmtt28;
-        fonts[1] = &g_sFontCmtt30;
-        fonts[2] = &g_sFontCmtt32;
-        fonts[3] = &g_sFontCmtt34; // This looks like the one!
-        fonts[4] = &g_sFontCmtt36;
-        fonts[5] = &g_sFontCmtt38;
-
-        char string[11] = "Hello world";
-        for(i = 0 ; i < 6 ; i++){
-            //GrContextFontSet(&grlibContext, fonts[i]);
-            GrStringDraw(&grlibContext, string, 11, 100, 20+40*i, false);
-        }
-
-#endif
-#ifdef UART_SCREEN_TEST
-        char uartInputBuf;
-        uint16_t x,y;
-        x = y = 0;
-        uint16_t charCounter = 0; // Character counter
 #define Y_INCREASE 40
 #define X_INCREASE 20
-        while(1){
-            Mailbox_pend(uartMailBoxHandle, &uartInputBuf, BIOS_WAIT_FOREVER);
-            if(uartInputBuf != 0x7F){
-                GrStringDraw(&grlibContext, &uartInputBuf, 1, x, y, false);
-                charCounter++;
-                x += X_INCREASE;
-                if(x >= 480-X_INCREASE*2){
-                    y += Y_INCREASE;
-                    x = 0;
-                }
-                if(y >= 320-Y_INCREASE-1){
-                    y = 0;
-                    x = 0;
-                }
+    while(1){
+        Mailbox_pend(uartMailBoxHandle, &uartInputBuf, BIOS_WAIT_FOREVER);
+        if(uartInputBuf != 0x7F){
+            GrStringDraw(&grlibContext, &uartInputBuf, 1, x, y, false);
+            charCounter++;
+            x += X_INCREASE;
+            if(x >= 480-X_INCREASE*2){
+                y += Y_INCREASE;
+                x = 0;
             }
-            else{
-                // Handle backspace
-                // Calculate where the backspace should be done:
-                if(charCounter > 0){
-                    tRectangle rect;
-                    if(x < X_INCREASE){
-                        if(y < Y_INCREASE){
-                            y = 320 - Y_INCREASE*2;
-                        }
-                        else{
-                            y -= Y_INCREASE;
-                        }
-
-                        x = 480 - X_INCREASE*3;
+            if(y >= 320-Y_INCREASE-1){
+                y = 0;
+                x = 0;
+            }
+        }
+        else{
+            // Handle backspace
+            // Calculate where the backspace should be done:
+            if(charCounter > 0){
+                tRectangle rect;
+                if(x < X_INCREASE){
+                    if(y < Y_INCREASE){
+                        y = 320 - Y_INCREASE*2;
                     }
                     else{
-                        x -= X_INCREASE;
+                        y -= Y_INCREASE;
                     }
-                    rect.i16XMin = x;
-                    rect.i16XMax = x + X_INCREASE;
-                    rect.i16YMin = y;
-                    rect.i16YMax = y + Y_INCREASE;
-                    RectFill(display.pvDisplayData, &rect, HX8357_BLACK);
-                    charCounter--;
+
+                    x = 480 - X_INCREASE*3;
                 }
+                else{
+                    x -= X_INCREASE;
+                }
+                rect.i16XMin = x;
+                rect.i16XMax = x + X_INCREASE;
+                rect.i16YMin = y;
+                rect.i16YMax = y + Y_INCREASE;
+                RectFill(display.pvDisplayData, &rect, HX8357_BLACK);
+                charCounter--;
             }
-            tRectangle rect;
-            rect.i16XMin = 0;
-            rect.i16XMax = 4*X_INCREASE;
-            rect.i16YMin = 200;
-            rect.i16YMax = 200 + 2*Y_INCREASE;
-            RectFill(display.pvDisplayData, &rect, HX8357_BLACK);
-            char numChars[3];
-            sprintf(numChars, "%i", charCounter);
-            GrStringDraw(&grlibContext, numChars, 3, 0, 200, false);
-
         }
+        tRectangle rect;
+        rect.i16XMin = 0;
+        rect.i16XMax = 4*X_INCREASE;
+        rect.i16YMin = 200;
+        rect.i16YMax = 200 + 2*Y_INCREASE;
+        RectFill(display.pvDisplayData, &rect, HX8357_BLACK);
+        char numChars[3];
+        sprintf(numChars, "%i", charCounter);
+        GrStringDraw(&grlibContext, numChars, 3, 0, 200, false);
 
-
-        usleep(500000); // Sleep for 500 ms
-#endif
-
-
-    } while(0);
+    }
 
 }
 
 char uartTmpBuf[50];
-Void uartFxn(UArg arg0, UArg arg1)
+void uartFxn(UArg arg0, UArg arg1)
 {
+    Semaphore_pend(initDoneSemHandle, BIOS_WAIT_FOREVER);
     UART_Handle uart;
     UART_Params uartParams;
     uint16_t tmpCount = 0;
@@ -537,13 +285,112 @@ Void uartFxn(UArg arg0, UArg arg1)
 
 }
 
+
+// Function to initialize hardware and software packages
+void initFxn(UArg arg0, UArg arg1){
+
+    // Init SPI and PWM (needs to be set in a task)
+    initPWM(&backLightPwmHandle);
+
+    // Set the backlight strength:
+    setBacklight(backLightPwmHandle, 100); // sets backlight to 0%
+
+    // Driver the reset pin high to get out of reset.
+    // NOTE: RESET MUST HAVE BEEN SET TO 0 IN MAIN TASK!
+    GPIO_write(GPIO_SCREEN_RESET, 1);
+
+    // Init the SPI driver, get the spiHandle
+    spiHandle = initSpi();
+
+    // Sleep for a small amount of time in order for the display to boot:
+    usleep(100000); // Sleep for 10 ms
+
+    // Init the screen
+    HX8357_init(spiHandle);
+
+    // Put the SPI handle in the displayData in order to let GRLIB use SPI.
+    displayData.spiHandle = spiHandle;
+    // Populate the GRLIB tDisplay variable
+    display.i32Size = 0; // The size of this structure
+    display.pvDisplayData = &displayData; // A pointer to display driver-specific data.
+    display.ui16Width = HX8357_TFTHEIGHT; // 480 pixels wide
+    display.ui16Height = HX8357_TFTWIDTH; // 320 pixels high
+    display.pfnPixelDraw = &PixelDraw; // A pointer to the function to draw a pixel on this display
+    display.pfnPixelDrawMultiple = &PixelDrawMultiple; //A pointer to the function to draw multiple pixels on this display.
+    display.pfnLineDrawV = &LineDrawV; // A pointer to the function to draw a vertical line on this display
+    display.pfnLineDrawH = &LineDrawH; // A pointer to the function to draw a horizontal line on this display.
+    display.pfnRectFill = &RectFill; // A pointer to the function to draw a filled rectangle on this display
+    display.pfnColorTranslate = &ColorTranslate; // A pointer to the function to translate 24-bit RGB colors to display-specific colors
+    display.pfnFlush = &Flush; // A pointer to the function to flush any cached drawing operations on this display.
+
+    // Initialize GRLIB:
+    GrContextInit(&grlibContext, &display);
+    GrContextForegroundSet(&grlibContext, ClrWhite); // white foreground
+    GrContextBackgroundSet(&grlibContext, ClrBlack); // black background
+    GrContextFontSet(&grlibContext, &g_sFontCmtt38);
+    GrStringCodepageSet(&grlibContext, CODEPAGE_ISO8859_1);
+
+    tGrLibDefaults grlibDefaults;
+    GrLibInit(&grlibDefaults);
+
+    // Fill the entire screen with black:
+    tRectangle rect;
+    rect.i16XMin = 0;
+    rect.i16XMax = HX8357_TFTHEIGHT;
+    rect.i16YMin = 0;
+    rect.i16YMax = HX8357_TFTWIDTH-100;
+    RectFill(display.pvDisplayData, &rect, HX8357_BLACK);
+
+    // Sleep for 10 ms
+    usleep(10000);
+    setBacklight(backLightPwmHandle, 100); // sets backlight to 100%
+
+    // Post the semaphore to let other threads know that the init is done:
+    Semaphore_post(initDoneSemHandle);
+    Semaphore_post(initDoneSemHandle);
+
+    // Exit the task.
+    Task_exit();
+}
+
+// Test a construct task:
+void constructFxn(UArg arg0, UArg arg1){
+    Task_Params uartTaskParams;
+    Task_Params mainTaskParams;
+
+    // Wait on the init task to complete.
+    Semaphore_pend(initDoneSemHandle, BIOS_WAIT_FOREVER);
+
+    // Construct the UART task:
+    Task_Params_init(&uartTaskParams);
+    uartTaskParams.arg0 = 115200; // Baud rate
+    uartTaskParams.stackSize = UARTTASKSTACKSIZE;
+    uartTaskParams.stack = &uartTaskStack;
+    uartTaskParams.priority = 3;
+    Task_construct(&uartTaskStruct, (Task_FuncPtr)uartFxn, &uartTaskParams, NULL);
+
+    // Construct the main task
+    Task_Params_init(&mainTaskParams);
+    mainTaskParams.arg0 = 10000;
+    mainTaskParams.stackSize = MAINTASKSTACKSIZE;
+    mainTaskParams.stack = &mainTaskStack;
+    mainTaskParams.priority = 2;
+    Task_construct(&mainTaskStruct, (Task_FuncPtr)taskFxn, &mainTaskParams, NULL);
+
+    // Exit the task.
+    Task_exit();
+}
+
 int main(void)
 {
-    Task_Params mainTaskParams;
+    Task_Params initTaskParams;
     Task_Params uartTaskParams;
-    Semaphore_Params uartSemParams;
+    Task_Params mainTaskParams;
+    Task_Params constructTaskParams;
+    Semaphore_Params initDoneSemParams;
+    Semaphore_Struct uartReadSemStruct;
+    Semaphore_Struct initDoneSemStruct;
     Mailbox_Params mailboxParams;
-
     /* Call board init functions */
     Board_initGeneral();
     Board_initGPIO();
@@ -556,15 +403,61 @@ int main(void)
     Board_initSPI();
 
 
-
-    // Driver the reset pin high to get out of reset.
-    GPIO_write(GPIO_SCREEN_RESET, 1);
     Board_initUART();
     // Board_initUSB(Board_USBDEVICE);
     // Board_initWatchdog();
     // Board_initWiFi();
     // Board_initPWM();
 
+
+
+    // Construct the init task
+    Task_Params_init(&initTaskParams);
+    initTaskParams.stackSize = INITTASKSTACKSIZE;
+    initTaskParams.stack = &initTaskStack;
+    initTaskParams.priority = 1;
+    Task_construct(&initTaskStruct, (Task_FuncPtr)initFxn, &initTaskParams, NULL);
+/*
+    // Constructor task:
+    Task_Params_init(&constructTaskParams);
+    constructTaskParams.stackSize = CONSTRUCTTASKSTACKSIZE;
+    constructTaskParams.stack = &constructTaskStack;
+    constructTaskParams.priority = 2;
+    Task_construct(&constructTaskStruct, (Task_FuncPtr)constructFxn, &constructTaskParams, NULL);
+*/
+
+    // Construct the UART task:
+    Task_Params_init(&uartTaskParams);
+    uartTaskParams.arg0 = 115200; // Baud rate
+    uartTaskParams.stackSize = UARTTASKSTACKSIZE;
+    uartTaskParams.stack = &uartTaskStack;
+    uartTaskParams.priority = 3;
+    Task_construct(&uartTaskStruct, (Task_FuncPtr)uartFxn, &uartTaskParams, NULL);
+
+    // Construct the main task
+    Task_Params_init(&mainTaskParams);
+    mainTaskParams.arg0 = 10000;
+    mainTaskParams.stackSize = MAINTASKSTACKSIZE;
+    mainTaskParams.stack = &mainTaskStack;
+    mainTaskParams.priority = 2;
+    Task_construct(&mainTaskStruct, (Task_FuncPtr)taskFxn, &mainTaskParams, NULL);
+
+    // Construct semaphores
+    Semaphore_Params_init(&initDoneSemParams);
+    initDoneSemHandle = Semaphore_create(0, &initDoneSemParams, NULL);
+    if(initDoneSemHandle == NULL){
+        System_abort("Semaphore could not be created");
+    }
+
+    // Construct mailbox between UART thread and screen thread
+    Mailbox_Params_init(&mailboxParams);
+    // Create a mailbox of size 1 byte, 1 buffer.
+    uartMailBoxHandle =  Mailbox_create(1, 1, &mailboxParams, NULL);
+
+    //Semaphore_construct(&initDoneSemStruct, 0, &initDoneSemParams);
+    //initDoneSemHandle = Semaphore_handle(&initDoneSemStruct);
+
+/*
     // Construct the main task
     Task_Params_init(&mainTaskParams);
     mainTaskParams.arg0 = 10000;
@@ -589,7 +482,7 @@ int main(void)
     Mailbox_Params_init(&mailboxParams);
     // Create a mailbox of size 1 byte, 1 buffer.
     uartMailBoxHandle =  Mailbox_create(1, 1, &mailboxParams, NULL);
-
+*/
     System_printf("Starting the example\nSystem provider is set to SysMin. "
                   "Halt the target to view any SysMin contents in ROV.\n");
     /* SysMin will only print to the console when you call flush or exit */
