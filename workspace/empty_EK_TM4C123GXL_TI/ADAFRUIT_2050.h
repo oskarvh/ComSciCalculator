@@ -13,8 +13,8 @@
 #include <stdbool.h>
 #include <ti/drivers/SPI.h>
 #include <grlib/grlib.h>
-#define HX8357_TFTWIDTH 320  ///< 320 pixels wide
-#define HX8357_TFTHEIGHT 480 ///< 480 pixels tall
+#define HX8357_TFTWIDTH 480  ///< 320 pixels wide
+#define HX8357_TFTHEIGHT 320 ///< 480 pixels tall
 
 #define HX8357_NOP 0x00     ///< No op
 #define HX8357_SWRESET 0x01 ///< software reset

@@ -14,6 +14,7 @@
 #include "board.h"
 #include <ti/drivers/GPIO.h>
 
+
 void sendLcdCommand(SPI_Handle spiHandle, char command, char* pData, uint32_t numData, uint32_t delayUs){
     SPI_Transaction transaction;
     transaction.count = 1; // 1 byte at a time for

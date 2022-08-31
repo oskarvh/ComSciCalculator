@@ -86,21 +86,15 @@
 // TI GRLIB
 #include <grlib/grlib.h>
 
-// If defined, a constructor task is used to dynamically allocate tasks.
-#define USE_CONSTRUCTOR_TASK
 
 // Task related items
 #define MAINTASKSTACKSIZE   2048
-#define INITTASKSTACKSIZE   1024
+#define INITTASKSTACKSIZE   800 // Try to keep this as small as possible.
 #define UARTTASKSTACKSIZE   2048
 Task_Struct initTaskStruct; // Init task
 Task_Struct mainTaskStruct; // Main task
 Task_Struct uartTaskStruct; // UART task
-Char initTaskStack[INITTASKSTACKSIZE];
-
-
-// Semaphores
-
+char initTaskStack[INITTASKSTACKSIZE];
 
 
 // This function opens the SPI, and returns the handle.
@@ -113,7 +107,6 @@ void initSpi(SPI_Handle *masterSpi){
     *masterSpi = SPI_open(Board_SPI0, &spiParams);
     if (*masterSpi == NULL) {
         System_abort("Error initializing SPI\n");
-        return NULL;
     }
     else {
         System_printf("SPI initialized\n");
@@ -156,7 +149,7 @@ void initFxn(UArg arg0, UArg arg1){
     initPWM(&backLightPwmHandle);
 
     // Set the backlight strength:
-    setBacklight(backLightPwmHandle, 100); // sets backlight to 0%
+    setBacklight(backLightPwmHandle, 0); // sets backlight to 0%
 
     // Driver the reset pin high to get out of reset.
     // NOTE: RESET MUST HAVE BEEN SET TO 0 IN MAIN TASK!
@@ -176,8 +169,8 @@ void initFxn(UArg arg0, UArg arg1){
     // Populate the GRLIB tDisplay variable
     display.i32Size = 0; // The size of this structure
     display.pvDisplayData = &displayData; // A pointer to display driver-specific data.
-    display.ui16Width = HX8357_TFTHEIGHT; // 480 pixels wide
-    display.ui16Height = HX8357_TFTWIDTH; // 320 pixels high
+    display.ui16Width = HX8357_TFTWIDTH; // 480 pixels wide
+    display.ui16Height = HX8357_TFTHEIGHT; // 320 pixels high
     display.pfnPixelDraw = &PixelDraw; // A pointer to the function to draw a pixel on this display
     display.pfnPixelDrawMultiple = &PixelDrawMultiple; //A pointer to the function to draw multiple pixels on this display.
     display.pfnLineDrawV = &LineDrawV; // A pointer to the function to draw a vertical line on this display
@@ -199,14 +192,20 @@ void initFxn(UArg arg0, UArg arg1){
     // Fill the entire screen with black:
     tRectangle rect;
     rect.i16XMin = 0;
-    rect.i16XMax = HX8357_TFTHEIGHT;
+    rect.i16XMax = HX8357_TFTWIDTH;
     rect.i16YMin = 0;
-    rect.i16YMax = HX8357_TFTWIDTH;
+    rect.i16YMax = HX8357_TFTHEIGHT;
     RectFill(display.pvDisplayData, &rect, HX8357_BLACK);
 
     // Sleep for 10 ms
     usleep(10000);
     setBacklight(backLightPwmHandle, 100); // sets backlight to 100%
+
+    // Initialize the input buffer list state to empty state
+    listState.pListEnd = NULL;
+    listState.pListEntry = NULL;
+    listState.numEntries = 0;
+
 
     // Stacks do not need to be pre-allocated for dynamic stack creation.
     // NOTE: THE STACKS WILL BE ALLOCATED ON THE HEAP
@@ -216,7 +215,7 @@ void initFxn(UArg arg0, UArg arg1){
     mainTaskParams.stackSize = MAINTASKSTACKSIZE;
 
     mainTaskParams.priority = 2;
-    mainTaskHandle = Task_create((Task_FuncPtr)taskFxn, &mainTaskParams, NULL);
+    mainTaskHandle = Task_create((Task_FuncPtr)displayFxn/*taskFxn*/, &mainTaskParams, NULL);
     if(mainTaskHandle == NULL){
         System_abort("Main task could not be created");
     }
@@ -241,6 +240,7 @@ int main(void)
 {
     Task_Params initTaskParams;
     Mailbox_Params mailboxParams;
+    Event_Params eventParams;
     /* Call board init functions */
     Board_initGeneral();
     Board_initGPIO();
@@ -266,10 +266,24 @@ int main(void)
     initTaskParams.priority = 1;
     Task_construct(&initTaskStruct, (Task_FuncPtr)initFxn, &initTaskParams, NULL);
 
+    // Construct the event module to wake up the display task.
+    Event_Params_init(&eventParams);
+    // Events can either be user input, or timer module
+    wakeDisplayEventHandle = Event_create(NULL, NULL);
+    if (wakeDisplayEventHandle == NULL) {
+        System_abort("Event create failed");
+    }
+
     // Construct mailbox between UART thread and screen thread
     Mailbox_Params_init(&mailboxParams);
+    mailboxParams.readerEvent = wakeDisplayEventHandle;
+    mailboxParams.readerEventId = EVENT_USER_INPUT;
     // Create a mailbox of size 1 byte, 1 buffer.
     uartMailBoxHandle =  Mailbox_create(1, 1, &mailboxParams, NULL);
+    if (uartMailBoxHandle == NULL) {
+        System_abort("Mailbox create failed");
+    }
+
 
     System_printf("Starting the example\nSystem provider is set to SysMin. "
                   "Halt the target to view any SysMin contents in ROV.\n");
