@@ -126,13 +126,13 @@ void updateScreenLayout(screenState_t screenState){
     rect.i16XMax = BATTERY_BOX_RECT_X_END;
     rect.i16YMin = BATTERY_BOX_RECT_Y_START;
     rect.i16YMax = BATTERY_BOX_RECT_Y_END;
-    RectFill(display.pvDisplayData, &rect, HX8357_WHITE);
+    RectFill(display.pvDisplayData, &rect, ClrWhite);
     // Battery indicator: stub
     rect.i16XMin = BATTERY_STUB_X_START;
     rect.i16XMax = BATTERY_STUB_X_END;
     rect.i16YMin = BATTERY_STUB_Y_START;
     rect.i16YMax = BATTERY_STUB_Y_END;
-    RectFill(display.pvDisplayData, &rect, HX8357_WHITE);
+    RectFill(display.pvDisplayData, &rect, ClrWhite);
     // Battery indicator: battery level indicators
     rect.i16YMin = BATTERY_IND_Y_START;
     rect.i16YMax = BATTERY_IND_Y_END;
@@ -140,35 +140,35 @@ void updateScreenLayout(screenState_t screenState){
         // Battery almost empty indicator
         rect.i16XMin = BATTERY_IND_1_X_START;
         rect.i16XMax = BATTERY_IND_1_X_START + BATTERY_IND_ALMOST_EMPTY;
-        RectFill(display.pvDisplayData, &rect, HX8357_BLACK);
+        RectFill(display.pvDisplayData, &rect, ClrBlack);
     }
     else {
         if(screenState.batteryLevel > 0){
             // Write the first box
             rect.i16XMin = BATTERY_IND_1_X_START;
             rect.i16XMax = BATTERY_IND_1_X_START + BATTERY_IND_X_WIDTH;
-            RectFill(display.pvDisplayData, &rect, HX8357_BLACK);
+            RectFill(display.pvDisplayData, &rect, ClrBlack);
         }
         if(screenState.batteryLevel > 1){
             // Write the second box
             rect.i16XMin = BATTERY_IND_2_X_START;
             rect.i16XMax = BATTERY_IND_2_X_START + BATTERY_IND_X_WIDTH;
-            RectFill(display.pvDisplayData, &rect, HX8357_BLACK);
+            RectFill(display.pvDisplayData, &rect, ClrBlack);
         }
         if(screenState.batteryLevel > 2){
             // Write the third box
             rect.i16XMin = BATTERY_IND_3_X_START;
             rect.i16XMax = BATTERY_IND_3_X_START + BATTERY_IND_X_WIDTH;
-            RectFill(display.pvDisplayData, &rect, HX8357_BLACK);
+            RectFill(display.pvDisplayData, &rect, ClrBlack);
         }
     }
 
     // Write the text(s). Tests for now. This will be replaced by actual statuses.
-    char testBuf[4] = {'T', 'S', 'T', '1'};
+    const char testBuf[4] = {'T', 'S', 'T', '1'};
     GrContextFontSet(&grlibContext, PTR_TEXT_BOX_FONT);
-    GrStringDraw(&grlibContext, &testBuf, 4, TEXT_BOX_1_X_START, TEXT_BOX_Y_START, false);
-    GrStringDraw(&grlibContext, &testBuf, 4, TEXT_BOX_2_X_START, TEXT_BOX_Y_START, false);
-    GrStringDraw(&grlibContext, &testBuf, 4, TEXT_BOX_3_X_START, TEXT_BOX_Y_START, false);
+    GrStringDraw(&grlibContext, testBuf, 4, TEXT_BOX_1_X_START, TEXT_BOX_Y_START, false);
+    GrStringDraw(&grlibContext, testBuf, 4, TEXT_BOX_2_X_START, TEXT_BOX_Y_START, false);
+    GrStringDraw(&grlibContext, testBuf, 4, TEXT_BOX_3_X_START, TEXT_BOX_Y_START, false);
     // Restore the screen font to default:
     GrContextFontSet(&grlibContext, screenState.screenFont);
 
@@ -400,12 +400,12 @@ void updateCursor(screenState_t *screenState){
             // Remember: (0,0) is the top left of the screen
             rect.i16YMin = screenState->editState.currentLine;
             rect.i16YMax = rect.i16YMin + screenState->screenFont->ui8Height - 1;
-            uint16_t color;
+            uint32_t color;
             if(screenState->editState.cursorWritten){
-                color = HX8357_BLACK;
+                color = ClrBlack;
             }
             else{
-                color = HX8357_WHITE;
+                color = ClrWhite;
             }
             // Write the cursor
             RectFill(display.pvDisplayData, &rect, color);
@@ -427,68 +427,110 @@ uint32_t getCharWidth(void){
     return GrStringWidthGet(&grlibContext, &tmp, 1);
 }
 
+// Function to just print the elements needed.
+// Generally, everthing
+void partialPrintListElements(listState_t *pListState, screenState_t *pScreenState){
+
+}
+
 // Function to update the screen and print the entire list.
 // This should be called every time a button has been pressed, except the menu button.
 // NOTE: if the printing is longer than the screen, some scrolling is needed.
 // If it's too long, then the cursor should decide what part is printed.
-void printListElements(listState_t *pListState, screenState_t *pScreenState){
-    // Clear the screen segment before writing the text to it.
-    tRectangle rect;
-    // Blackout the entire rows.
-    rect.i16XMin = 0;
-    rect.i16XMax = 480;
-    // The height is determined by the font.
-    // Remember: (0,0) is the top left of the screen
-    rect.i16YMin = pScreenState->editState.currentLine;
-    rect.i16YMax = rect.i16YMin + pScreenState->screenFont->ui8Height;
-    // Write the blackout rectangle
-    RectFill(display.pvDisplayData, &rect, HX8357_BLACK);
+void printListElements(listState_t *pListState, screenState_t *pScreenState, bool bUpdateScreen){
+
+    if(bUpdateScreen){
+        // Clear the screen segment before writing the text to it.
+        tRectangle rect;
+        // Start at the current index, as nothing will change before that.
+        // We have the number of characters on the screen last time, which gives us the
+        // maximum width we need to clear:
+        rect.i16XMax = getCharWidth()*(pScreenState->editState.numCharsOnScreen);
+        // As to how far we need to clear, that depends on the number of entries in the
+        // list, and what the index is.
+        if(pListState->numEntries > pScreenState->editState.numCharsOnScreen){
+            rect.i16XMin = getCharWidth()*(pScreenState->editState.numCharsOnScreen
+                                           - pScreenState->editState.index);
+        }
+        else{
+            rect.i16XMin = getCharWidth()*(pListState->numEntries - pScreenState->editState.index);
+        }
+        // If the number of characters extend beyond the screen, we need to scroll.
+        // Therefore, we need to blackout everything
+        if(rect.i16XMax > HX8357_TFTWIDTH){
+            rect.i16XMin = 0;
+            rect.i16XMax = HX8357_TFTWIDTH;
+        }
+        // The height is determined by the font.
+        // Remember: (0,0) is the top left of the screen
+        rect.i16YMin = pScreenState->editState.currentLine;
+        rect.i16YMax = rect.i16YMin + pScreenState->screenFont->ui8Height;
+        // Write the blackout rectangle
+        //RectFill(display.pvDisplayData, &rect, ClrBlack);
 
 
-    // Get the list entry:
-    listElement_t *pListEntry = pListState->pListEntry;
-    // The first element is the first element entered into the list.
-    // If the entry is NULL, then nothing to print.
-    if(pListEntry != NULL){
-        // Allocate a char buffer for the elements in the list
-        char* pTmpBuf = malloc(pListState->numEntries);
+        // Get the list entry:
+        listElement_t *pListEntry = pListState->pListEntry;
+        // The first element is the first element entered into the list.
+        // If the entry is NULL, then nothing to print.
+        if(pListEntry != NULL){
+            // Allocate a char buffer for the elements in the list
+            char* pTmpBuf = malloc(pListState->numEntries);
 
-        // Entry is not zero, loop through the list and print everything.
-        listElement_t *pCurrentElement = pListEntry;
-        if(pTmpBuf == NULL){
-            // Loop until the next element is NULL, i.e. end of list.
-            // Should be slower than writing directly from char array
-            uint16_t cursorLocation = 0;
-            while(pCurrentElement != NULL){
+            // Entry is not zero, loop through the list and print everything.
+            listElement_t *pCurrentElement = pListEntry;
+            if(pTmpBuf == NULL){
+                // If the local buffer could not be allocated, simply print each character.
+                // Loop until the next element is NULL, i.e. end of list.
+                // Should be slower than writing directly from char array
+                uint16_t cursorLocation = 0;
+                // Blackout the screen before writing data
+                RectFill(display.pvDisplayData, &rect, ClrBlack);
+                while(pCurrentElement != NULL){
+                    GrStringDraw(&grlibContext,
+                                 &(pCurrentElement->currentChar),
+                                 1,
+                                 cursorLocation,
+                                 pScreenState->editState.currentLine,
+                                 false);
+                    cursorLocation += getCharWidth();
+                    pCurrentElement = pCurrentElement->pNextElem;
+                }
+            }
+            else {
+                // Copy the elements from the list to a temporary buffer,
+                // making it possible to print all characters at the same time.
+                // Time gained from this is unknown.
+                int count = 0;
+                while(pCurrentElement != NULL){
+                    pTmpBuf[count++] = pCurrentElement->currentChar;
+                    pCurrentElement = pCurrentElement->pNextElem;
+                }
+                // Blackout the screen before writing data
+                RectFill(display.pvDisplayData, &rect, ClrBlack);
                 GrStringDraw(&grlibContext,
-                             &(pCurrentElement->currentChar),
-                             1,
-                             cursorLocation,
+                             pTmpBuf,
+                             pListState->numEntries,
+                             0,
                              pScreenState->editState.currentLine,
                              false);
-                cursorLocation += getCharWidth();
-                pCurrentElement = pCurrentElement->pNextElem;
+                free(pTmpBuf);
             }
         }
-        else {
-            int count = 0;
-            while(pCurrentElement != NULL){
-                pTmpBuf[count++] = pCurrentElement->currentChar;
-                pCurrentElement = pCurrentElement->pNextElem;
-            }
-            GrStringDraw(&grlibContext,
-                         pTmpBuf,
-                         pListState->numEntries,
-                         0,
-                         pScreenState->editState.currentLine,
-                         false);
-            free(pTmpBuf);
+        else{
+            // Blackout the screen even if there are no entries.
+            // could be a case where there is no entries because everything was
+            // deleted by the user.
+            RectFill(display.pvDisplayData, &rect, ClrBlack);
         }
     }
     // Calculate the cursor location based on the index.
     pScreenState->editState.cursorLocation =
             (pListState->numEntries - pScreenState->editState.index) *
             getCharWidth();
+    // Set the number of characters on the screen to the
+    // number of entries in the list.
+    pScreenState->editState.numCharsOnScreen = pListState->numEntries;
 }
 
 // Function to receive content from input mailbox and
@@ -511,7 +553,8 @@ void displayFxn(UArg arg0, UArg arg1){
     screenState.batteryLevel = 3; // HACK: set full battery indicator
     screenState.editState.cursorWritten = false; // Start with no cursor written.
     screenState.editState.index = 0; // Start writing at the back of the list.
-    screenState.screenFont = g_psFontCmtt38;
+    screenState.editState.numCharsOnScreen = 0; // Start with no characters on the screen.
+    screenState.screenFont = g_psFontCmtt38; // A bit of a hack with the type casting..
 
     // Initialize the screen layout
     updateScreenLayout(screenState);
@@ -530,6 +573,8 @@ void displayFxn(UArg arg0, UArg arg1){
             // Read the mailbox
             Mailbox_pend(uartMailBoxHandle, &uartInputBuf, BIOS_NO_WAIT);
 
+            // Declare boolean to say if the operation should update the screen or not
+            bool bUpdateScreen = false;
             // Check if in menu or edit mode:
             if(screenState.activeScreen == EDITOR_ACTIVE){
                 // In edit state
@@ -538,6 +583,7 @@ void displayFxn(UArg arg0, UArg arg1){
                 if(screenState.editState.cursorWritten){
                     updateCursor(&screenState);
                 }
+
                 if(uartInputBuf == TOGGLE_MENU_BUTTON){
                     // Write the menu
                     printMenuLayout(screenState);
@@ -569,15 +615,20 @@ void displayFxn(UArg arg0, UArg arg1){
                 else if(uartInputBuf == BACKSPACE){
                     // Backspace, remove the character before the cursor.
                     removeListEntry(&listState, screenState.editState.index);
+                    // This should update the screen:
+                    bUpdateScreen = true;
                 }
                 else {
                     // Write whatever else input to the screen and input buffer
                     // At the character to the linked list, at the end
                     addListEntry(&listState, uartInputBuf, screenState.editState.index);
+                    // This should update the screen:
+                    bUpdateScreen = true;
                 }
                 // Update the screen.
                 // Print the entire buffer.
-                printListElements(&listState, &screenState);
+                printListElements(&listState, &screenState, bUpdateScreen);
+
                 // Print the cursor again
                 updateCursor(&screenState);
             }

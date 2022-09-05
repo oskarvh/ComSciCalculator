@@ -293,7 +293,7 @@ int main(void)
     // x ms = x*1000µs = x*1000 ticks. 1 period = n ticks ->
     // number of periods = x*1000 / period.
     clkParams.period = CURSOR_PERIOD_MS*1000/Clock_tickPeriod;
-    clkParams.startFlag = TRUE;/* start immediately */
+    clkParams.startFlag = true; // start immediately
     cursorClkHandle = Clock_create((Clock_FuncPtr)clkFxn, 16, &clkParams, NULL);
     if (cursorClkHandle == NULL) {
         System_abort("Clock create failed");

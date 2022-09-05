@@ -146,6 +146,8 @@ typedef struct editState {
     // characters to/from the end of the current edit, and non-zero
     // if not at the end.
     uint16_t index;
+    // Number of characters written to the screen.
+    uint16_t numCharsOnScreen;
     // True if insert edit mode is active, false if not.
     // Insert meaning inserting the new char at the cursor location.
     // If insert is false, then it will overwrite the char at the cursor location.
@@ -168,7 +170,7 @@ typedef struct screenState {
     editState_t editState;
     menuState_t menuState;
     uint8_t batteryLevel; // 0,1,2,3 available
-    tFont *screenFont;
+    const tFont *screenFont;
 } screenState_t;
 
 // Global variables, shared by main.c
