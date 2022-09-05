@@ -13,7 +13,7 @@
 
 // Include this files header file
 #include <comSciCalc.h>
-
+#include <driverlib/uart.h>
 // Global variables:
 
 
@@ -27,69 +27,10 @@ void setBacklight(PWM_Handle pwm0, uint8_t duty){
     PWM_setDuty(pwm0, (PWM_PERIOD*duty)/100);
 }
 
-// Function to display uart buffer on screen
-void taskFxn(UArg arg0, UArg arg1)
-{
-    char uartInputBuf;
-    uint16_t x,y;
-    x = y = 0;
-    uint16_t charCounter = 0; // Character counter
-
-#define Y_INCREASE 40
-#define X_INCREASE 20
-    while(1){
-        Mailbox_pend(uartMailBoxHandle, &uartInputBuf, BIOS_WAIT_FOREVER);
-        if(uartInputBuf != 0x7F){
-            GrStringDraw(&grlibContext, &uartInputBuf, 1, x, y, false);
-            charCounter++;
-            x += X_INCREASE;
-            if(x >= 480-X_INCREASE*2){
-                y += Y_INCREASE;
-                x = 0;
-            }
-            if(y >= 320-Y_INCREASE-1){
-                y = 0;
-                x = 0;
-            }
-        }
-        else{
-            // Handle backspace
-            // Calculate where the backspace should be done:
-            if(charCounter > 0){
-                tRectangle rect;
-                if(x < X_INCREASE){
-                    if(y < Y_INCREASE){
-                        y = 320 - Y_INCREASE*2;
-                    }
-                    else{
-                        y -= Y_INCREASE;
-                    }
-
-                    x = 480 - X_INCREASE*3;
-                }
-                else{
-                    x -= X_INCREASE;
-                }
-                rect.i16XMin = x;
-                rect.i16XMax = x + X_INCREASE;
-                rect.i16YMin = y;
-                rect.i16YMax = y + Y_INCREASE;
-                RectFill(display.pvDisplayData, &rect, HX8357_BLACK);
-                charCounter--;
-            }
-        }
-        tRectangle rect;
-        rect.i16XMin = 0;
-        rect.i16XMax = 4*X_INCREASE;
-        rect.i16YMin = 200;
-        rect.i16YMax = 200 + 2*Y_INCREASE;
-        RectFill(display.pvDisplayData, &rect, HX8357_BLACK);
-        char numChars[3];
-        sprintf(numChars, "%i", charCounter);
-        GrStringDraw(&grlibContext, numChars, 3, 0, 200, false);
-
-    }
-
+// Function that is called every 500ms, triggers the
+// event that the cursor shall be updated.
+void clkFxn(UArg arg0){
+    Event_post(wakeDisplayEventHandle, EVENT_TIMER_MODULE);
 }
 
 // Function to read from UART and send the result onwards in a mailbox
@@ -117,6 +58,44 @@ void uartFxn(UArg arg0, UArg arg1)
     while(1){
         // Read one character at a time
         UART_read(uart, &readBuf, 1);
+        // Check if the first character is escape.
+        // In which case, the next two characters shall be read, as it's
+        // most probably a special char. Although, just the ESC key will cause this to halt.
+        if(readBuf == 0x1b){
+            // Escape char, read the two next ones.
+            // NOTE: if this is just an ESC key, it will block until two more characters have been sent.
+            // If more data is available, then it's an extension of the escape.
+            // If not, then it's just an escape key, do nothing.
+
+            // Read the next character
+            UART_read(uart, &readBuf, 1);
+            if(readBuf == 91){
+                // Read the last char, check if arrow key has been pressed.
+                UART_read(uart, &readBuf, 1);
+                if(readBuf == 68){
+                    // Left key
+                    readBuf = LEFT_ARROW;
+                }
+                else if(readBuf == 65){
+                    // Up key
+                    readBuf = UP_ARROW;
+                }
+                else if(readBuf == 66){
+                    // Down key
+                    readBuf = DOWN_ARROW;
+                }
+                else if(readBuf == 67){
+                    // Right key
+                    readBuf = RIGHT_ARROW;
+                }
+                else {
+                    // Something else.
+                }
+            }
+            // If the next character is 91 (dec) then it might be an arrow key
+
+        }
+        // If this is the case,
         if(readBuf != 0x7F){
             tmpCount++;
         }
@@ -184,7 +163,7 @@ void updateScreenLayout(screenState_t screenState){
         }
     }
 
-    // Write the text(s). Tests for now.
+    // Write the text(s). Tests for now. This will be replaced by actual statuses.
     char testBuf[4] = {'T', 'S', 'T', '1'};
     GrContextFontSet(&grlibContext, PTR_TEXT_BOX_FONT);
     GrStringDraw(&grlibContext, &testBuf, 4, TEXT_BOX_1_X_START, TEXT_BOX_Y_START, false);
@@ -192,6 +171,11 @@ void updateScreenLayout(screenState_t screenState){
     GrStringDraw(&grlibContext, &testBuf, 4, TEXT_BOX_3_X_START, TEXT_BOX_Y_START, false);
     // Restore the screen font to default:
     GrContextFontSet(&grlibContext, screenState.screenFont);
+
+}
+
+// Function to print the menu
+void printMenuLayout(screenState_t screenState){
 
 }
 
@@ -286,13 +270,16 @@ int addListEntry(listState_t *pListState, char entry, uint8_t index){
             pListState->pListEntry->pPrevElem = pNewElement;
 
             // Overwrite the first entry in the list state
-           pListState->pListEntry = pNewElement;
-           if(i == index){
-               return ENTRY_DONE;
-           }
-           else{
-               return INDEX_TOO_LARGE;
-           }
+            pListState->pListEntry = pNewElement;
+
+            // Increase the number of entries:
+            pListState->numEntries += 1;
+            if(i == index){
+                return ENTRY_DONE;
+            }
+            else{
+                return INDEX_TOO_LARGE;
+            }
         }
         else {
             // The current entry is not NULL, which means that we're somewhere else in the list.
@@ -319,6 +306,8 @@ int addListEntry(listState_t *pListState, char entry, uint8_t index){
 
             // And finally, set the current elements next pointer to this new one:
             pCurrentElement->pNextElem = pNewElement;
+            // Increase the number of entries:
+            pListState->numEntries += 1;
         }
         return ENTRY_DONE;
 
@@ -327,7 +316,179 @@ int addListEntry(listState_t *pListState, char entry, uint8_t index){
 
 // Function to remove a list entry
 int removeListEntry(listState_t *pListState, uint8_t index){
+    // Get the pointer to the list entry
+    listElement_t *pListEntry = pListState->pListEntry;
 
+    // Check if the list is un-initialized
+    if(pListEntry == NULL){
+        // If no entries, then nothing to remove.
+        return LIST_EMPTY;
+    }
+    else{
+        // There is an entry, find the pointer to that entry
+        // by looping through the list at the index.
+        // Get the tail end of the list
+        listElement_t *pListEnd = pListState->pListEnd;
+
+        // Do a NULL check, and if true there is an error
+        if(pListEnd == NULL){
+            return LIST_END_ERROR;
+        }
+
+        // Iterate through the list index amount of times to find
+        // the entry into which this character shall be placed,
+        // starting at the end of the list.
+        listElement_t *pCurrentElement = pListEnd;
+        int i;
+        for(i = 0 ; i < index ; i++){
+            // Set the current entry to the previous entry
+            pCurrentElement = pCurrentElement->pPrevElem;
+            if(pCurrentElement == NULL){
+                break;
+            }
+        }
+
+        if(pCurrentElement == NULL){
+            // Points to the start of the buffer, in which case there is nothing to remove.
+            return INDEX_TOO_LARGE;
+        }
+
+        // pCurrentElement points to the element that should be removed.
+        // But before that entry can be removed, check the previous and next entries,
+        // and tie them together.
+        if(pCurrentElement->pPrevElem != NULL){
+            // Not the first entry, therefore change the previous elements next pointer
+            // to the current entries next pointer.
+            ((listElement_t*)(pCurrentElement->pPrevElem))->pNextElem = pCurrentElement->pNextElem;
+        }
+        else{
+            // Removing the first entry, modify the listState.
+            pListState->pListEntry = pCurrentElement->pNextElem;
+            // Set the previous element to NULL for the first element in the list.
+            pListState->pListEntry->pPrevElem = NULL;
+        }
+        if(pCurrentElement->pNextElem != NULL){
+            // Not the last entry, change the next elements previous element.
+            ((listElement_t*)(pCurrentElement->pNextElem))->pPrevElem = pCurrentElement->pPrevElem;
+        }
+        else{
+            // This is the last entry, change the listState and the second to last entry.
+            pListState->pListEnd = pCurrentElement->pPrevElem;
+            // Change the new list end elements next entry to NULL
+            pListState->pListEnd->pNextElem = NULL;
+        }
+        // Free the entry and return.
+        free(pCurrentElement);
+        pListState->numEntries -= 1;
+        return REMOVE_DONE;
+    }
+}
+
+// Function to update/toggle the cursor
+void updateCursor(screenState_t *screenState){
+    if(screenState->activeScreen == EDITOR_ACTIVE){
+        if(screenState->editState.insert){
+            // "Normal" edit mode, insert a new character at the location
+            // This is a normal blinking vertical line.
+            // Use the rectangle draw function in case we want to change the
+            // width at some point in the future
+            tRectangle rect;
+            // The x-location is determined by the cursor location variable.
+            rect.i16XMin = screenState->editState.cursorLocation;
+            rect.i16XMax = screenState->editState.cursorLocation+1;
+            // The height is determined by the font.
+            // Remember: (0,0) is the top left of the screen
+            rect.i16YMin = screenState->editState.currentLine;
+            rect.i16YMax = rect.i16YMin + screenState->screenFont->ui8Height - 1;
+            uint16_t color;
+            if(screenState->editState.cursorWritten){
+                color = HX8357_BLACK;
+            }
+            else{
+                color = HX8357_WHITE;
+            }
+            // Write the cursor
+            RectFill(display.pvDisplayData, &rect, color);
+            // Toggle the internal state
+            screenState->editState.cursorWritten = !screenState->editState.cursorWritten;
+        }
+        else {
+            // Toggle the inversion of the colors of the current
+            // character to indicate that the current character will
+            // be overwritten.
+        }
+    }
+}
+
+// Padding function to get length of one character.
+// The normal GrFontMaxWidthGet doesn't really do the trick.
+uint32_t getCharWidth(void){
+    char tmp = 'A';
+    return GrStringWidthGet(&grlibContext, &tmp, 1);
+}
+
+// Function to update the screen and print the entire list.
+// This should be called every time a button has been pressed, except the menu button.
+// NOTE: if the printing is longer than the screen, some scrolling is needed.
+// If it's too long, then the cursor should decide what part is printed.
+void printListElements(listState_t *pListState, screenState_t *pScreenState){
+    // Clear the screen segment before writing the text to it.
+    tRectangle rect;
+    // Blackout the entire rows.
+    rect.i16XMin = 0;
+    rect.i16XMax = 480;
+    // The height is determined by the font.
+    // Remember: (0,0) is the top left of the screen
+    rect.i16YMin = pScreenState->editState.currentLine;
+    rect.i16YMax = rect.i16YMin + pScreenState->screenFont->ui8Height;
+    // Write the blackout rectangle
+    RectFill(display.pvDisplayData, &rect, HX8357_BLACK);
+
+
+    // Get the list entry:
+    listElement_t *pListEntry = pListState->pListEntry;
+    // The first element is the first element entered into the list.
+    // If the entry is NULL, then nothing to print.
+    if(pListEntry != NULL){
+        // Allocate a char buffer for the elements in the list
+        char* pTmpBuf = malloc(pListState->numEntries);
+
+        // Entry is not zero, loop through the list and print everything.
+        listElement_t *pCurrentElement = pListEntry;
+        if(pTmpBuf == NULL){
+            // Loop until the next element is NULL, i.e. end of list.
+            // Should be slower than writing directly from char array
+            uint16_t cursorLocation = 0;
+            while(pCurrentElement != NULL){
+                GrStringDraw(&grlibContext,
+                             &(pCurrentElement->currentChar),
+                             1,
+                             cursorLocation,
+                             pScreenState->editState.currentLine,
+                             false);
+                cursorLocation += getCharWidth();
+                pCurrentElement = pCurrentElement->pNextElem;
+            }
+        }
+        else {
+            int count = 0;
+            while(pCurrentElement != NULL){
+                pTmpBuf[count++] = pCurrentElement->currentChar;
+                pCurrentElement = pCurrentElement->pNextElem;
+            }
+            GrStringDraw(&grlibContext,
+                         pTmpBuf,
+                         pListState->numEntries,
+                         0,
+                         pScreenState->editState.currentLine,
+                         false);
+            free(pTmpBuf);
+        }
+    }
+    // Calculate the cursor location based on the index.
+    pScreenState->editState.cursorLocation =
+            (pListState->numEntries - pScreenState->editState.index) *
+            getCharWidth();
 }
 
 // Function to receive content from input mailbox and
@@ -336,7 +497,7 @@ int removeListEntry(listState_t *pListState, uint8_t index){
 // and display the result on the screen.
 // It shall also keep track of the state of the screen: edit mode or menu mode
 //
-// This task should be called every 500 ms to update the cursor.
+// This task should be called every CURSOR_PERIOD_MS ms to update the cursor.
 // However, there are several events that can trigger this task to get out of sleep:
 // 1. User input
 // 2. Timer module (to update the cursor)
@@ -344,19 +505,20 @@ void displayFxn(UArg arg0, UArg arg1){
     // Initialize the screen state:
     screenState_t screenState;
     screenState.activeScreen = EDITOR_ACTIVE; // Start in editor mode
-    screenState.editState.currentLine = 0; // Start at the top of the screen
+    screenState.editState.currentLine = CUTLINE_Y +3; // Start at the top of the screen, just below the cutline
     screenState.editState.cursorLocation = 0; // Start at cursor location 0
     screenState.editState.insert = true; // default is using the insert edit mode
     screenState.batteryLevel = 3; // HACK: set full battery indicator
-    screenState.screenFont = &g_sFontCmtt38;
+    screenState.editState.cursorWritten = false; // Start with no cursor written.
+    screenState.editState.index = 0; // Start writing at the back of the list.
+    screenState.screenFont = g_psFontCmtt38;
+
     // Initialize the screen layout
     updateScreenLayout(screenState);
     char uartInputBuf;
+
     // Loop forever.
     // This task shall never end. All waiting is done inside of the loop
-    int x, y; //DEBUG
-    x = 0; // DEBUG
-    y = CUTLINE_Y +3; //DEBUG
     while(1){
         // Pend on the wake up event. Only pend on OR mask.
         unsigned int events = Event_pend(wakeDisplayEventHandle,
@@ -367,30 +529,66 @@ void displayFxn(UArg arg0, UArg arg1){
         if(events & EVENT_USER_INPUT){
             // Read the mailbox
             Mailbox_pend(uartMailBoxHandle, &uartInputBuf, BIOS_NO_WAIT);
-            // At the character to the linked list, at the end
-            addListEntry(&listState, uartInputBuf, 0);
-            // Depending on the input, either write to the screen, change a state
-            // or invoke the interpreter for calculation.
-            char testBuf[4] = {'T','E','S','T'};
 
-            GrStringDraw(&grlibContext, &uartInputBuf, 1, x, y, true);
-            //x += screenState.screenFont->ui8MaxWidth;
-
+            // Check if in menu or edit mode:
+            if(screenState.activeScreen == EDITOR_ACTIVE){
+                // In edit state
+                // Act on the input
+                // The cursor should blink on each input, therefore remove the cursor first
+                if(screenState.editState.cursorWritten){
+                    updateCursor(&screenState);
+                }
+                if(uartInputBuf == TOGGLE_MENU_BUTTON){
+                    // Write the menu
+                    printMenuLayout(screenState);
+                    // set the screen state to menu mode
+                    screenState.activeScreen = MENU_ACTIVE;
+                    // No need to update the screen, therefore break
+                    break;
+                }
+                else if(uartInputBuf == LEFT_ARROW){
+                    // Move the cursor left
+                    if(screenState.editState.index < listState.numEntries){
+                        // Move the index, if not at the end of the input buffer.
+                        screenState.editState.index += 1;
+                    }
+                }
+                else if(uartInputBuf == RIGHT_ARROW){
+                    // Move the cursor left
+                    if(screenState.editState.index > 0){
+                        // Move the index, if not at the end of the input buffer.
+                        screenState.editState.index -= 1;
+                    }
+                }
+                else if(uartInputBuf == UP_ARROW){
+                    // TODO
+                }
+                else if(uartInputBuf == DOWN_ARROW){
+                    // TODO
+                }
+                else if(uartInputBuf == BACKSPACE){
+                    // Backspace, remove the character before the cursor.
+                    removeListEntry(&listState, screenState.editState.index);
+                }
+                else {
+                    // Write whatever else input to the screen and input buffer
+                    // At the character to the linked list, at the end
+                    addListEntry(&listState, uartInputBuf, screenState.editState.index);
+                }
+                // Update the screen.
+                // Print the entire buffer.
+                printListElements(&listState, &screenState);
+                // Print the cursor again
+                updateCursor(&screenState);
+            }
+            else {
+                // In menu state
+            }
         }
         else if(events & EVENT_TIMER_MODULE){
             // Timer module kicked in.
             // If in editor mode, toggle the cursor
-            if(screenState.activeScreen == EDITOR_ACTIVE){
-                // In the editor.
-                // Toggle the cursor
-                // TODO: Toggle the cursor
-            }
-        }
-
-
-        if(screenState.activeScreen == EDITOR_ACTIVE){
-            // In the editor.
-            // Check what the
+            updateCursor(&screenState);
         }
     }
 }

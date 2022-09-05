@@ -284,6 +284,20 @@ int main(void)
         System_abort("Mailbox create failed");
     }
 
+    // Construct the clock instance to give a CURSOR_PERIOD_MS ms timer to blink the cursor
+    // on the screen.
+    Clock_Params clkParams;
+    Clock_Params_init(&clkParams);
+    // The default clock period is in the .cfg file.
+    // The resolution is 1 µs, so to get x ms, we need to calculate:
+    // x ms = x*1000µs = x*1000 ticks. 1 period = n ticks ->
+    // number of periods = x*1000 / period.
+    clkParams.period = CURSOR_PERIOD_MS*1000/Clock_tickPeriod;
+    clkParams.startFlag = TRUE;/* start immediately */
+    cursorClkHandle = Clock_create((Clock_FuncPtr)clkFxn, 16, &clkParams, NULL);
+    if (cursorClkHandle == NULL) {
+        System_abort("Clock create failed");
+    }
 
     System_printf("Starting the example\nSystem provider is set to SysMin. "
                   "Halt the target to view any SysMin contents in ROV.\n");
