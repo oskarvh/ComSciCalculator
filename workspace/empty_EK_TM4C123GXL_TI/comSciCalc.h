@@ -28,7 +28,6 @@
 #include <ti/sysbios/knl/Event.h>
 #include <ti/sysbios/knl/Clock.h>
 
-
 // POSIX header files
 #include <pthread.h>
 #include <semaphore.h>
@@ -55,6 +54,9 @@
 // TI GRLIB
 #include <grlib/grlib.h>
 
+// Linked list:
+#include "list.h"
+
 // TI-RTOS related defines
 #define EVENT_TIMER_MODULE Event_Id_00
 #define EVENT_USER_INPUT   Event_Id_01
@@ -66,7 +68,7 @@
 
 // Screen layout defines:
 // TEXT BOXES
-#define PTR_TEXT_BOX_FONT &g_sFontCmtt22
+#define PTR_TEXT_BOX_FONT &g_sFontCmtt20
 #define TEXT_BOX_WIDTH 55
 #define TEXT_BOX_Y_START 1
 #define TEXT_BOX_HEIGHT (CUTLINE_Y-2)
@@ -74,7 +76,7 @@
 #define TEXT_BOX_2_X_START (TEXT_BOX_1_X_START + TEXT_BOX_WIDTH + 2)
 #define TEXT_BOX_3_X_START (TEXT_BOX_2_X_START + TEXT_BOX_WIDTH + 2)
 // CUTLINE
-#define CUTLINE_Y 19
+#define CUTLINE_Y 21
 // BATTERY INDICATOR
 #define BATTERY_BOX_RECT_Y_START 1
 #define BATTERY_BOX_RECT_Y_END (CUTLINE_Y - 2)
@@ -101,34 +103,12 @@
 #define UP_ARROW 'u'
 #define DOWN_ARROW 'w'
 #define BACKSPACE 127
-// Linked list for storing the input.
-// We want a doubly linked list, so that characters can be inserted in between
-// other characters.
-typedef struct listElement{
-    // Pointer to next element. If NULL then no next element is defined.
-    void *pNextElem;
-    // Pointer to previous element. NULL if this is the first element.
-    void *pPrevElem;
-    // Char currently in this entry of the list
-    char currentChar;
-}listElement_t;
+#define TOGGLE_INSERT 'i'
 
-// structure that works to keep track of the state of the list
-typedef struct listState {
-    listElement_t *pListEntry;
-    listElement_t *pListEnd;
-    uint8_t numEntries;
-}listState_t;
-
-// Different statuses that the linked list helper functions can return
-enum listStatus {
-    ALLOCATION_FAILED = -1, // new list element allocation failed
-    LIST_END_ERROR = -2, // There is an error at the end of the list, e.g NULL pointer
-    ENTRY_DONE = 0, // New list element entered at the chosen index
-    REMOVE_DONE = 0, // Element removed successfully.
-    INDEX_TOO_LARGE, // The index input was too large.
-    LIST_EMPTY // Trying to remove from an empty list
-};
+// When parentheses are used, the goal is to render them in different colors
+// to help the user see clearly.
+#define NUM_DEPTH_COLORS 5
+extern const uint32_t depthColor[NUM_DEPTH_COLORS];
 
 typedef enum activeScreen {
     EDITOR_ACTIVE = 0,

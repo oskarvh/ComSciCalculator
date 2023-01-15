@@ -15,7 +15,13 @@
 #include <comSciCalc.h>
 #include <driverlib/uart.h>
 // Global variables:
-
+const uint32_t depthColor[NUM_DEPTH_COLORS] = {
+   ClrWhite,
+   ClrAquamarine,
+   ClrMediumSeaGreen,
+   ClrYellow,
+   ClrHotPink
+};
 
 
 // Function to set the TFT display backlight
@@ -110,14 +116,23 @@ void uartFxn(UArg arg0, UArg arg1)
     }
 }
 
+// Padding function to get length of one character.
+// The normal GrFontMaxWidthGet doesn't really do the trick.
+uint32_t getCharWidth(void){
+    char tmp = 'A';
+    return GrStringWidthGet(&grlibContext, &tmp, 1);
+}
+
+// Padding function to get the height of one character.
+uint32_t getCharHeight(void){
+    return GrFontHeightGet(grlibContext.psFont);
+}
+
 // Function to set the screen layout, which
 // writes the top rows of the screen with functions such
 // as settings and battery information
 // The sizes of the widgets are set by preprocessor defines
 void updateScreenLayout(screenState_t screenState){
-
-    // Draw the cutline, top of screen.
-    LineDrawH(display.pvDisplayData, 0, HX8357_TFTWIDTH, CUTLINE_Y, HX8357_WHITE);
 
     // Draw the battery indicator:
     tRectangle rect;
@@ -166,11 +181,32 @@ void updateScreenLayout(screenState_t screenState){
     // Write the text(s). Tests for now. This will be replaced by actual statuses.
     const char testBuf[4] = {'T', 'S', 'T', '1'};
     GrContextFontSet(&grlibContext, PTR_TEXT_BOX_FONT);
-    GrStringDraw(&grlibContext, testBuf, 4, TEXT_BOX_1_X_START, TEXT_BOX_Y_START, false);
+
+    // Write the first text box:
+    // Clear the box before overwriting it.
+    rect.i16XMin = TEXT_BOX_1_X_START;
+    rect.i16XMax = TEXT_BOX_1_X_START + 4*getCharWidth();
+    // The height is determined by the font.
+    rect.i16YMin = TEXT_BOX_Y_START;
+    rect.i16YMax = TEXT_BOX_Y_START + getCharHeight();
+    if(screenState.editState.insert){
+        RectFill(display.pvDisplayData, &rect, ClrBlack);
+        const char insertBuf[4] = {'I','N','S',' '};
+        GrStringDraw(&grlibContext, insertBuf, 4, TEXT_BOX_1_X_START, TEXT_BOX_Y_START, true);
+    }
+    else {
+        RectFill(display.pvDisplayData, &rect, ClrBlack);
+        const char insertBuf[4] = {'O','V','R','W'};
+        GrStringDraw(&grlibContext, insertBuf, 4, TEXT_BOX_1_X_START, TEXT_BOX_Y_START, true);
+    }
+    //GrStringDraw(&grlibContext, testBuf, 4, TEXT_BOX_1_X_START, TEXT_BOX_Y_START, false);
     GrStringDraw(&grlibContext, testBuf, 4, TEXT_BOX_2_X_START, TEXT_BOX_Y_START, false);
     GrStringDraw(&grlibContext, testBuf, 4, TEXT_BOX_3_X_START, TEXT_BOX_Y_START, false);
     // Restore the screen font to default:
     GrContextFontSet(&grlibContext, screenState.screenFont);
+
+    // Draw the cutline, top of screen.
+    LineDrawH(display.pvDisplayData, 0, HX8357_TFTWIDTH, CUTLINE_Y, HX8357_WHITE);
 
 }
 
@@ -179,229 +215,24 @@ void printMenuLayout(screenState_t screenState){
 
 }
 
-// Function to add an entry to the linked list.
-// takes in a pointer to the list state,
-// the character that should be entered in the list,
-// and the index FROM THE LAST ENTRY(!).
-// For example, if index = 0, then the entry will be placed at the last
-// spot on the list. If index = 1, then the new entry will be placed between
-// the last and second to last element.
-// If index is larger than the list is long, then the entry will be allocated
-// as the first entry of the list.
-int addListEntry(listState_t *pListState, char entry, uint8_t index){
-    // Get the pointer to the list entry
-    listElement_t *pListEntry = pListState->pListEntry;
-
-    // Check if the list is un-initialized
-    if(pListEntry == NULL){
-        // Allocate the first list entry.
-        pListEntry = (listElement_t*)malloc(sizeof(listElement_t));
-        if(pListEntry == NULL){
-            // Allocation failed, return with failure warning
-            return ALLOCATION_FAILED;
-        }
-        // Enter the character
-        pListEntry->currentChar = entry;
-
-        // Since this is the only entry to the list so far, set all pointers to NULL
-        pListEntry->pNextElem = NULL;
-        pListEntry->pPrevElem = NULL;
-
-        // Set the state variables. The end and start list entries are the same.
-        pListState->pListEntry = pListEntry;
-        pListState->pListEnd = pListEntry;
-        pListState->numEntries += 1;
-
-        // Check if the index was anything else than 0
-        if(index > 0){
-            return INDEX_TOO_LARGE;
-        }
-        else{
-            return ENTRY_DONE;
-        }
-    }
-    else{
-        // A list already exists.
-        // Therefore, get the tail end of the list
-        listElement_t *pListEnd = pListState->pListEnd;
-
-        // Do a NULL check, and if true there is an error
-        if(pListEnd == NULL){
-            return LIST_END_ERROR;
-        }
-
-        // Iterate through the list index amount of times to find
-        // the entry into which this character shall be placed,
-        // starting at the end of the list.
-        listElement_t *pCurrentElement = pListEnd;
-        int i;
-        for(i = 0 ; i < index ; i++){
-            // Set the current entry to the previous entry
-            pCurrentElement = pCurrentElement->pPrevElem;
-            if(pCurrentElement == NULL){
-                break;
-            }
-        }
-
-        // Then, insert the new element here.
-        // Start by allocating a new element
-        listElement_t *pNewElement = (listElement_t*)malloc(sizeof(listElement_t));
-        if(pNewElement == NULL){
-            // Allocation failed, return with failure warning
-            return ALLOCATION_FAILED;
-        }
-        // Populate the new elements parameters:
-        // Enter the character
-        pNewElement->currentChar = entry;
-        // Squeeze the new element into the list
-        if(pCurrentElement == NULL){
-            // If the current entry is NULL, that means that
-            // we're at the beginning of the list.
-            // Therefore, replace the list entry with this entry:
-
-            // Set the next element of the new element to the list entry
-            pNewElement->pNextElem = pListState->pListEntry;
-
-            // Set the previous element to NULL to indicate that this
-            // is the first entry
-            pNewElement->pPrevElem = NULL;
-
-            // Set the list entries previous entry to the new element
-            pListState->pListEntry->pPrevElem = pNewElement;
-
-            // Overwrite the first entry in the list state
-            pListState->pListEntry = pNewElement;
-
-            // Increase the number of entries:
-            pListState->numEntries += 1;
-            if(i == index){
-                return ENTRY_DONE;
-            }
-            else{
-                return INDEX_TOO_LARGE;
-            }
-        }
-        else {
-            // The current entry is not NULL, which means that we're somewhere else in the list.
-            // Insert an element in the list OR insert an element at the end of the list.
-            // If it's the end of the list, then update the state.
-            // Ensure that the list isn't broken when inserting.
-
-            // The current element points to what will be the new element previous element,
-            // therefore set the previous element of the new element to the current element
-            // (I know, it's confusing..)
-            pNewElement->pPrevElem = pCurrentElement;
-            // Get the next element in the list, pointed to by the current entry, and
-            // set that as the new element next element:
-            pNewElement->pNextElem = pCurrentElement->pNextElem;
-            // Set the next elements previous element to the new element.
-            // If this was the last entry, then set the previous element to the entry,
-            // and change the last entry of the state.
-            if(pNewElement->pNextElem != NULL){
-                ((listElement_t*)(pNewElement->pNextElem))->pPrevElem = pNewElement;
-            }
-            else{
-                pListState->pListEnd = pNewElement;
-            }
-
-            // And finally, set the current elements next pointer to this new one:
-            pCurrentElement->pNextElem = pNewElement;
-            // Increase the number of entries:
-            pListState->numEntries += 1;
-        }
-        return ENTRY_DONE;
-
-    }
-}
-
-// Function to remove a list entry
-int removeListEntry(listState_t *pListState, uint8_t index){
-    // Get the pointer to the list entry
-    listElement_t *pListEntry = pListState->pListEntry;
-
-    // Check if the list is un-initialized
-    if(pListEntry == NULL){
-        // If no entries, then nothing to remove.
-        return LIST_EMPTY;
-    }
-    else{
-        // There is an entry, find the pointer to that entry
-        // by looping through the list at the index.
-        // Get the tail end of the list
-        listElement_t *pListEnd = pListState->pListEnd;
-
-        // Do a NULL check, and if true there is an error
-        if(pListEnd == NULL){
-            return LIST_END_ERROR;
-        }
-
-        // Iterate through the list index amount of times to find
-        // the entry into which this character shall be placed,
-        // starting at the end of the list.
-        listElement_t *pCurrentElement = pListEnd;
-        int i;
-        for(i = 0 ; i < index ; i++){
-            // Set the current entry to the previous entry
-            pCurrentElement = pCurrentElement->pPrevElem;
-            if(pCurrentElement == NULL){
-                break;
-            }
-        }
-
-        if(pCurrentElement == NULL){
-            // Points to the start of the buffer, in which case there is nothing to remove.
-            return INDEX_TOO_LARGE;
-        }
-
-        // pCurrentElement points to the element that should be removed.
-        // But before that entry can be removed, check the previous and next entries,
-        // and tie them together.
-        if(pCurrentElement->pPrevElem != NULL){
-            // Not the first entry, therefore change the previous elements next pointer
-            // to the current entries next pointer.
-            ((listElement_t*)(pCurrentElement->pPrevElem))->pNextElem = pCurrentElement->pNextElem;
-        }
-        else{
-            // Removing the first entry, modify the listState.
-            pListState->pListEntry = pCurrentElement->pNextElem;
-            // Set the previous element to NULL for the first element in the list.
-            pListState->pListEntry->pPrevElem = NULL;
-        }
-        if(pCurrentElement->pNextElem != NULL){
-            // Not the last entry, change the next elements previous element.
-            ((listElement_t*)(pCurrentElement->pNextElem))->pPrevElem = pCurrentElement->pPrevElem;
-        }
-        else{
-            // This is the last entry, change the listState and the second to last entry.
-            pListState->pListEnd = pCurrentElement->pPrevElem;
-            // Change the new list end elements next entry to NULL
-            pListState->pListEnd->pNextElem = NULL;
-        }
-        // Free the entry and return.
-        free(pCurrentElement);
-        pListState->numEntries -= 1;
-        return REMOVE_DONE;
-    }
-}
-
 // Function to update/toggle the cursor
-void updateCursor(screenState_t *screenState){
-    if(screenState->activeScreen == EDITOR_ACTIVE){
-        if(screenState->editState.insert){
+void updateCursor(screenState_t *pScreenState, listState_t * pListState){
+    if(pScreenState->activeScreen == EDITOR_ACTIVE){
+        if(pScreenState->editState.insert){
             // "Normal" edit mode, insert a new character at the location
             // This is a normal blinking vertical line.
             // Use the rectangle draw function in case we want to change the
             // width at some point in the future
             tRectangle rect;
             // The x-location is determined by the cursor location variable.
-            rect.i16XMin = screenState->editState.cursorLocation;
-            rect.i16XMax = screenState->editState.cursorLocation+1;
+            rect.i16XMin = pScreenState->editState.cursorLocation;
+            rect.i16XMax = pScreenState->editState.cursorLocation+1;
             // The height is determined by the font.
             // Remember: (0,0) is the top left of the screen
-            rect.i16YMin = screenState->editState.currentLine;
-            rect.i16YMax = rect.i16YMin + screenState->screenFont->ui8Height - 1;
+            rect.i16YMin = pScreenState->editState.currentLine;
+            rect.i16YMax = rect.i16YMin + getCharHeight() - 1;
             uint32_t color;
-            if(screenState->editState.cursorWritten){
+            if(pScreenState->editState.cursorWritten){
                 color = ClrBlack;
             }
             else{
@@ -410,50 +241,97 @@ void updateCursor(screenState_t *screenState){
             // Write the cursor
             RectFill(display.pvDisplayData, &rect, color);
             // Toggle the internal state
-            screenState->editState.cursorWritten = !screenState->editState.cursorWritten;
+            pScreenState->editState.cursorWritten = !pScreenState->editState.cursorWritten;
         }
         else {
             // Toggle the inversion of the colors of the current
             // character to indicate that the current character will
             // be overwritten.
+            // If index is zero, and/or if the list is empty, then simply
+            // toggle a rectangle at the end.
+            uint32_t color;
+            if(pScreenState->editState.cursorWritten){
+                color = ClrBlack;
+            }
+            else{
+                color = ClrWhite;
+            }
+            // Toggle an empty rectangle:
+            tRectangle rect;
+            // The x-location is determined by the cursor location variable.
+            rect.i16XMin = pScreenState->editState.cursorLocation;
+            rect.i16XMax = pScreenState->editState.cursorLocation + getCharWidth();
+            // The height is determined by the font.
+            // Remember: (0,0) is the top left of the screen
+            rect.i16YMin = pScreenState->editState.currentLine;
+            rect.i16YMax = rect.i16YMin + getCharHeight() - 1;
+            // Write the rectangle:
+            RectFill(display.pvDisplayData, &rect, color);
+            // Now that the character has been cleared, toggle the character.
+            if(pScreenState->editState.index > 0){
+                // Toggle the next character (at the index -1)
+                if(pScreenState->editState.cursorWritten){
+                    // Cursor was written last time, i.e. we should set it back
+                    // This means that the background and foreground should be reset
+                    GrContextForegroundSet(&grlibContext, ClrWhite); // white foreground
+                    GrContextBackgroundSet(&grlibContext, ClrBlack); // black background
+                }
+                else{
+                    GrContextForegroundSet(&grlibContext, ClrBlack); // black foreground
+                    GrContextBackgroundSet(&grlibContext, ClrWhite); // white background
+                }
+                // Write the character at index -1:
+                char toggleChar = 0;
+                getCharFromList(&listState, &toggleChar, pScreenState->editState.index-1);
+                GrStringDraw(&grlibContext,
+                             &toggleChar,
+                             1,
+                             pScreenState->editState.cursorLocation,
+                             pScreenState->editState.currentLine,
+                             true);
+
+            }
+            // Toggle the internal state
+            pScreenState->editState.cursorWritten = !pScreenState->editState.cursorWritten;
         }
     }
-}
-
-// Padding function to get length of one character.
-// The normal GrFontMaxWidthGet doesn't really do the trick.
-uint32_t getCharWidth(void){
-    char tmp = 'A';
-    return GrStringWidthGet(&grlibContext, &tmp, 1);
-}
-
-// Function to just print the elements needed.
-// Generally, everthing
-void partialPrintListElements(listState_t *pListState, screenState_t *pScreenState){
-
 }
 
 // Function to update the screen and print the entire list.
 // This should be called every time a button has been pressed, except the menu button.
 // NOTE: if the printing is longer than the screen, some scrolling is needed.
 // If it's too long, then the cursor should decide what part is printed.
+// TODO: handle functions with inputs longer than 1 character width.
 void printListElements(listState_t *pListState, screenState_t *pScreenState, bool bUpdateScreen){
 
     if(bUpdateScreen){
         // Clear the screen segment before writing the text to it.
         tRectangle rect;
-        // Start at the current index, as nothing will change before that.
+        // Start at the current index, as nothing will change before that
+        // (unless insert == false)
         // We have the number of characters on the screen last time, which gives us the
         // maximum width we need to clear:
         rect.i16XMax = getCharWidth()*(pScreenState->editState.numCharsOnScreen);
         // As to how far we need to clear, that depends on the number of entries in the
         // list, and what the index is.
+        // If there are more entries in the list than are shown on the screen,
+        // then get the minimum from the number of character on screen.
         if(pListState->numEntries > pScreenState->editState.numCharsOnScreen){
             rect.i16XMin = getCharWidth()*(pScreenState->editState.numCharsOnScreen
                                            - pScreenState->editState.index);
         }
         else{
+            // If the same amount of entries, then get the minimum from the number of entries and index
             rect.i16XMin = getCharWidth()*(pListState->numEntries - pScreenState->editState.index);
+        }
+        // If index is not zero, and insert is false, that means that we need to
+        // render the character that was just overwritten as well.
+        if((!pScreenState->editState.insert)){
+            rect.i16XMin -= getCharWidth();
+            // Do a zero check as well.
+            if(rect.i16XMin < 0){
+                rect.i16XMin = 0;
+            }
         }
         // If the number of characters extend beyond the screen, we need to scroll.
         // Therefore, we need to blackout everything
@@ -475,7 +353,7 @@ void printListElements(listState_t *pListState, screenState_t *pScreenState, boo
         // If the entry is NULL, then nothing to print.
         if(pListEntry != NULL){
             // Allocate a char buffer for the elements in the list
-            char* pTmpBuf = malloc(pListState->numEntries);
+            char* pTmpBuf = (char*)malloc(pListState->numEntries);
 
             // Entry is not zero, loop through the list and print everything.
             listElement_t *pCurrentElement = pListEntry;
@@ -488,7 +366,7 @@ void printListElements(listState_t *pListState, screenState_t *pScreenState, boo
                 RectFill(display.pvDisplayData, &rect, ClrBlack);
                 while(pCurrentElement != NULL){
                     GrStringDraw(&grlibContext,
-                                 &(pCurrentElement->currentChar),
+                                 &(pCurrentElement->currentEntry.currentChar),
                                  1,
                                  cursorLocation,
                                  pScreenState->editState.currentLine,
@@ -503,7 +381,7 @@ void printListElements(listState_t *pListState, screenState_t *pScreenState, boo
                 // Time gained from this is unknown.
                 int count = 0;
                 while(pCurrentElement != NULL){
-                    pTmpBuf[count++] = pCurrentElement->currentChar;
+                    pTmpBuf[count++] = pCurrentElement->currentEntry.currentChar;
                     pCurrentElement = pCurrentElement->pNextElem;
                 }
                 // Blackout the screen before writing data
@@ -581,7 +459,7 @@ void displayFxn(UArg arg0, UArg arg1){
                 // Act on the input
                 // The cursor should blink on each input, therefore remove the cursor first
                 if(screenState.editState.cursorWritten){
-                    updateCursor(&screenState);
+                    updateCursor(&screenState, &listState);
                 }
 
                 if(uartInputBuf == TOGGLE_MENU_BUTTON){
@@ -607,10 +485,13 @@ void displayFxn(UArg arg0, UArg arg1){
                     }
                 }
                 else if(uartInputBuf == UP_ARROW){
-                    // TODO
+                    // TODO: Fetch the last calculation from memory.
+                    // If enter/= is pressed after this, copy it to the
+                    // current buffer.
                 }
                 else if(uartInputBuf == DOWN_ARROW){
-                    // TODO
+                    // TODO: Navigate the previous calculations, fetching them
+                    // from non-volatile memory.
                 }
                 else if(uartInputBuf == BACKSPACE){
                     // Backspace, remove the character before the cursor.
@@ -618,10 +499,27 @@ void displayFxn(UArg arg0, UArg arg1){
                     // This should update the screen:
                     bUpdateScreen = true;
                 }
+                else if(uartInputBuf == TOGGLE_INSERT){
+                    // Toggle the insert:
+                    screenState.editState.insert = !screenState.editState.insert;
+                    // Update the screen layout to reflect it.
+                    updateScreenLayout(screenState);
+                }
                 else {
                     // Write whatever else input to the screen and input buffer
-                    // At the character to the linked list, at the end
-                    addListEntry(&listState, uartInputBuf, screenState.editState.index);
+                    // At the character to the linked list.
+                    // Check if inserting or overwriting, and act accordingly.
+                    if(screenState.editState.insert){
+                        addListEntry(&listState, uartInputBuf, screenState.editState.index);
+                    } else {
+                        overwriteListEntry(&listState, uartInputBuf, screenState.editState.index);
+                        // For the overwrite to make sense, we also want to move the cursor/index
+                        // to the right
+                        if(screenState.editState.index > 0){
+                            // Move the index, if not at the end of the input buffer.
+                            screenState.editState.index -= 1;
+                        }
+                    }
                     // This should update the screen:
                     bUpdateScreen = true;
                 }
@@ -630,7 +528,7 @@ void displayFxn(UArg arg0, UArg arg1){
                 printListElements(&listState, &screenState, bUpdateScreen);
 
                 // Print the cursor again
-                updateCursor(&screenState);
+                updateCursor(&screenState, &listState);
             }
             else {
                 // In menu state
@@ -639,7 +537,7 @@ void displayFxn(UArg arg0, UArg arg1){
         else if(events & EVENT_TIMER_MODULE){
             // Timer module kicked in.
             // If in editor mode, toggle the cursor
-            updateCursor(&screenState);
+            updateCursor(&screenState, &listState);
         }
     }
 }

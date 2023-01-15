@@ -215,7 +215,7 @@ void initFxn(UArg arg0, UArg arg1){
     mainTaskParams.stackSize = MAINTASKSTACKSIZE;
 
     mainTaskParams.priority = 2;
-    mainTaskHandle = Task_create((Task_FuncPtr)displayFxn/*taskFxn*/, &mainTaskParams, NULL);
+    mainTaskHandle = Task_create((Task_FuncPtr)displayFxn, &mainTaskParams, NULL);
     if(mainTaskHandle == NULL){
         System_abort("Main task could not be created");
     }
@@ -241,17 +241,15 @@ int main(void)
     Task_Params initTaskParams;
     Mailbox_Params mailboxParams;
     Event_Params eventParams;
-    /* Call board init functions */
+    // Call board init functions
     Board_initGeneral();
     Board_initGPIO();
     // Drive the reset pin low to reset
     GPIO_write(GPIO_SCREEN_RESET, 0);
 
-
     // Board_initI2C();
     // Board_initSDSPI();
     Board_initSPI();
-
 
     Board_initUART();
     // Board_initUSB(Board_USBDEVICE);
