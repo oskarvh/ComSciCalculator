@@ -1,4 +1,5 @@
 # Written by Oskar von Heideken
+# Copyright, 2023
 # The aim of this script is to get an overview of how the computer scientists calculator 
 # would work, in the GUI parts but also to check what functions would be nice. 
 # It uses Tkinter as the GUI interface. 
@@ -9,6 +10,61 @@ from tkinter import *
 import tkinter as tk #HACK! 
 #from tkinter.ttk import *
 import logging
+from enum import Enum
+
+
+
+# Class to handle input. 
+# For each character that is entered, this would be populated. 
+# If the input character is a non-numerical, then that triggers 
+# the operator to be set and a new InputBuffer object is made. 
+# Upon making a new InputBuffer object, the pNext of this is set to
+# the new object, and pPrevious of the new one is set to this one. 
+class InputBuffer(object):
+    # Pointer to previous entry. None if no entry. 
+    pPrevious = None
+    # Pointer to the next entry
+    pNext = None
+    # Get the format of the input
+    inputFormat = None
+    # The actual input string, in all different formats
+    inputString = {}
+    # Boolean to state if this has been solved or not.
+    solved = False
+    # Result of this part given that it can be solved
+    # This stores a result for each type
+    result = {}
+    # Operator to right hand side
+    operator = None
+    # How deep is this, i.e. how manu brackets is this in
+    # 0 is no brackets
+    depth = 0
+
+    # Initialize function to create a new object
+    def __init__(self, pPrevious, inputFormat, depth):
+        self.pPrevious = pPrevious
+        self.pNext = None
+        self.inputFormat = inputFormat
+        self.inputString = {
+            "Decimal": "", 
+            "Hex": "", 
+            "Bin": "", 
+            "Float": "", 
+        }
+        self.operator = None
+        self.depth = depth
+        self.solved = False
+        self.result = {
+            "Decimal": "", 
+            "Hex": "", 
+            "Bin": "", 
+            "Float": "", 
+        }
+
+# Function to parse string into different formats
+def parseStringToFormat(inputString, inputFormat, outputFormat):
+    res = ""
+    return res
 
 # Class for handling logging with colors and proper formatting. 
 # Borrowed from https://stackoverflow.com/questions/14097061/easier-way-to-enable-verbose-logging
@@ -25,7 +81,6 @@ class CustomFormatter(logging.Formatter):
         logging.INFO: grey + format + reset,
         logging.WARNING: yellow + format + reset,
         logging.ERROR: red + format + reset,
-        logging.CRITICAL: bold_red + format + reset
     }
 
     def format(self, record):
@@ -55,6 +110,30 @@ class subresult:
     # 
 
 
+def inputValid(inputEvent, formatting):
+    # Aims to check if input is valid:
+    if inputEvent.keysym in ("BackSpace", "Delete", "Up", "Down", "Left", "Right"):
+        # This type of input is always valid
+        return True
+
+    if inputEvent.char in ("(", ")", "&", "^", "|", "~", "*", "+", "-", "i"):
+        # This type of input is always valid
+        return True
+
+    if inputEvent.keysym in ("0", "1") and formatting is "Binary":
+        return True
+
+    if inputEvent.keysym in ("0", "1", "2", "3", "4", "5", "6", "7", "8", "9") and formatting is "Decimal":
+        return True
+
+    if inputEvent.keysym.lower() in ("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f") and formatting is "Hex":
+        return True
+
+    if inputEvent.keysym.lower() in ("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "e") and formatting is "float":
+        return True
+
+    return False
+
 # Class to customize the text output. 
 class CustomText:
     colorWheel = ["white", "deep sky blue", "cyan", "green", "yellow", "pink", "purple3"]
@@ -72,6 +151,9 @@ class CustomText:
     floatOutputWidget = None
     binOutputWidget = None
     calcResult = subresult
+    inputBuffer = None
+    cursorPosition = 0
+
 
     def __init__(self, inputWidget, inputWidgetName, hexOutputWidget, decOutputWidget, floatOutputWidget, binOutputWidget):
         self.inputMode = "Decimal"
@@ -82,13 +164,154 @@ class CustomText:
         self.decOutputWidget = decOutputWidget
         self.floatOutputWidget = floatOutputWidget
         self.binOutputWidget = binOutputWidget
+        self.inputBuffer = InputBuffer(None, self.inputMode, 0)
+        self.cursorPosition = 0
 
-    # This function gets the text from the input and places it in the queue
+    # Function to populate the InputBuffer objects
+    def HandleInput(self, inputEvent, inputMode):
+        # Find the inputbuffer currently active:
+        currentBuf = self.inputBuffer
+        while currentBuf.pNext is not None:
+            logger.debug("Move on to next buffer")
+            currentBuf = currentBuf.pNext
+        # TODO: Correct buffer depending on the cursor position
+
+        # Check if input is valid
+        if inputValid(inputEvent, inputMode):
+            # Input is valid, handle it, otherwise ignore it
+            # TODO: would be nice if input format is flashing. 
+            # Aims to check if input is valid:
+            if inputEvent.keysym in ("BackSpace", "Delete"):
+                # Delete the character that is at the current cursor. 
+                logger.debug("Delete char.")
+                # TODO: Remove the char at the current cursor. 
+
+            elif inputEvent.keysym is "Right":
+                if cursorPosition > 0:
+                    cursorPosition -= 1
+                else:
+                    cursorPosition = 0
+
+            elif inputEvent.keysym is "Left":
+                cursorPosition += 1
+
+            elif inputEvent.keysym in ("Up", "Down"):
+                logger.debug("Up/Down.")
+                # TODO: Not exactly sure how to handle this yet. 
+            elif inputEvent.char is "(":
+                # Opening bracket, this creates a new object since the 
+                # depth is different than the previous one. 
+                currentBuf.inputFormat = inputMode
+                # Create a new object and assign it to the next in buffer.
+                # Note: this can create empty buffer objects, with the only change being the depth
+                currentBuf.pNext = InputBuffer(currentBuf, inputMode, currentBuf.depth + 1)
+            elif inputEvent.char is ")":
+                # Closing bracket creates a new buffer. 
+                if currentBuf.depth > 0:
+                    currentBuf.inputFormat = inputMode
+                    # Create a new object and assign it to the next in buffer.
+                    # Note: this can create empty buffer objects, with the only change being the depth
+                    currentBuf.pNext = InputBuffer(currentBuf, inputMode, currentBuf.depth - 1)
+            elif inputEvent.char in ("&", "^", "|", "~", "*", "+", "-"):
+                # This type of input is always valid
+                # TODO: Handle NOT, as it's generally a single input operator
+                logger.debug("Make a new object and link it")
+                currentBuf.operator = inputEvent.char
+                currentBuf.inputFormat = inputMode
+                # Create a new object and assign it to the next in buffer.
+                currentBuf.pNext = InputBuffer(currentBuf, inputMode, currentBuf.depth)
+
+            elif inputEvent.char is "i":
+                # Toggle the input format
+                logger.debug("Change input state")
+                if self.inputMode == "Decimal":
+                    self.inputMode = "Hex"
+                elif self.inputMode == "Hex":
+                    self.inputMode = "Bin"
+                elif self.inputMode == "Bin":
+                    self.inputMode = "Float"
+                elif self.inputMode == "Float":
+                    self.inputMode = "Decimal"
+                self.statusWidget.config(state=tk.NORMAL)
+                # For some reason this changes the color on the text?
+                self.statusWidget.config(text="Input mode: " + self.inputMode)
+                self.statusWidget.config(state=tk.DISABLED)
+
+            else:
+                # Add the inputbuffer to the corresponding buffer and 
+                # format all other buffers
+                inputChar = inputEvent.char
+                logger.debug("Input: " + inputChar)
+                if inputMode == "Decimal":
+                    currentBuf.inputString["Decimal"] += inputChar
+                    currentBuf.inputString["Hex"]     = parseStringToFormat(currentBuf.inputString["Decimal"], "Decimal", "Hex")
+                    currentBuf.inputString["Bin"]     = parseStringToFormat(currentBuf.inputString["Decimal"], "Decimal", "Bin")
+                    currentBuf.inputString["Float"]   = parseStringToFormat(currentBuf.inputString["Decimal"], "Decimal", "Float")
+
+                if inputMode == "Hex":
+                    currentBuf.inputString["Hex"]     += inputChar
+                    currentBuf.inputString["Decimal"] = parseStringToFormat(currentBuf.inputString["Hex"], "Hex", "Decimal")
+                    currentBuf.inputString["Bin"]     = parseStringToFormat(currentBuf.inputString["Hex"], "Hex", "Bin")
+                    currentBuf.inputString["Float"]   = parseStringToFormat(currentBuf.inputString["Hex"], "Hex", "Float")
+
+                if inputMode == "Bin":
+                    currentBuf.inputString["Bin"]     += inputChar
+                    currentBuf.inputString["Decimal"] = parseStringToFormat(currentBuf.inputString["Bin"], "Bin", "Decimal")
+                    currentBuf.inputString["Hex"]     = parseStringToFormat(currentBuf.inputString["Bin"], "Bin", "Hex")
+                    currentBuf.inputString["Float"]   = parseStringToFormat(currentBuf.inputString["Bin"], "Bin", "Float")
+
+                if inputMode == "Float":
+                    currentBuf.inputString["Float"]   += inputChar
+                    currentBuf.inputString["Decimal"] = parseStringToFormat(currentBuf.inputString["Float"], "Float", "Decimal")
+                    currentBuf.inputString["Hex"]     = parseStringToFormat(currentBuf.inputString["Float"], "Float", "Hex")
+                    currentBuf.inputString["Bin"]     = parseStringToFormat(currentBuf.inputString["Float"], "Float", "Bin")
+        
+    # Function to parse the InputBuffer class to a normal string                
+    def ParseInputClassToString(self):
+        # Loop through the inputbuffer and record each string
+        currentBuf = self.inputBuffer
+        self.inputString = ""
+        logger.debug("-------------------------------------------------------")
+        while currentBuf is not None:
+            # Extract the output buffer based on the type of input this is:
+            logger.debug(currentBuf.inputFormat)
+            logger.debug(currentBuf.inputString[currentBuf.inputFormat])
+            # 
+
+
+            self.inputString += currentBuf.inputString[currentBuf.inputFormat]
+            logger.debug("Parsed string: " + self.inputString)
+
+            # If the next buffer has a depth that is shallower than the current, 
+            # a closing bracket is needed
+            if currentBuf.pNext is not None:
+                if currentBuf.depth > currentBuf.pNext.depth:
+                    self.inputString += ")"
+
+            if currentBuf.operator is not None:
+                logger.debug("Add operator to string")
+                self.inputString += currentBuf.operator
+
+            # At the end of the string, if the next buffer has a deeper depth 
+            # than the current, insert an opening bracket
+            if currentBuf.pNext is not None:
+                if currentBuf.depth < currentBuf.pNext.depth:
+                    self.inputString += "("
+            #else:
+            #    for d in range(0, currentBuf.depth):
+            #        self.inputString += ")"
+            currentBuf = currentBuf.pNext
+        logger.debug("-------------------------------------------------------")
+
     def inputText(self, event):
 
         #logger.debug(event.keysym)
-        inputChar = event.char
+        
+        self.HandleInput(event, self.inputMode)
+        self.ParseInputClassToString()
         # Filter the characters and do different string manipulations where needed. 
+        """
+        inputChar = event.char
         if event.keysym in ("BackSpace", "Delete"):
             # Handle deletion. 
             logger.debug("Delete char.")
@@ -109,7 +332,7 @@ class CustomText:
         if event.char in ("(", ")", "&", "^", "|", "~", "*", "+", "-"):
             # Add that to the string. 
             self.inputString += inputChar
-
+        """
         #logger.debug("Input string: " + self.inputString)
         # Update the display once it's done. 
         self.displayText()
@@ -227,7 +450,7 @@ class CustomText:
         # We need to loop through the string
         lenOfInputString = len(self.inputString)
         for inputStringIndex in range(0, lenOfInputString):
-            currentChar = self.inputString(inputStringIndex)
+            currentChar = self.inputString[inputStringIndex]
             # Get the current character
             if self.inputMode is "Decimal":
                 if currentChar in range(0,9):
@@ -273,7 +496,6 @@ logger.debug("debug message") # Displayed for debug flag
 logger.info("info message") # Displayed for debug and verbose flag
 logger.warning("warning message") # Always displayed
 logger.error("error message") # Always displayed
-logger.critical("critical message") # Always displayed
 
 # GUI
 root = Tk()
