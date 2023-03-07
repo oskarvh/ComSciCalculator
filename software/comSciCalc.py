@@ -66,6 +66,12 @@ def parseStringToFormat(inputString, inputFormat, outputFormat):
     res = ""
     return res
 
+class Brackets:
+    def __init__(self, start, end, color):
+        self.start = start
+        self.end = end
+        self.color = color
+
 # Class for handling logging with colors and proper formatting. 
 # Borrowed from https://stackoverflow.com/questions/14097061/easier-way-to-enable-verbose-logging
 class CustomFormatter(logging.Formatter):
@@ -116,7 +122,7 @@ def inputValid(inputEvent, formatting):
         # This type of input is always valid
         return True
 
-    if inputEvent.char in ("(", ")", "&", "^", "|", "~", "*", "+", "-", "i"):
+    if inputEvent.char in ("(", ")", "&", "^", "|", "~", "*", "+", "-", "i", "s", "f"):
         # This type of input is always valid
         return True
 
@@ -153,19 +159,33 @@ class CustomText:
     calcResult = subresult
     inputBuffer = None
     cursorPosition = 0
+    signed = False
+    floatActive = False
 
 
-    def __init__(self, inputWidget, inputWidgetName, hexOutputWidget, decOutputWidget, floatOutputWidget, binOutputWidget):
+
+    def __init__(self, inputWidget, inputWidgetName, hexOutputWidget, decOutputWidget, binOutputWidget):
         self.inputMode = "Decimal"
         self.inputTextWidget = inputWidget
         self.statusWidget = inputWidgetName
-        self.statusWidget.config(text="Input mode: "+self.inputMode)
+        self.signed = False
+        self.floatActive = False
+        # Need the following settings: input base (hex, dec, bin), signed (unsigned, signed), float (on/off). 
+        # Output modes are: signed/unsigned, float(on/off). bin hex and dec outputs are shown at all times and calculated 
+        # dynamically. 
+        # How to edit floats is however quite tricky, as it would require a way to edit sign, exponent and fraction. 
+        # IEEE 754 defines this as:
+        # [sign][exponent][fraction]. Should be possible to have an edit mode for this.
+        self.displayInputMode()
         self.hexOutputWidget = hexOutputWidget
         self.decOutputWidget = decOutputWidget
-        self.floatOutputWidget = floatOutputWidget
+        #self.floatOutputWidget = floatOutputWidget
         self.binOutputWidget = binOutputWidget
         self.inputBuffer = InputBuffer(None, self.inputMode, 0)
         self.cursorPosition = 0
+
+    def displayInputMode(self):
+        self.statusWidget.config(text="[i]Input mode: "+ self.inputMode + ". [s]" + ("Signed" if self.signed else "Unsigned") + ". [f]Float: " + ("On" if self.floatActive else "Off"))
 
     # Function to populate the InputBuffer objects
     def HandleInput(self, inputEvent, inputMode):
@@ -178,6 +198,7 @@ class CustomText:
 
         # Check if input is valid
         if inputValid(inputEvent, inputMode):
+            logger.debug("Keysym : " + inputEvent.keysym)
             # Input is valid, handle it, otherwise ignore it
             # TODO: would be nice if input format is flashing. 
             # Aims to check if input is valid:
@@ -185,15 +206,19 @@ class CustomText:
                 # Delete the character that is at the current cursor. 
                 logger.debug("Delete char.")
                 # TODO: Remove the char at the current cursor. 
-
-            elif inputEvent.keysym is "Right":
-                if cursorPosition > 0:
-                    cursorPosition -= 1
+                # If the current buffer is empty, the current entry shall be removed, 
+                # and the previous operator shall be deleted.
+            elif inputEvent.keysym in ("Right"):
+                logger.debug("Move cursor right")
+                if self.cursorPosition > 0:
+                    self.cursorPosition -= 1
                 else:
-                    cursorPosition = 0
+                    self.cursorPosition = 0
 
-            elif inputEvent.keysym is "Left":
-                cursorPosition += 1
+            elif inputEvent.keysym in ("Left"):
+                logger.debug("Move cursor left")
+                self.cursorPosition += 1
+                # TODO: add a stop here, otherwise it'll go on forever
 
             elif inputEvent.keysym in ("Up", "Down"):
                 logger.debug("Up/Down.")
@@ -222,20 +247,28 @@ class CustomText:
                 currentBuf.pNext = InputBuffer(currentBuf, inputMode, currentBuf.depth)
 
             elif inputEvent.char is "i":
-                # Toggle the input format
-                logger.debug("Change input state")
+                # Toggle the input base
+                logger.debug("Change input base")
                 if self.inputMode == "Decimal":
                     self.inputMode = "Hex"
                 elif self.inputMode == "Hex":
                     self.inputMode = "Bin"
                 elif self.inputMode == "Bin":
-                    self.inputMode = "Float"
-                elif self.inputMode == "Float":
                     self.inputMode = "Decimal"
-                self.statusWidget.config(state=tk.NORMAL)
-                # For some reason this changes the color on the text?
-                self.statusWidget.config(text="Input mode: " + self.inputMode)
-                self.statusWidget.config(state=tk.DISABLED)
+                self.displayInputMode()
+
+            elif inputEvent.char is "s":
+                # Toggle the sign
+                logger.debug("Change input sign")
+                self.signed = not self.signed
+                self.displayInputMode()
+
+            elif inputEvent.char is "f":
+                # Toggle the sign
+                logger.debug("Change input float mode")
+                self.floatActive = not self.floatActive
+                self.displayInputMode()
+                
 
             else:
                 # Add the inputbuffer to the corresponding buffer and 
@@ -266,11 +299,12 @@ class CustomText:
                     currentBuf.inputString["Hex"]     = parseStringToFormat(currentBuf.inputString["Float"], "Float", "Hex")
                     currentBuf.inputString["Bin"]     = parseStringToFormat(currentBuf.inputString["Float"], "Float", "Bin")
         
-    # Function to parse the InputBuffer class to a normal string                
+    # Function to parse the InputBuffer class to a normal string. This is for printing            
     def ParseInputClassToString(self):
         # Loop through the inputbuffer and record each string
         currentBuf = self.inputBuffer
         self.inputString = ""
+        numStringsWritten = 0
         logger.debug("-------------------------------------------------------")
         while currentBuf is not None:
             # Extract the output buffer based on the type of input this is:
@@ -281,6 +315,7 @@ class CustomText:
 
             self.inputString += currentBuf.inputString[currentBuf.inputFormat]
             logger.debug("Parsed string: " + self.inputString)
+            numStringsWritten += 1
 
             # If the next buffer has a depth that is shallower than the current, 
             # a closing bracket is needed
@@ -301,6 +336,13 @@ class CustomText:
             #    for d in range(0, currentBuf.depth):
             #        self.inputString += ")"
             currentBuf = currentBuf.pNext
+
+        # Handle the cursor here for now. Pending if 0x and 0b should be added
+        # for binary and hex, as this should be skipped all together. 
+        # Get how far in the cursor should be
+        adjustForHexDec = numStringsWritten*2 if self.inputMode == "Hex" or self.inputMode == "Bin" else 0
+        self.inputString = self.inputString[:(len(self.inputString) - self.cursorPosition - adjustForHexDec)] + "|" + \
+        self.inputString[(len(self.inputString) - self.cursorPosition - adjustForHexDec):]
         logger.debug("-------------------------------------------------------")
 
     def inputText(self, event):
@@ -516,10 +558,10 @@ hexWidget.config(state=DISABLED)
 decWidgetName = Label(text = "Dec", fg=foreGroundColor, bg=backGroundColor, font="Courier 10")
 decWidget = Text(root, height = 3, bg = backGroundColor, fg = foreGroundColor, font="Courier 15")
 decWidget.config(state=DISABLED)
-# float:
-floatWidgetName = Label(text = "IEEE 754 floating point", fg=foreGroundColor, bg=backGroundColor, font="Courier 10")
-floatWidget = Text(root, height = 3, bg = backGroundColor, fg = foreGroundColor, font="Courier 15")
-floatWidget.config(state=DISABLED)
+# float. No use for it though, since this is only a representation. 
+#floatWidgetName = Label(text = "IEEE 754 floating point", fg=foreGroundColor, bg=backGroundColor, font="Courier 10")
+#floatWidget = Text(root, height = 3, bg = backGroundColor, fg = foreGroundColor, font="Courier 15")
+#floatWidget.config(state=DISABLED)
 #Binary:
 binWidgetName = Label(text = "Binary", fg=foreGroundColor, bg=backGroundColor, font="Courier 10")
 binWidget = Text(root, height = 3, bg = backGroundColor, fg = foreGroundColor, font="Courier 15")
@@ -531,17 +573,18 @@ hexWidgetName.grid(row=3, column=0)
 decWidgetName.grid(row=3, column=1)
 hexWidget.grid(row=4, column=0)
 decWidget.grid(row=4, column=1)
-floatWidgetName.grid(row=5, column=0,  columnspan=2)
-floatWidget.grid(row=6, column=0, columnspan=2)
-binWidgetName.grid(row=7, column=0, columnspan=2)
-binWidget.grid(row=8, column=0, columnspan=2)
+#floatWidgetName.grid(row=5, column=0,  columnspan=2)
+#floatWidget.grid(row=6, column=0, columnspan=2)
+binWidgetName.grid(row=5, column=0, columnspan=2)
+binWidget.grid(row=6, column=0, columnspan=2)
 root.columnconfigure(0, weight=1)
 root.columnconfigure(1, weight=1)
 root.rowconfigure(1, weight=1)
 
 
 # re-bind the keypress:
-inputHandler = CustomText(inputWidget, inputWidgetName, hexWidget, decWidget, floatWidget, binWidget)
+#inputHandler = CustomText(inputWidget, inputWidgetName, hexWidget, decWidget, floatWidget, binWidget)
+inputHandler = CustomText(inputWidget, inputWidgetName, hexWidget, decWidget, binWidget)
 root.bind("<KeyPress>", inputHandler.inputText)
 
 # Start the GUI main loop
