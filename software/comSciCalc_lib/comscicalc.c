@@ -34,6 +34,12 @@
  * Since there are a lot of commonalities with preceding/single entry operators, 
  * I think it makes sense to do the same. However, there is a point in keeping the
  * opThis (i.e. preceding operator) for printing purposes. 
+ * Although, it's a bit confusing having both preceding operator and normal operator
+ * in one entry. 
+ * 
+ * Conclusion is that there shall only be one operator per entry. 
+ * so a NOT() operator shall always have a next list with one higher depth. 
+ * Same goes for parenthesis. Do this and all tests of getInputListEntry passes
  */
 
 /* ----------------- DEFINES ----------------- */
@@ -42,9 +48,23 @@
 // comsci header file
 #include "comscicalc.h"
 
+/* ---- CALCULATOR CORE HELPER FUNCTIONS ----- */
+
+/* Function to check if operator is preceding. 
+   Args: 
+   - op: operator
+   Returns:
+   - True of opeator is preceding, false if not. 
+*/
+static bool operatorIsPreceding(operators_t op){
+	if(op&0x80 == 0x80){
+		return true;
+	}
+	else{
+		return false;
+	}
+}
 /* -------- CALCULATOR CORE FUNCTIONS -------- */
-
-
 
 /* Function to find the input list entry and input character entry
    Args: 
@@ -54,9 +74,10 @@
    - ppInputString: Pointer to pointer to string entry
    Returns:
    - state of the function
+   State: 
+   - Function tested successfully
 */
-// TODO: Should be static. But for tests, keep it non-static
-inputModStatus_t getInputListEntry(
+static inputModStatus_t getInputListEntry(
 		inputListEntry_t *pInputList, 
 		uint8_t cursorPosition,
 		inputListEntry_t **ppInputListAtCursor, 
@@ -87,50 +108,28 @@ inputModStatus_t getInputListEntry(
 		// it has to be an operator entry, either the previous nextOp
 		// or this entries preceding operator (e.g. NOT). 
 		if(pStringEntry == NULL){
-			// Move on to previous entry, with the cursor at the  
-			// previous list entries operator, or at this operator
-			if(pListEntry->opThis != operators_NONE){
-				// If the previous state was a preceding operator entry, and
-				// the current one has a preceeding operator, that means that 
-				// there were two preceding operators in a row. 
-				if(state == inputModStatus_LIST_AT_PRECEDING_OPERATOR_ENTRY){
+			// Go to the previous list entry, if it exists. 
+			if(pListEntry->pPrevious != NULL){
+				// Cursor at previous operator, 				
+				pListEntry = pListEntry->pPrevious;
+				// Check if there is an operator, 
+				// If yes, then set state to be at operator entry, 
+				// Otherwise the previous entry didn't have an operator, 
+				// which is the case of e.g. parenthesis
+				if(pListEntry->op != operators_NONE){
 					state = inputModStatus_LIST_AT_OPERATOR_ENTRY;
-					pListEntry = pListEntry->pPrevious;
-					pStringEntry = pListEntry->pLastInputStringEntry;
 				}
 				else {
-					// If there is no previous list entry, and the previous operator
-					// was not a preceding operator, then this list entry has an empty
-					// string buffer with only one operator. 
-					state = inputModStatus_LIST_AT_PRECEDING_OPERATOR_ENTRY;
-					// We need to stay at the current list entry, but acknowledge that a previous
-					// list entry has been observed. 
+					state = inputModStatus_SUCCESS;
 				}
+				pStringEntry = pListEntry->pLastInputStringEntry;
 			}
 			else {
-				// Go to the previous list entry, if it exists. 
-				if(pListEntry->pPrevious != NULL){
-					// Cursor at previous operator, 				
-					pListEntry = pListEntry->pPrevious;
-					// Check if there is an operator, 
-					// If yes, then set state to be at operator entry, 
-					// Otherwise the previous entry didn't have an operator, 
-					// which is the case of e.g. parenthesis
-					if(pListEntry->opNext != operators_NONE){
-						state = inputModStatus_LIST_AT_OPERATOR_ENTRY;
-					}
-					else {
-						state = inputModStatus_SUCCESS;
-					}
-					pStringEntry = pListEntry->pLastInputStringEntry;
-				}
-				else {
-					// If there is no previous list entry, hence we've
-					// reaced the start of the list. 
-					// Break and return with the state and results
-					state = inputModStatus_CURSOR_VALUE_LARGER_THAN_LIST_ENTRY;
-					break;
-				}
+				// If there is no previous list entry, hence we've
+				// reaced the start of the list. 
+				// Break and return with the state and results
+				state = inputModStatus_CURSOR_VALUE_LARGER_THAN_LIST_ENTRY;
+				break;
 			}
 		}
 		else {
@@ -203,11 +202,6 @@ calc_funStatus_t calc_addInput(inputListEntry_t *pInputList, calcCoreState_t* pC
 			// Operator shall replace the current operator, and the current
 			// operator shall be inserted in a new list entry. 
 			break;
-		case inputModStatus_LIST_AT_PRECEDING_OPERATOR_ENTRY:
-			// Everything went well, list at preceding operator
-			// If the cursor is at a preceding operator, any inputs shall
-			// be added to the previous list entry. 
-			break; 
 		case inputModStatus_CURSOR_VALUE_LARGER_THAN_LIST_ENTRY:
 			// This is OK, simply add to the start, but cursor might need to be updated.
 			// Add input to start of list. Need to check if there is a preceding operator. 
@@ -269,9 +263,6 @@ calc_funStatus_t calc_removeInput(inputListEntry_t *pInputList, calcCoreState_t*
 			// previous operator. If preceding operator exists without end operator, then remove
 			// preceding operator. 
 			break;
-		case inputModStatus_LIST_AT_PRECEDING_OPERATOR_ENTRY:
-			// At a preceding operator. Pretty much the same procedure as success. Might merge with that one. 
-			break; 
 		case inputModStatus_CURSOR_VALUE_LARGER_THAN_LIST_ENTRY:
 			// This is OK, no nothing, but cursor might need to be updated.
 			// However, this is at the start of the buffer, so nothing to remove. 
@@ -280,4 +271,23 @@ calc_funStatus_t calc_removeInput(inputListEntry_t *pInputList, calcCoreState_t*
 			// Unknown return, throw an error. 
 			break;
 	}
+}
+
+
+
+
+/* -------------------------------------------
+ * ------------ FUNCTION WRAPPERS ------------
+ * -------------------------------------------*/
+inputModStatus_t getInputListEntryWrapper(
+		inputListEntry_t *pInputList, 
+		uint8_t cursorPosition,
+		inputListEntry_t **ppInputListAtCursor, 
+		inputStringEntry_t **ppInputString)
+{
+	return getInputListEntryWrapper(
+		pInputList, 
+		cursorPosition,
+		ppInputListAtCursor, 
+		ppInputString);
 }

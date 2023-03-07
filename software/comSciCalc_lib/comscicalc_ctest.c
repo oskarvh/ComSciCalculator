@@ -38,8 +38,7 @@ bool test1_getInputListEntry(){
 		.inputBase = inputBase_NONE, 
 		.pInputStringEntry = NULL, 
 		.pLastInputStringEntry = NULL, 
-		.opNext = operators_NONE, 
-		.opThis = operators_NONE, 
+		.op = operators_NONE, 
 		.customFunction.pFunc = NULL, 
 		.customFunction.numArgs = 0,
 		.depth = 0
@@ -49,7 +48,7 @@ bool test1_getInputListEntry(){
 	inputStringEntry_t *pInputString = NULL;
 
 	// Run the function
-	inputModStatus_t testRes = getInputListEntry(
+	inputModStatus_t testRes = getInputListEntryWrapper(
 		&emptyList, 
 		cursorPosition,
 		&pInputListAtCursor, 
@@ -87,8 +86,7 @@ bool test2_getInputListEntry(){
 		.inputBase = inputBase_NONE, 
 		.pInputStringEntry = NULL, 
 		.pLastInputStringEntry = NULL, 
-		.opNext = operators_NONE, 
-		.opThis = operators_NONE, 
+		.op = operators_NONE, 
 		.customFunction.pFunc = NULL, 
 		.customFunction.numArgs = 0,
 		.depth = 0
@@ -98,7 +96,7 @@ bool test2_getInputListEntry(){
 	inputStringEntry_t *pInputString = NULL;
 
 	// Run the function
-	inputModStatus_t testRes = getInputListEntry(
+	inputModStatus_t testRes = getInputListEntryWrapper(
 		&emptyList, 
 		cursorPosition,
 		&pInputListAtCursor, 
@@ -135,7 +133,7 @@ bool test3_getInputListEntry(){
 	inputStringEntry_t *pInputString = NULL;
 
 	// Run the function
-	inputModStatus_t testRes = getInputListEntry(
+	inputModStatus_t testRes = getInputListEntryWrapper(
 		emptyList, 
 		cursorPosition,
 		&pInputListAtCursor, 
@@ -168,25 +166,36 @@ bool test4_getInputListEntry(){
 	  - Returns SUCCESS with string null pointer and list pointer at pInputList
 	*/
 	// Create an empty list
-	inputListEntry_t emptyList = {
+	inputListEntry_t emptyList1 = {
 		.pPrevious = NULL, 
 		.pNext = NULL, 
 		.inputBase = inputBase_NONE, 
 		.pInputStringEntry = NULL, 
 		.pLastInputStringEntry = NULL, 
-		.opNext = operators_NONE, 
-		.opThis = operators_NOT, 
+		.op = operators_NOT, 
 		.customFunction.pFunc = NULL, 
 		.customFunction.numArgs = 0,
 		.depth = 0
 	};
+	inputListEntry_t emptyList2 = {
+		.pPrevious = &emptyList1, 
+		.pNext = NULL, 
+		.inputBase = inputBase_NONE, 
+		.pInputStringEntry = NULL, 
+		.pLastInputStringEntry = NULL, 
+		.op = operators_NONE, 
+		.customFunction.pFunc = NULL, 
+		.customFunction.numArgs = 0,
+		.depth = 0
+	};
+	emptyList1.pNext = &emptyList2;
 	uint8_t cursorPosition = 0;
 	inputListEntry_t *pInputListAtCursor = NULL;
 	inputStringEntry_t *pInputString = NULL;
 
 	// Run the function
-	inputModStatus_t testRes = getInputListEntry(
-		&emptyList, 
+	inputModStatus_t testRes = getInputListEntryWrapper(
+		&emptyList1, 
 		cursorPosition,
 		&pInputListAtCursor, 
 		&pInputString);
@@ -197,7 +206,7 @@ bool test4_getInputListEntry(){
 		printf("getInputListEntry 4 did not return successfully.\r\n");
 	}
 
-	if(pInputListAtCursor != &emptyList){
+	if(pInputListAtCursor != &emptyList2){
 		passed = false;
 		printf("getInputListEntry 4 returned a pointer for pInputListAtCursor.\r\n");
 	}
@@ -214,7 +223,7 @@ bool test5a_getInputListEntry(){
 	/*	  
 	5. Input a list with empty string but preceding operator, cursor value > 0. 
 	  - Example "NOT(", cursor = 1
-	  - Returns LIST_AT_PRECEDING_OPERATOR_ENTRY, string entry NULL and list pointer at pInputList
+	  - Returns LIST_AT__OPERATOR_ENTRY, string entry NULL and list pointer at pInputList->pPrevios
 	*/
 	// Create an empty list
 	inputListEntry_t emptyList1 = {
@@ -223,26 +232,38 @@ bool test5a_getInputListEntry(){
 		.inputBase = inputBase_NONE, 
 		.pInputStringEntry = NULL, 
 		.pLastInputStringEntry = NULL, 
-		.opNext = operators_NONE,
-		.opThis = operators_NOT, 
+		.op = operators_NOT,
 		.customFunction.pFunc = NULL, 
 		.customFunction.numArgs = 0,
 		.depth = 0
 	};
-	
+
+	inputListEntry_t emptyList2 = {
+		.pPrevious = &emptyList1, 
+		.pNext = NULL, 
+		.inputBase = inputBase_NONE, 
+		.pInputStringEntry = NULL, 
+		.pLastInputStringEntry = NULL, 
+		.op = operators_NONE,
+		.customFunction.pFunc = NULL, 
+		.customFunction.numArgs = 0,
+		.depth = 0
+	};
+
+	emptyList1.pNext = &emptyList2;
 	uint8_t cursorPosition = 1;
 	inputListEntry_t *pInputListAtCursor = NULL;
 	inputStringEntry_t *pInputString = NULL;
 
 	// Run the function
-	inputModStatus_t testRes = getInputListEntry(
+	inputModStatus_t testRes = getInputListEntryWrapper(
 		&emptyList1, 
 		cursorPosition,
 		&pInputListAtCursor, 
 		&pInputString);
 
 	// Check the output:
-	if(testRes != inputModStatus_LIST_AT_PRECEDING_OPERATOR_ENTRY){
+	if(testRes != inputModStatus_LIST_AT_OPERATOR_ENTRY){
 		passed = false;
 		printf("getInputListEntry 5a did not return successfully.\r\n");
 	}
@@ -265,7 +286,7 @@ bool test5b_getInputListEntry(){
 	/*	  
 	5. Input a list with empty string but preceding operator, cursor value > 0. 
 	  - Example "123+NOT(", cursor = 1
-	  - Returns LIST_AT_PRECEDING_OPERATOR_ENTRY, string entry NULL and list pointer at pInputList
+	  - Returns LIST_AT_OPERATOR_ENTRY, string entry NULL and list pointer at pInputList->pPrev
 	*/
 	// Create the string list
 	inputStringEntry_t stringEntry1 = {
@@ -292,8 +313,7 @@ bool test5b_getInputListEntry(){
 		.inputBase = inputBase_NONE, 
 		.pInputStringEntry = &stringEntry1, 
 		.pLastInputStringEntry = &stringEntry3, 
-		.opNext = operators_ADD,
-		.opThis = operators_NONE, 
+		.op = operators_ADD, 
 		.customFunction.pFunc = NULL, 
 		.customFunction.numArgs = 0,
 		.depth = 0
@@ -305,27 +325,38 @@ bool test5b_getInputListEntry(){
 		.inputBase = inputBase_NONE, 
 		.pInputStringEntry = NULL, 
 		.pLastInputStringEntry = NULL, 
-		.opNext = operators_NONE,
-		.opThis = operators_NOT, 
+		.op = operators_NOT,
+		.customFunction.pFunc = NULL, 
+		.customFunction.numArgs = 0,
+		.depth = 0
+	};
+	inputListEntry_t emptyList3 = {
+		.pPrevious = &emptyList2, 
+		.pNext = NULL, 
+		.inputBase = inputBase_NONE, 
+		.pInputStringEntry = NULL, 
+		.pLastInputStringEntry = NULL, 
+		.op = operators_NONE,
 		.customFunction.pFunc = NULL, 
 		.customFunction.numArgs = 0,
 		.depth = 0
 	};
 	emptyList1.pNext = &emptyList2;
+	emptyList2.pNext = &emptyList3;
 	
 	uint8_t cursorPosition = 1;
 	inputListEntry_t *pInputListAtCursor = NULL;
 	inputStringEntry_t *pInputString = NULL;
 
 	// Run the function
-	inputModStatus_t testRes = getInputListEntry(
+	inputModStatus_t testRes = getInputListEntryWrapper(
 		&emptyList1, 
 		cursorPosition,
 		&pInputListAtCursor, 
 		&pInputString);
 
 	// Check the output:
-	if(testRes != inputModStatus_LIST_AT_PRECEDING_OPERATOR_ENTRY){
+	if(testRes != inputModStatus_LIST_AT_OPERATOR_ENTRY){
 		passed = false;
 		printf("getInputListEntry 5b did not return successfully.\r\n");
 	}
@@ -358,8 +389,7 @@ bool test6_getInputListEntry(){
 		.inputBase = inputBase_NONE, 
 		.pInputStringEntry = NULL, 
 		.pLastInputStringEntry = NULL, 
-		.opNext = operators_ADD, 
-		.opThis = operators_NONE, 
+		.op = operators_ADD, 
 		.customFunction.pFunc = NULL, 
 		.customFunction.numArgs = 0,
 		.depth = 0
@@ -369,7 +399,7 @@ bool test6_getInputListEntry(){
 	inputStringEntry_t *pInputString = NULL;
 
 	// Run the function
-	inputModStatus_t testRes = getInputListEntry(
+	inputModStatus_t testRes = getInputListEntryWrapper(
 		&emptyList, 
 		cursorPosition,
 		&pInputListAtCursor, 
@@ -407,8 +437,7 @@ bool test7_getInputListEntry(){
 		.inputBase = inputBase_NONE, 
 		.pInputStringEntry = NULL, 
 		.pLastInputStringEntry = NULL, 
-		.opNext = operators_ADD, 
-		.opThis = operators_NONE, 
+		.op = operators_ADD, 
 		.customFunction.pFunc = NULL, 
 		.customFunction.numArgs = 0,
 		.depth = 0
@@ -419,8 +448,7 @@ bool test7_getInputListEntry(){
 		.inputBase = inputBase_NONE, 
 		.pInputStringEntry = NULL, 
 		.pLastInputStringEntry = NULL, 
-		.opNext = operators_NONE, 
-		.opThis = operators_NONE, 
+		.op = operators_NONE, 
 		.customFunction.pFunc = NULL, 
 		.customFunction.numArgs = 0,
 		.depth = 0
@@ -432,7 +460,7 @@ bool test7_getInputListEntry(){
 	inputStringEntry_t *pInputString = NULL;
 
 	// Run the function
-	inputModStatus_t testRes = getInputListEntry(
+	inputModStatus_t testRes = getInputListEntryWrapper(
 		&emptyList1, 
 		cursorPosition,
 		&pInputListAtCursor, 
@@ -471,8 +499,7 @@ bool test8_getInputListEntry(){
 		.inputBase = inputBase_NONE, 
 		.pInputStringEntry = NULL, 
 		.pLastInputStringEntry = NULL, 
-		.opNext = operators_ADD, 
-		.opThis = operators_NONE, 
+		.op = operators_ADD, 
 		.customFunction.pFunc = NULL, 
 		.customFunction.numArgs = 0,
 		.depth = 0
@@ -483,8 +510,7 @@ bool test8_getInputListEntry(){
 		.inputBase = inputBase_NONE, 
 		.pInputStringEntry = NULL, 
 		.pLastInputStringEntry = NULL, 
-		.opNext = operators_SUBTRACT, 
-		.opThis = operators_NONE, 
+		.op = operators_SUBTRACT, 
 		.customFunction.pFunc = NULL, 
 		.customFunction.numArgs = 0,
 		.depth = 0
@@ -495,8 +521,7 @@ bool test8_getInputListEntry(){
 		.inputBase = inputBase_NONE, 
 		.pInputStringEntry = NULL, 
 		.pLastInputStringEntry = NULL, 
-		.opNext = operators_MULTI, 
-		.opThis = operators_NONE, 
+		.op = operators_MULTI, 
 		.customFunction.pFunc = NULL, 
 		.customFunction.numArgs = 0,
 		.depth = 0
@@ -509,7 +534,7 @@ bool test8_getInputListEntry(){
 	inputStringEntry_t *pInputString = NULL;
 
 	// Run the function
-	inputModStatus_t testRes = getInputListEntry(
+	inputModStatus_t testRes = getInputListEntryWrapper(
 		&emptyList1, 
 		cursorPosition,
 		&pInputListAtCursor, 
@@ -526,7 +551,7 @@ bool test8_getInputListEntry(){
 		printf("getInputListEntry 8 did not return the correct pointer.\r\n");
 	}
 
-	if(pInputListAtCursor->opNext != operators_SUBTRACT){
+	if(pInputListAtCursor->op != operators_SUBTRACT){
 		passed = false;
 		printf("getInputListEntry 8 did not return correct operator.\r\n");
 	}
@@ -543,7 +568,7 @@ bool test9a_getInputListEntry(){
 	/*	  
 	9a. Double preceding operators
 	  - Example "NOT(NOT(", cursor 1
-	  - Returns LIST_AT_PRECEDING_OPERATOR_ENTRY with string null pointer, and list pointer 
+	  - Returns LIST_AT__OPERATOR_ENTRY with string null pointer, and list pointer 
 	  	at the second entry
 	*/
 	// Create an empty list
@@ -553,8 +578,7 @@ bool test9a_getInputListEntry(){
 		.inputBase = inputBase_NONE, 
 		.pInputStringEntry = NULL, 
 		.pLastInputStringEntry = NULL, 
-		.opNext = operators_NONE, 
-		.opThis = operators_NOT, 
+		.op = operators_NOT, 
 		.customFunction.pFunc = NULL, 
 		.customFunction.numArgs = 0,
 		.depth = 0
@@ -565,29 +589,41 @@ bool test9a_getInputListEntry(){
 		.inputBase = inputBase_NONE, 
 		.pInputStringEntry = NULL, 
 		.pLastInputStringEntry = NULL, 
-		.opNext = operators_NONE, 
-		.opThis = operators_NOT, 
+		.op = operators_NOT, 
+		.customFunction.pFunc = NULL, 
+		.customFunction.numArgs = 0,
+		.depth = 0
+	};
+	inputListEntry_t emptyList3 = {
+		.pPrevious = &emptyList2, 
+		.pNext = NULL, 
+		.inputBase = inputBase_NONE, 
+		.pInputStringEntry = NULL, 
+		.pLastInputStringEntry = NULL, 
+		.op = operators_NONE,  
 		.customFunction.pFunc = NULL, 
 		.customFunction.numArgs = 0,
 		.depth = 0
 	};
 	emptyList1.pNext = &emptyList2;
-	
+	emptyList2.pNext = &emptyList3;
+
 	uint8_t cursorPosition = 1;
 	inputListEntry_t *pInputListAtCursor = NULL;
 	inputStringEntry_t *pInputString = NULL;
 
 	// Run the function
-	inputModStatus_t testRes = getInputListEntry(
+	inputModStatus_t testRes = getInputListEntryWrapper(
 		&emptyList1, 
 		cursorPosition,
 		&pInputListAtCursor, 
 		&pInputString);
 
 	// Check the output:
-	if(testRes != inputModStatus_LIST_AT_PRECEDING_OPERATOR_ENTRY){
+	if(testRes != inputModStatus_LIST_AT_OPERATOR_ENTRY){
 		passed = false;
 		printf("getInputListEntry 9a did not return successfully.\r\n");
+		printf("Status = %i\n", testRes);
 	}
 
 	if(pInputListAtCursor != &emptyList2){
@@ -607,7 +643,7 @@ bool test9b_getInputListEntry(){
 	/*	  
 	9b. Double preceding operators, start of list
 	  - Example "NOT(NOT(", cursor 2
-	  - Returns LIST_AT_PRECEDING_OPERATOR_ENTRY with string null pointer, and list pointer 
+	  - Returns LIST_AT_OPERATOR_ENTRY with string null pointer, and list pointer 
 	  	at first entry
 	*/
 	// Create an empty list
@@ -617,8 +653,7 @@ bool test9b_getInputListEntry(){
 		.inputBase = inputBase_NONE, 
 		.pInputStringEntry = NULL, 
 		.pLastInputStringEntry = NULL, 
-		.opNext = operators_NONE, 
-		.opThis = operators_NOT, 
+		.op = operators_NOT, 
 		.customFunction.pFunc = NULL, 
 		.customFunction.numArgs = 0,
 		.depth = 0
@@ -629,27 +664,38 @@ bool test9b_getInputListEntry(){
 		.inputBase = inputBase_NONE, 
 		.pInputStringEntry = NULL, 
 		.pLastInputStringEntry = NULL, 
-		.opNext = operators_NONE, 
-		.opThis = operators_NOT, 
+		.op = operators_NOT, 
+		.customFunction.pFunc = NULL, 
+		.customFunction.numArgs = 0,
+		.depth = 0
+	};
+	inputListEntry_t emptyList3 = {
+		.pPrevious = &emptyList2, 
+		.pNext = NULL, 
+		.inputBase = inputBase_NONE, 
+		.pInputStringEntry = NULL, 
+		.pLastInputStringEntry = NULL, 
+		.op = operators_NONE, 
 		.customFunction.pFunc = NULL, 
 		.customFunction.numArgs = 0,
 		.depth = 0
 	};
 	emptyList1.pNext = &emptyList2;
+	emptyList2.pNext = &emptyList3;
 	
 	uint8_t cursorPosition = 2;
 	inputListEntry_t *pInputListAtCursor = NULL;
 	inputStringEntry_t *pInputString = NULL;
 
 	// Run the function
-	inputModStatus_t testRes = getInputListEntry(
+	inputModStatus_t testRes = getInputListEntryWrapper(
 		&emptyList1, 
 		cursorPosition,
 		&pInputListAtCursor, 
 		&pInputString);
 
 	// Check the output:
-	if(testRes != inputModStatus_LIST_AT_PRECEDING_OPERATOR_ENTRY){
+	if(testRes != inputModStatus_LIST_AT_OPERATOR_ENTRY){
 		passed = false;
 		printf("getInputListEntry 9b did not return successfully.\r\n");
 		printf("Status = %i\n", testRes);
@@ -663,6 +709,81 @@ bool test9b_getInputListEntry(){
 	if(pInputString != NULL){
 		passed = false;
 		printf("getInputListEntry 9b returned a pointer for pInputString.\r\n");
+	}
+	return passed;
+}
+
+bool test10a_getInputListEntry(){
+	bool passed = true;
+	/*	  
+	10a. Double preceding opening parentheses
+	  - Example "((", cursor 1
+	  - Returns LIST_SUCCESS with string null pointer, and list pointer ->pPrev
+	  	at first entry
+	*/
+	// Create an empty list
+	inputListEntry_t emptyList1 = {
+		.pPrevious = NULL, 
+		.pNext = NULL, 
+		.inputBase = inputBase_NONE, 
+		.pInputStringEntry = NULL, 
+		.pLastInputStringEntry = NULL, 
+		.op = operators_NONE, 
+		.customFunction.pFunc = NULL, 
+		.customFunction.numArgs = 0,
+		.depth = 0
+	};
+	inputListEntry_t emptyList2 = {
+		.pPrevious = &emptyList1, 
+		.pNext = NULL, 
+		.inputBase = inputBase_NONE, 
+		.pInputStringEntry = NULL, 
+		.pLastInputStringEntry = NULL, 
+		.op = operators_NONE, 
+		.customFunction.pFunc = NULL, 
+		.customFunction.numArgs = 0,
+		.depth = 1
+	};
+	inputListEntry_t emptyList3 = {
+		.pPrevious = &emptyList2, 
+		.pNext = NULL, 
+		.inputBase = inputBase_NONE, 
+		.pInputStringEntry = NULL, 
+		.pLastInputStringEntry = NULL, 
+		.op = operators_NONE, 
+		.customFunction.pFunc = NULL, 
+		.customFunction.numArgs = 0,
+		.depth = 2
+	};
+	emptyList1.pNext = &emptyList2;
+	emptyList2.pNext = &emptyList3;
+	
+	uint8_t cursorPosition = 1;
+	inputListEntry_t *pInputListAtCursor = NULL;
+	inputStringEntry_t *pInputString = NULL;
+
+	// Run the function
+	inputModStatus_t testRes = getInputListEntryWrapper(
+		&emptyList1, 
+		cursorPosition,
+		&pInputListAtCursor, 
+		&pInputString);
+
+	// Check the output:
+	if(testRes != inputModStatus_SUCCESS){
+		passed = false;
+		printf("getInputListEntry 10a did not return successfully.\r\n");
+		printf("Status = %i\n", testRes);
+	}
+
+	if(pInputListAtCursor != &emptyList2){
+		passed = false;
+		printf("getInputListEntry 10a did not return the correct pointer.\r\n");
+	}
+
+	if(pInputString != NULL){
+		passed = false;
+		printf("getInputListEntry 10a returned a pointer for pInputString.\r\n");
 	}
 	return passed;
 }
@@ -699,7 +820,9 @@ void main(){
 	
 	passed = test9a_getInputListEntry();
 
-	passed = test9b_getInputListEntry();	
+	passed = test9b_getInputListEntry();
+
+	passed = test10a_getInputListEntry();	
 	
 	if(passed){
 		printf("getInputListEntry tests passed!\r\n");

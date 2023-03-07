@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 /* -------------------------------------------
  * ------------ ENUMS AND STRUCTS ------------
@@ -74,7 +75,7 @@ typedef enum inputModStatus {
 	// Cursor at end operator
 	inputModStatus_LIST_AT_OPERATOR_ENTRY = 2,
 	// Cursor at preceding operator
-	inputModStatus_LIST_AT_PRECEDING_OPERATOR_ENTRY = 3,
+	//inputModStatus_LIST_AT_PRECEDING_OPERATOR_ENTRY = 3,
 	// Cursor value larger than list entries
 	inputModStatus_CURSOR_VALUE_LARGER_THAN_LIST_ENTRY = -2,
 	// Input list pointer is NULL
@@ -126,12 +127,12 @@ typedef struct inputListEntry {
 
 	// Operator to next entry
 	// This operator is acting between this entry and next entry
-	operators_t opNext;
+	operators_t op;
 
 	// Operator on this entry
 	// This operator is acting on this entry, e.g. NOT. 
 	// These operators should only be single input operators(bit 7 = 1)
-	operators_t opThis;
+	// operators_t opThis;
 
 	// Custom function. 
 	// If this is defined, then no inputstring should be defined, 
@@ -167,7 +168,7 @@ typedef struct calcCoreState {
  * -------------------------------------------*/
 calc_funStatus_t calc_addInput(inputListEntry_t *pInputList, calcCoreState_t* pCalcCoreState);
 calc_funStatus_t calc_removeInput(inputListEntry_t *pInputList, calcCoreState_t* pCalcCoreState);
-inputModStatus_t getInputListEntry(
+inputModStatus_t getInputListEntryWrapper(
 	inputListEntry_t *pInputList, 
 	uint8_t cursorPosition,
 	inputListEntry_t **ppInputListAtCursor, 
