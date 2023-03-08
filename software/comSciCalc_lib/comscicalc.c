@@ -50,85 +50,12 @@
 // comsci header file
 #include "comscicalc.h"
 
+// Operator functions
+#include "comscicalc_operators.h"
+
 // Standard library
 
-/* ---------------- VARIABLES ---------------- */
-// List of operator function pointers
-// Ensure that each inputChar and op field is unique! 
-operatorEntry_t operators[NUM_OPERATORS] = {
-	// Arithmetic operators, multiple input
-	{.inputChar = '+', .opString = "+\0", .op = operators_ADD, .pFun = &calc_add},
-	{.inputChar = '-', .opString = "-\0", .op = operators_SUBTRACT, .pFun = &calc_subtract},
-	{.inputChar = '*', .opString = "*\0", .op = operators_MULTI, .pFun = &calc_multiply},
-	{.inputChar = '/', .opString = "/\0", .op = operators_DIVIDE, .pFun = &calc_divide},
-	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
-	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
-	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
-	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
-	
-	// Bitwise operators, mulitple input
-	{.inputChar = '&', .opString = "AND\0", .op = operators_AND, .pFun = &calc_and},
-	{.inputChar = 'N', .opString = "NAND\0", .op = operators_NAND, .pFun = &calc_nand},
-	{.inputChar = '|', .opString = "OR\0", .op = operators_OR, .pFun = &calc_or},
-	{.inputChar = '^', .opString = "XOR\0", .op = operators_XOR, .pFun = &calc_xor},
-	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
-	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
-	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
-	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
-	
-	// Arithmetic operators, single input
-	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
-	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
-	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
-	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
-	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
-	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
-	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
-	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
-	
-	// Bitwise operators, single input
-	{.inputChar = '~', .opString = "NOT\0", .op = operators_NOT, .pFun = &calc_not},
-	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
-	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
-	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
-	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
-	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
-	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
-	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL}
-
-};
-
-
-/* ------ CALCULATOR OPERATOR FUNCTIONS ------ */
-int32_t calc_add(int32_t a, int32_t b){
-	return a+b;
-}
-int32_t calc_subtract(int32_t a, int32_t b){
-	return a-b;
-}
-int32_t calc_multiply(int32_t a, int32_t b){
-	return a*b;
-}
-int32_t calc_divide(int32_t a, int32_t b){
-	return 0; //TODO
-}
-
-int32_t calc_and(int32_t a, int32_t b){
-	return a&b;
-}
-int32_t calc_nand(int32_t a, int32_t b){
-	return ~(a&b);
-}
-int32_t calc_or(int32_t a, int32_t b){
-	return a|b;
-}
-int32_t calc_xor(int32_t a, int32_t b){
-	return a^b;
-}
-
-int32_t calc_not(int32_t a, int32_t b){
-	return ~a;
-}
+/* ------------- GLOBAL VARIABLES ------------ */
 
 /* ---- CALCULATOR CORE HELPER FUNCTIONS ----- */
 

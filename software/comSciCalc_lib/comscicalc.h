@@ -12,7 +12,6 @@
 /* -------------------------------------------
  * ----------------- DEFINES ----------------- 
  * -------------------------------------------*/
-#define NUM_OPERATORS 32 // Max number of operators
 #define OPERATOR_STRING_MAX_LEN 10 // Max length of the operator string
 #define CONSTRUCT_OPERATOR(OP, BITWISE, SINGLE_INPUT) ( (OP&0xF) | (BITWISE<<4) | (SINGLE_INPUT<<5))
 #define OPERATOR_IS_BITWISE(OP_ID) ( (OP_ID >> 4) & 0x01)
@@ -39,8 +38,8 @@ typedef enum inputBase {
 // bit 7-6: Reserved
 // bit 5: 1 = single input, 0 = multiple input
 // bit 4: 1 = bitwise, 0 = arithmetic
-// bit 3-0: Operator
-enum operators{
+// bit 3-0: Operator (0 is reserved, must be 1-15)
+enum op_id {
 	// Artihmetic operators, multiple input
     operators_ADD 		= CONSTRUCT_OPERATOR(1, 0, 0),
     operators_SUBTRACT 	= CONSTRUCT_OPERATOR(2, 0, 0),
@@ -64,10 +63,8 @@ enum operators{
     operators_NONE 		= 0x00
 };
 
-typedef uint8_t operators_t;
-
 // status of calc_* functions
-typedef enum calc_funStatus {
+enum calc_funStatus {
 	calc_funStatus_SUCCESS 				= 0, 
 	// Input list pointer is NULL
 	calc_funStatus_INPUT_LIST_NULL 		= -1,
@@ -79,10 +76,10 @@ typedef enum calc_funStatus {
 	calc_funStatus_INPUT_BASE_ERROR		= -3,
 	// Unknown input
 	calc_funStatus_UNKNOWN_INPUT		= -4,
-} calc_funStatus_t;
+};
 
 // Status of functions handling input lists
-typedef enum inputModStatus {
+enum inputModStatus {
 	inputModStatus_SUCCESS = 0,
 	// Cursor is at/in string. NOT USED AT THE MOMENT
 	// LIST_AT_STRING_ENTRY = 1, 
@@ -94,18 +91,11 @@ typedef enum inputModStatus {
 	inputModStatus_CURSOR_VALUE_LARGER_THAN_LIST_ENTRY = -2,
 	// Input list pointer is NULL
 	inputModStatus_INPUT_LIST_NULL 	= -1,
-} inputModStatus_t;
+};
 
-// Struct for storing operators
-typedef struct operatorEntry {
-	// Which input corresponds to this function
-	char inputChar;
-	// What string should be displayed for this operator?
-	char opString[OPERATOR_STRING_MAX_LEN];
-	// Operator flag
-	operators_t op;
-	int32_t (*pFun)(int32_t a, int32_t b);
-} operatorEntry_t;
+typedef uint8_t operators_t;
+typedef int8_t calc_funStatus_t;
+typedef int8_t inputModStatus_t;
 
 // Struct used for the input string linked list
 typedef struct inputStringEntry {
@@ -174,6 +164,7 @@ typedef struct calcCoreState {
 	// 1 means that the position of the cursor is between 
 	// last and second to last characters
 	uint8_t cursorPosition;
+
 	// The base of incoming characters. 
 	// Note that this is different than the input entry
 	// base, as this will be used when new entires are made. 
@@ -207,7 +198,7 @@ int32_t calc_not(int32_t a, int32_t b);
 /* -------------------------------------------
  * ---------------- VARIABLES ----------------
  * -------------------------------------------*/
-operatorEntry_t operators[NUM_OPERATORS];
+
 
 
 /* -------------------------------------------
