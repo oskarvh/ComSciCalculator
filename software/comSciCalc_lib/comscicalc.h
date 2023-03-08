@@ -12,17 +12,19 @@
 /* -------------------------------------------
  * ----------------- DEFINES ----------------- 
  * -------------------------------------------*/
-
+#define NUM_OPERATORS 32 // Max number of operators
+#define OPERATOR_STRING_MAX_LEN 10 // Max length of the operator string
+#define CONSTRUCT_OPERATOR(OP, BITWISE, SINGLE_INPUT) ( (OP&0xF) | (BITWISE<<4) | (SINGLE_INPUT<<5))
+#define OPERATOR_IS_BITWISE(OP_ID) ( (OP_ID >> 4) & 0x01)
 /* -------------------------------------------
  * ----------------- HEADERS -----------------
  * -------------------------------------------*/
-#include <stdio.h>
-#include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 /* -------------------------------------------
- * ------------ ENUMS AND STRUCTS ------------
+ * ------- ENUMS, TYPEDEFS AND STRUCTS -------
  * -------------------------------------------*/
 // Enum for the possible type of input.
 typedef enum inputBase {
@@ -34,37 +36,49 @@ typedef enum inputBase {
 } inputBase_t;
 
 // Enum for the supported operators
-// bit 7: 1 = single input, 0 = multiple input
-// bit 6-5: Not in use
+// bit 7-6: Reserved
+// bit 5: 1 = single input, 0 = multiple input
 // bit 4: 1 = bitwise, 0 = arithmetic
 // bit 3-0: Operator
-typedef enum operators {
+enum operators{
 	// Artihmetic operators, multiple input
-    operators_ADD 		= 0x01,
-    operators_SUBTRACT 	= 0x02,
-    operators_MULTI 	= 0x03,
-    operators_DIVIDE	= 0x04, 
+    operators_ADD 		= CONSTRUCT_OPERATOR(1, 0, 0),
+    operators_SUBTRACT 	= CONSTRUCT_OPERATOR(2, 0, 0),
+    operators_MULTI 	= CONSTRUCT_OPERATOR(3, 0, 0),
+    operators_DIVIDE	= CONSTRUCT_OPERATOR(4, 0, 0), 
+
     // Arithmetic operators, single input
     // Bitwise operators, multiple input
-    operators_AND 		= 0x11,
-    operators_NAND 		= 0x12,
-    operators_OR 		= 0x13,
-    operators_XOR 		= 0x14, 
-    // Arithmetic operators, single input
-    // EXAMPLE = 0x8x. 
-    // Bitwise operators, single input
-    operators_NOT 		= 0x91,
-    // Not assigned:
-    operators_NONE 		= 0x00,
-} operators_t;
+    operators_AND 		= CONSTRUCT_OPERATOR(1, 1, 0),
+    operators_NAND 		= CONSTRUCT_OPERATOR(2, 1, 0),
+    operators_OR 		= CONSTRUCT_OPERATOR(3, 1, 0),
+    operators_XOR 		= CONSTRUCT_OPERATOR(4, 1, 0), 
 
-// status of calc_ functions
+    // Arithmetic operators, single input
+    // EXAMPLE = (operators_t)CONSTRUCT_OPERATOR(n, 0, 1),
+    // This could be SIN, COS etc.  
+    // Bitwise operators, single input
+    operators_NOT 		= CONSTRUCT_OPERATOR(1, 1, 1),
+
+    // Not assigned:
+    operators_NONE 		= 0x00
+};
+
+typedef uint8_t operators_t;
+
+// status of calc_* functions
 typedef enum calc_funStatus {
 	calc_funStatus_SUCCESS 				= 0, 
 	// Input list pointer is NULL
 	calc_funStatus_INPUT_LIST_NULL 		= -1,
 	// Pointer to core state is NULL
 	calc_funStatus_CALC_CORE_STATE_NULL = -2,
+	// Tried to add input in the middle of 
+	// string buffer, where the input base didn't correspond
+	// between input and existing entry. 
+	calc_funStatus_INPUT_BASE_ERROR		= -3,
+	// Unknown input
+	calc_funStatus_UNKNOWN_INPUT		= -4,
 } calc_funStatus_t;
 
 // Status of functions handling input lists
@@ -82,6 +96,17 @@ typedef enum inputModStatus {
 	inputModStatus_INPUT_LIST_NULL 	= -1,
 } inputModStatus_t;
 
+// Struct for storing operators
+typedef struct operatorEntry {
+	// Which input corresponds to this function
+	char inputChar;
+	// What string should be displayed for this operator?
+	char opString[OPERATOR_STRING_MAX_LEN];
+	// Operator flag
+	operators_t op;
+	int32_t (*pFun)(int32_t a, int32_t b);
+} operatorEntry_t;
+
 // Struct used for the input string linked list
 typedef struct inputStringEntry {
 	// Pointer to previous entry. NULL if first element in list
@@ -96,7 +121,7 @@ typedef struct inputStringEntry {
 typedef struct customFunc {
 	// Pointer to custom function
 	// NULL if no function defined. 
-	void *pFunc; 
+	int32_t (*pFunc)(void* args); 
 	// Number of arguments. 
 	// I.e. how many of the following entries should go into 
 	// this function
@@ -129,11 +154,6 @@ typedef struct inputListEntry {
 	// This operator is acting between this entry and next entry
 	operators_t op;
 
-	// Operator on this entry
-	// This operator is acting on this entry, e.g. NOT. 
-	// These operators should only be single input operators(bit 7 = 1)
-	// operators_t opThis;
-
 	// Custom function. 
 	// If this is defined, then no inputstring should be defined, 
 	// as the next N number of entries should be the 
@@ -154,20 +174,45 @@ typedef struct calcCoreState {
 	// 1 means that the position of the cursor is between 
 	// last and second to last characters
 	uint8_t cursorPosition;
+	// The base of incoming characters. 
+	// Note that this is different than the input entry
+	// base, as this will be used when new entires are made. 
+	inputBase_t inputBase;
 } calcCoreState_t;
 
-/* -------------------------------------------
- * ---------------- VARIABLES ----------------
- * -------------------------------------------*/
 
-// List of operator function pointers
 
 
 /* -------------------------------------------
  * ----------- FUNCTION PROTOTYPES -----------
  * -------------------------------------------*/
-calc_funStatus_t calc_addInput(inputListEntry_t *pInputList, calcCoreState_t* pCalcCoreState);
+// Calculator core functions
+calc_funStatus_t calc_addInput(inputListEntry_t *pInputList, calcCoreState_t* pCalcCoreState, char inputChar);
 calc_funStatus_t calc_removeInput(inputListEntry_t *pInputList, calcCoreState_t* pCalcCoreState);
+
+// Calculator operator functions
+// NOTE: all operators must have 
+int32_t calc_add(int32_t a, int32_t b);
+int32_t calc_subtract(int32_t a, int32_t b);
+int32_t calc_multiply(int32_t a, int32_t b);
+int32_t calc_divide(int32_t a, int32_t b);
+
+int32_t calc_and(int32_t a, int32_t b);
+int32_t calc_nand(int32_t a, int32_t b);
+int32_t calc_or(int32_t a, int32_t b);
+int32_t calc_xor(int32_t a, int32_t b);
+
+int32_t calc_not(int32_t a, int32_t b);
+
+/* -------------------------------------------
+ * ---------------- VARIABLES ----------------
+ * -------------------------------------------*/
+operatorEntry_t operators[NUM_OPERATORS];
+
+
+/* -------------------------------------------
+ * ------------ FUNCTION WRAPPERS ------------
+ * -------------------------------------------*/
 inputModStatus_t getInputListEntryWrapper(
 	inputListEntry_t *pInputList, 
 	uint8_t cursorPosition,

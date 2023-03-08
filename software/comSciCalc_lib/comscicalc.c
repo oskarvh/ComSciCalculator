@@ -42,28 +42,167 @@
  * Same goes for parenthesis. Do this and all tests of getInputListEntry passes
  */
 
+
+
 /* ----------------- DEFINES ----------------- */
 
 /* ----------------- HEADERS ----------------- */
 // comsci header file
 #include "comscicalc.h"
 
+// Standard library
+
+/* ---------------- VARIABLES ---------------- */
+// List of operator function pointers
+// Ensure that each inputChar and op field is unique! 
+operatorEntry_t operators[NUM_OPERATORS] = {
+	// Arithmetic operators, multiple input
+	{.inputChar = '+', .opString = "+\0", .op = operators_ADD, .pFun = &calc_add},
+	{.inputChar = '-', .opString = "-\0", .op = operators_SUBTRACT, .pFun = &calc_subtract},
+	{.inputChar = '*', .opString = "*\0", .op = operators_MULTI, .pFun = &calc_multiply},
+	{.inputChar = '/', .opString = "/\0", .op = operators_DIVIDE, .pFun = &calc_divide},
+	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
+	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
+	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
+	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
+	
+	// Bitwise operators, mulitple input
+	{.inputChar = '&', .opString = "AND\0", .op = operators_AND, .pFun = &calc_and},
+	{.inputChar = 'N', .opString = "NAND\0", .op = operators_NAND, .pFun = &calc_nand},
+	{.inputChar = '|', .opString = "OR\0", .op = operators_OR, .pFun = &calc_or},
+	{.inputChar = '^', .opString = "XOR\0", .op = operators_XOR, .pFun = &calc_xor},
+	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
+	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
+	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
+	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
+	
+	// Arithmetic operators, single input
+	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
+	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
+	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
+	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
+	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
+	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
+	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
+	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
+	
+	// Bitwise operators, single input
+	{.inputChar = '~', .opString = "NOT\0", .op = operators_NOT, .pFun = &calc_not},
+	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
+	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
+	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
+	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
+	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
+	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL},
+	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .pFun = NULL}
+
+};
+
+
+/* ------ CALCULATOR OPERATOR FUNCTIONS ------ */
+int32_t calc_add(int32_t a, int32_t b){
+	return a+b;
+}
+int32_t calc_subtract(int32_t a, int32_t b){
+	return a-b;
+}
+int32_t calc_multiply(int32_t a, int32_t b){
+	return a*b;
+}
+int32_t calc_divide(int32_t a, int32_t b){
+	return 0; //TODO
+}
+
+int32_t calc_and(int32_t a, int32_t b){
+	return a&b;
+}
+int32_t calc_nand(int32_t a, int32_t b){
+	return ~(a&b);
+}
+int32_t calc_or(int32_t a, int32_t b){
+	return a|b;
+}
+int32_t calc_xor(int32_t a, int32_t b){
+	return a^b;
+}
+
+int32_t calc_not(int32_t a, int32_t b){
+	return ~a;
+}
+
 /* ---- CALCULATOR CORE HELPER FUNCTIONS ----- */
 
-/* Function to check if operator is preceding. 
+/* Function to check if character is numerical. 
    Args: 
-   - op: operator
+   - base: which base is currently active. 
+   - c: incoming character. 
    Returns:
-   - True of opeator is preceding, false if not. 
+   - True if c is numerical input, false otherwise. 
+   - False if input base ins't defined as well. 
+   Note: should not be used to determine if input is operator, as 
+   it will return false for all non-numerical types in the active base
 */
-static bool operatorIsPreceding(operators_t op){
-	if(op&0x80 == 0x80){
-		return true;
+static bool charIsNumerical(inputBase_t base, char c){
+	switch(base){
+		case inputBase_DEC:
+			if('0' <= c <= '9'){
+				return true;
+			}
+			break;
+    	case inputBase_HEX:
+    		if( ('0' <= c <= '9') || ('a' <= c <= 'f') ){
+				return true;
+			}
+			break;
+    	case inputBase_BIN:
+    		if('0' <= c <= '1'){
+				return true;
+			}
+			break;
+    	default:
+    		break;
 	}
-	else{
-		return false;
-	}
+	return false;
 }
+
+/* Function to check if character is operator
+   Args: 
+   - c: incoming character. 
+   Returns:
+   - True if char is in operator database, false otherwise
+*/
+static bool charIsOperator(char c){
+	// Loop through the operator array and check if the operator is in there. 
+	// Not a nice way to do it, but the array is fairly small. 
+	for(uint8_t i = 0 ; i < NUM_OPERATORS ; i++){
+		if(c == operators[i].inputChar){
+			// Operator entry found!
+			return true;
+		}
+	}
+	return false;
+}
+
+/* Function to get the operator entry based on input character. 
+   Args: 
+   - c: incoming character. 
+   Returns:
+   - pointer to operator if successful, otherwise NULL
+   Note: should not be used to detrmine if input is operator, as 
+   it will return false for all non-numerical types
+*/
+static operatorEntry_t *getOperator(char c){
+	// Loop through the operator array and check if the operator is in there. 
+	// Not a nice way to do it, but the array is fairly small. 
+	for(uint8_t i = 0 ; i < NUM_OPERATORS ; i++){
+		if(c == operators[i].inputChar){
+			// Operator entry found!
+			return &operators[i];
+		}
+	}
+	return NULL;
+}
+
 /* -------- CALCULATOR CORE FUNCTIONS -------- */
 
 /* Function to find the input list entry and input character entry
@@ -147,29 +286,44 @@ static inputModStatus_t getInputListEntry(
 	return state;
 }
 
-/* Function to add a character to the list
+/* Function to add a character or operator to the entry list
    Args: 
    - pInputList: Pointer to first entry of the input list
    - pCalcCoreState: pointer to calculator core state
    Returns:
    - state of the function
+   State:
+   - Untested, Unfinished
 
    Function test cases:
    1. pInputList = NULL
       - Returns: INPUT_LIST_NULL
    2. pCalcCoreState = NULL
       - Returns: CALC_CORE_STATE_NULL
-   3. Add character to end
+   3. Add character to end (permutations: empty entires, non-emtpy entries)
    4. Add operator at end
-   5. Add character at cursor > 0
-   6. Add operator at cursor > 0
+   5. Add '(' at end
+   6. Add ')' at end
+   7. Add character in middle of string buffer 
+   8. Add operator in middle of string buffer
+   9. Add '(' in middle of string buffer
+   10.Add ')' in middle of string buffer
+   11.Add character at entry without string (e.g. parentheses)
+   12.Add operator at entry without string (e.g. parentheses)
+   13.Add '(' at entry without string (e.g. parentheses)
+   14.Add ')' at entry without string (e.g. parentheses)
 
    n. test1
       - Example
       - Returns 
-*/
-calc_funStatus_t calc_addInput(inputListEntry_t *pInputList, calcCoreState_t* pCalcCoreState){
 
+*/
+calc_funStatus_t calc_addInput(
+	inputListEntry_t *pInputList, 
+	calcCoreState_t* pCalcCoreState,
+	char inputChar
+	)
+{
 	// Check pointer to input list
 	if(pInputList == NULL){
 		return calc_funStatus_INPUT_LIST_NULL;
@@ -193,12 +347,60 @@ calc_funStatus_t calc_addInput(inputListEntry_t *pInputList, calcCoreState_t* pC
 		case inputModStatus_SUCCESS:
 			// Everything went well, we can add input into list, or add another operator
 			// If adding a char, insert that into the string buffer
-			// If an operator, then create a new list entry splitting the list. 
-			// If a preceding operator, then create a new list entry for that. 
+			// Check if adding a new entry, in which case use the incoming base
+			// for the entry. If already in an existing list, then we either convert that
+			// entry or throw an error. 
+			if(pCurrentStringEntry == NULL){
+				// No entry in string buffer, add new with incoming base. 
+				if(charIsNumerical(pCalcCoreState->inputBase,inputChar)){
+					// Allocate new string entry and populate with character
+					inputStringEntry_t *newStringEntry = malloc(sizeof(inputStringEntry_t));
+					newStringEntry->c = inputChar;
+					newStringEntry->pPrevious = NULL;
+					newStringEntry->pNext = NULL;
+					// TBD: How to handle the case where this is a parentheses or 
+					// operator only entry? 
+				}
+				else if(charIsOperator(inputChar)){
+					// Character is operator, add this to the current entry 
+					// and allocate a new entry and add to list. 
+					// Check if existing operator exists as well, in which case
+					// shoehorn that in here. Most likely this at the end of the entry
+					// list, otherwise it should have been handled by the 
+					// LIST_AT_OPERATOR_ENTRY state. 
+					// TODO
+				}
+				else if(inputChar == '('){
+					// Opening bracket. 
+					// TODO
+				}
+				else if(inputChar == ')'){
+					// Closing bracket. 
+					// TODO
+				}
+				else{
+					// Nothing of the above, therefore unknown input. Return with status
+					return calc_funStatus_UNKNOWN_INPUT;
+				}
+			}
+			else{
+				// Exising list, we are either in the middle of a string entry, 
+				// or at the end of a string entry. 
+				// For now, this is not allowed, so return with error
+				if(pCalcCoreState->inputBase != pCurrentListEntry->inputBase){
+					return calc_funStatus_INPUT_BASE_ERROR;
+				}
+				// Here we are in the middle of a string, so shoehorn in either new
+				// character or operator. Note that operator would split the string 
+				// array and make a new entry. 
+				// TODO
+			}
+			
 			break;
+			// If an operator, then create a new list entry splitting the list. 
 		case inputModStatus_LIST_AT_OPERATOR_ENTRY:
 			// Everything went well, we can add input into list
-			// Char shall be added at the end of the string buffefr
+			// Char shall be added at the end of the string buffer
 			// Operator shall replace the current operator, and the current
 			// operator shall be inserted in a new list entry. 
 			break;
@@ -221,6 +423,8 @@ calc_funStatus_t calc_addInput(inputListEntry_t *pInputList, calcCoreState_t* pC
    - pCalcCoreState: pointer to calculator core state
    Returns:
    - state of the function
+   State:
+   - Untested, Unfinished
 
    Function test cases:
    1. pInputList = NULL
@@ -285,7 +489,7 @@ inputModStatus_t getInputListEntryWrapper(
 		inputListEntry_t **ppInputListAtCursor, 
 		inputStringEntry_t **ppInputString)
 {
-	return getInputListEntryWrapper(
+	return getInputListEntry(
 		pInputList, 
 		cursorPosition,
 		ppInputListAtCursor, 
