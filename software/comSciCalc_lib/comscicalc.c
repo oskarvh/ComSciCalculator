@@ -42,7 +42,24 @@
  * Same goes for parenthesis. Do this and all tests of getInputListEntry passes
  */
 
+/*
+Overview:
+List entries are a doubly linked list where each element consists of either:
+1. A string (list)
+2. an operator
+3. a custom function
+4. empty. 
 
+- A list entry can have a string and an operator, if that operator does not increase depth. 
+- A list that has an that operator increase depth cannot have a string. 
+- A custom function acts like an operator, but always increase depth. 
+- A bracket entry is an entry which increases depth, but does not have a custom function, 
+  an operator or a string. 
+- An entry can only be empty with none of those, only if there is no input. 
+
+
+
+*/
 
 /* ----------------- DEFINES ----------------- */
 
@@ -115,8 +132,6 @@ static bool charIsOperator(char c){
    - c: incoming character. 
    Returns:
    - pointer to operator if successful, otherwise NULL
-   Note: should not be used to detrmine if input is operator, as 
-   it will return false for all non-numerical types
 */
 static operatorEntry_t *getOperator(char c){
 	// Loop through the operator array and check if the operator is in there. 
@@ -129,6 +144,94 @@ static operatorEntry_t *getOperator(char c){
 	}
 	return NULL;
 }
+
+/* Function to initialize a list entry, excluding pointer
+   Args: 
+   - pListEntry: Pointer to list entry
+*/
+static void initListEntry(inputListEntry_t *pListEntry){
+	pListEntry->pPrevious				= NULL;
+	pListEntry->pNext					= NULL;
+	pListEntry->inputBase				= inputBase_NONE;
+	pListEntry->pInputStringEntry		= NULL;
+	pListEntry->pLastInputStringEntry	= NULL;
+	pListEntry->op						= operators_NONE;
+	pListEntry->customFunction.pFunc	= NULL;
+	pListEntry->customFunction.numArgs	= 0;
+	pListEntry->depth 					= 0;
+}
+
+/* Function to check if input character corresponds to custom function. 
+   Args: 
+   - c: Input character. 
+   Returns:
+   - True if there is a custom function corresponding to this char, otherwise false
+*/
+static bool charIsCustomFunction(char c){
+	// TODO
+	return false;
+}
+
+/* Function to check health of list entry. 
+   Args: 
+   - pListEntry: Pointer to list entry 
+   Returns:
+   - True if list entry is healty, false otherwise
+*/
+static bool listEntryHealty(inputListEntry_t *pListEntry){
+	// Checks for operator
+	if(pListEntry->op != operators_NONE){
+		// Check 1: If an operator is present, there must be an entry after this. 
+		if(pListEntry->pNext == NULL){
+			return false;
+		}
+		// Check 2: If an operator requires an increase in depth, and there isn't one in entry
+		if(getOperator(pListEntry->op)->bIncDepth){
+			// There is always a next operator, as we've already checked this
+			if(pListEntry->depth == ((inputListEntry_t*)(pListEntry->pNext))->depth){
+				return false;
+			}
+		}
+		// Check 3: Cannot have operator and custom function
+		if(pListEntry->customFunction.pFunc != NULL){
+			return false;
+		}
+	}
+
+	// Checks for custom function
+	if(pListEntry->customFunction.pFunc != NULL){
+		// Check 1: If an custom function is present, there must be an entry after this. 
+		if(pListEntry->pNext == NULL){
+			return false;
+		}
+		// Check 2: Custom functions require a depth increase
+		// There is always a next operator, as we've already checked this
+		if(pListEntry->depth == ((inputListEntry_t*)(pListEntry->pNext))->depth){
+			return false;
+		}
+		// Check 3: Cannot have an operator and custom function at the same time. 
+		if(pListEntry->op != operators_NONE){
+			return false;
+		}
+	}
+	return true;
+}
+
+/* Function to check an entry corresponds to a depth increasing operator 
+   Args: 
+   - pListEntry: Pointer to list entry 
+   Returns:
+   - True if list entry is depth increasing operator
+*/
+static bool entryIsDepthIncreasingOperator(inputListEntry_t *pListEntry){
+	if( (pListEntry->op != operators_NONE) && 
+		(pListEntry->depth == (((inputListEntry_t*)(pListEntry->pNext))->depth)+1) ){
+		return true;
+	}
+	return false;
+}
+
+
 
 /* -------- CALCULATOR CORE FUNCTIONS -------- */
 
@@ -143,6 +246,7 @@ static operatorEntry_t *getOperator(char c){
    State: 
    - Function tested successfully
 */
+
 static inputModStatus_t getInputListEntry(
 		inputListEntry_t *pInputList, 
 		uint8_t cursorPosition,
@@ -154,63 +258,131 @@ static inputModStatus_t getInputListEntry(
 		return inputModStatus_INPUT_LIST_NULL;
 	}
 
-	// Based on the first entry, get the last entry of the list. 
-	// Should be reasonably fast, since the number of list entries shouldn't
-	// be insane for most cases. 
+	// Find the pointer to the last list entry
 	inputListEntry_t *pListEntry = pInputList;
 	while(pListEntry->pNext != NULL){
 		pListEntry = pListEntry->pNext;
 	}
 
-	// Going backwards, find the entry of the string. 
+	// The cursor is only allowed to be unsigned:
+	if(cursorPosition > (uint8_t)((int8_t)-1)){
+		return inputModStatus_CURSOR_VALUE_LARGER_THAN_LIST_ENTRY;
+	}
+
+	// Get the pointer to the last list entry
 	inputStringEntry_t *pStringEntry = pListEntry->pLastInputStringEntry;
-	// If the cursor position is 0, we should return with success by default. 
-	inputModStatus_t state = inputModStatus_SUCCESS;
+
+	// Start going backwards. 
 	for(uint8_t i = 0 ; i < cursorPosition ; i++){
-		// If the string entry is NULL, that means that the current
-		// string entry is exhausted, and we need to go to the previous
-		// input list entry. 
-		// However, the previous entry cannot be a string entry, 
-		// it has to be an operator entry, either the previous nextOp
-		// or this entries preceding operator (e.g. NOT). 
-		if(pStringEntry == NULL){
+		// If the string entry is not NULL, keep going backwards in the string 
+		if(pStringEntry != NULL){
+			pStringEntry = pStringEntry->pPrevious;
+		}
+		else {
+			// If string entry is NULL, then we need to proceed to the previous entry
+			// We should then end up at the previous entires last input string entry point
+
 			// Go to the previous list entry, if it exists. 
 			if(pListEntry->pPrevious != NULL){
-				// Cursor at previous operator, 				
+				// Go to previous list entry				
 				pListEntry = pListEntry->pPrevious;
-				// Check if there is an operator, 
-				// If yes, then set state to be at operator entry, 
-				// Otherwise the previous entry didn't have an operator, 
-				// which is the case of e.g. parenthesis
-				if(pListEntry->op != operators_NONE){
-					state = inputModStatus_LIST_AT_OPERATOR_ENTRY;
-				}
-				else {
-					state = inputModStatus_SUCCESS;
-				}
+				// And set pointer at last string entry. Note, this is allowed to be NULL
 				pStringEntry = pListEntry->pLastInputStringEntry;
 			}
 			else {
 				// If there is no previous list entry, hence we've
 				// reaced the start of the list. 
-				// Break and return with the state and results
-				state = inputModStatus_CURSOR_VALUE_LARGER_THAN_LIST_ENTRY;
-				break;
+				// Return the iterator
+				return i;
 			}
 		}
-		else {
-			// There is a string input, move to the previous one.
-			pStringEntry = pStringEntry->pPrevious;
-			// Currently at a list entry. 
-			state = inputModStatus_SUCCESS;
-		}
 	}
-
 	// Set the return values and return the state. 
 	*ppInputListAtCursor = pListEntry;
 	*ppInputString = pStringEntry;
 
-	return state;
+	return inputModStatus_SUCCESS;
+}
+
+/* Function initialize the calculator core. This will allocate the first list entry as well. 
+   Args: 
+   - pCalcCoreState: pointer to an allocated calculator core state
+   Returns:
+   - Status
+   State:
+   - Untested, Unfinished
+*/
+calc_funStatus_t calc_coreInit(calcCoreState_t *pCalcCoreState){
+	// Check the calc code pointer
+	if(pCalcCoreState == NULL){
+		return calc_funStatus_CALC_CORE_STATE_NULL;
+	}
+
+	// Initialize the cursor to 0
+	pCalcCoreState->cursorPosition = 0;
+
+	// Set the input base to NONE
+	pCalcCoreState->inputBase = inputBase_NONE;
+
+	// Allocate the first list entry
+	//int32_t *pTmp = calloc(28, 1);
+
+	pCalcCoreState->pListEntrypoint = malloc(sizeof(inputListEntry_t));
+
+	// Check if the allocation failed
+	if(pCalcCoreState->pListEntrypoint == NULL){
+		return calc_funStatus_ALLOCATE_ERROR;
+	}
+
+	// Initialize the list entry
+	initListEntry(pCalcCoreState->pListEntrypoint);
+
+	return calc_funStatus_SUCCESS;
+}
+
+/* Function to tear down the calculator core state and deallocate ALL buffers. 
+   NOTE: Must run calc_coreInit before running any other calculator core functions after this. 
+   Args: 
+   - pCalcCoreState: pointer to an allocated calculator core state
+   Returns:
+   - Status
+   State:
+   - Untested, Unfinished
+*/
+calc_funStatus_t calc_coreBufferTeardown(calcCoreState_t *pCalcCoreState){
+	// Check the calc code pointer
+	if(pCalcCoreState == NULL){
+		return calc_funStatus_CALC_CORE_STATE_NULL;
+	}
+
+	inputListEntry_t *pListEntry = pCalcCoreState->pListEntrypoint;
+	// Check if the entry point pointer is NULL
+	if(pListEntry == NULL){
+		return calc_funStatus_INPUT_LIST_NULL;
+	}
+
+	// Find the start of the entry list
+	while( (pListEntry->pPrevious) != NULL){
+		pListEntry = (inputListEntry_t*)(pListEntry->pPrevious);
+	}
+
+	// Go from start to finish and free all string entires and list entries
+	while(pListEntry != NULL){
+		inputStringEntry_t *pStringEntry = pListEntry->pInputStringEntry;
+		while(pStringEntry != NULL){
+			inputStringEntry_t *pNext = (inputStringEntry_t *)(pStringEntry->pNext);
+			free(pStringEntry);
+			pStringEntry = pNext;
+		}
+		// Free the list entry
+		inputListEntry_t *pNext = (inputListEntry_t *)pListEntry->pNext;
+		free(pListEntry);
+		pListEntry = pNext;
+	}
+
+	// We should not free the calcCoreState, it not be malloced. 
+
+	return calc_funStatus_SUCCESS;
 }
 
 /* Function to add a character or operator to the entry list
@@ -245,20 +417,20 @@ static inputModStatus_t getInputListEntry(
       - Returns 
 
 */
-calc_funStatus_t calc_addInput(
-	inputListEntry_t *pInputList, 
+calc_funStatus_t calc_addInput( 
 	calcCoreState_t* pCalcCoreState,
 	char inputChar
 	)
 {
-	// Check pointer to input list
-	if(pInputList == NULL){
-		return calc_funStatus_INPUT_LIST_NULL;
-	}
-
 	// Check pointer to calculator core state
 	if(pCalcCoreState == NULL){
 		return calc_funStatus_CALC_CORE_STATE_NULL;
+	}
+	inputListEntry_t *pInputList = pCalcCoreState->pListEntrypoint;
+
+	// Check pointer to input list
+	if(pInputList == NULL){
+		return calc_funStatus_INPUT_LIST_NULL;
 	}
 
 	// Get the current list and string entries based on the cursor. 
@@ -270,80 +442,151 @@ calc_funStatus_t calc_addInput(
 		&pCurrentListEntry, 
 		&pCurrentStringEntry
 	);
-	switch(listState){
-		case inputModStatus_SUCCESS:
-			// Everything went well, we can add input into list, or add another operator
-			// If adding a char, insert that into the string buffer
-			// Check if adding a new entry, in which case use the incoming base
-			// for the entry. If already in an existing list, then we either convert that
-			// entry or throw an error. 
-			if(pCurrentStringEntry == NULL){
-				// No entry in string buffer, add new with incoming base. 
-				if(charIsNumerical(pCalcCoreState->inputBase,inputChar)){
-					// Allocate new string entry and populate with character
-					inputStringEntry_t *newStringEntry = malloc(sizeof(inputStringEntry_t));
-					newStringEntry->c = inputChar;
-					newStringEntry->pPrevious = NULL;
-					newStringEntry->pNext = NULL;
-					// TBD: How to handle the case where this is a parentheses or 
-					// operator only entry? 
-				}
-				else if(charIsOperator(inputChar)){
-					// Character is operator, add this to the current entry 
-					// and allocate a new entry and add to list. 
-					// Check if existing operator exists as well, in which case
-					// shoehorn that in here. Most likely this at the end of the entry
-					// list, otherwise it should have been handled by the 
-					// LIST_AT_OPERATOR_ENTRY state. 
-					// TODO
-				}
-				else if(inputChar == '('){
-					// Opening bracket. 
-					// TODO
-				}
-				else if(inputChar == ')'){
-					// Closing bracket. 
-					// TODO
-				}
-				else{
-					// Nothing of the above, therefore unknown input. Return with status
-					return calc_funStatus_UNKNOWN_INPUT;
-				}
-			}
-			else{
-				// Exising list, we are either in the middle of a string entry, 
-				// or at the end of a string entry. 
-				// For now, this is not allowed, so return with error
-				if(pCalcCoreState->inputBase != pCurrentListEntry->inputBase){
-					return calc_funStatus_INPUT_BASE_ERROR;
-				}
-				// Here we are in the middle of a string, so shoehorn in either new
-				// character or operator. Note that operator would split the string 
-				// array and make a new entry. 
-				// TODO
-			}
-			
-			break;
-			// If an operator, then create a new list entry splitting the list. 
-		case inputModStatus_LIST_AT_OPERATOR_ENTRY:
-			// Everything went well, we can add input into list
-			// Char shall be added at the end of the string buffer
-			// Operator shall replace the current operator, and the current
-			// operator shall be inserted in a new list entry. 
-			break;
-		case inputModStatus_CURSOR_VALUE_LARGER_THAN_LIST_ENTRY:
-			// This is OK, simply add to the start, but cursor might need to be updated.
-			// Add input to start of list. Need to check if there is a preceding operator. 
-			break; 
-		default:
-			// Unknown return, throw an error. 
-			break;
+
+	// Check health of list entry. E.g. if operator is present, no custom function is allowed. 
+	if(!listEntryHealty(pCurrentListEntry)){
+		return calc_funStatus_ENTRY_LIST_ERROR;
 	}
 
+	// Based on the input, handle the insertion. 
+	if(charIsNumerical(pCalcCoreState->inputBase,inputChar)){
+		// Needs to be handled differently based on different situtations
+		// One thing is always true though, allocate a new string buffer entry
+		// and insert the character. 
+		inputStringEntry_t *pNewStringEntry = malloc(sizeof(inputStringEntry_t));
+		if(pNewStringEntry == NULL){
+			return calc_funStatus_ALLOCATE_ERROR;
+		}
+		pNewStringEntry->c = inputChar;
+		pNewStringEntry->pNext = NULL;
+		pNewStringEntry->pPrevious = NULL;
+
+		// When inputting a character, and the current string is not NULL, then 
+		// this is simply put into an existing string entry, either in the middle
+		// or at the start. 
+		if(pCurrentStringEntry != NULL){
+			// Set the pointers to the newly created entry
+			pNewStringEntry->pNext = pCurrentStringEntry->pNext;
+			pNewStringEntry->pPrevious = pCurrentStringEntry;
+
+			// Adjust the current strings pointer:
+			pCurrentStringEntry->pNext = pNewStringEntry;
+
+			// If there is an entry before this one, then also modify that. 
+			if(pNewStringEntry->pNext != NULL){
+				((inputStringEntry_t *)(pNewStringEntry->pNext))->pPrevious = pNewStringEntry;
+			} 
+			else{
+				// If there isn't a next one, then this entry is at the end of the 
+				// string list, therefore adjust the list last entry string end pointer
+				pCurrentListEntry->pLastInputStringEntry = pNewStringEntry;
+			}
+		}
+		else {
+			// The current string entry is NULL, and could therefore be a couple of different 
+			// situations
+			if(pCurrentListEntry->pNext == NULL || pCurrentListEntry->pPrevious == NULL){
+				
+				// Check if this entry has a string from before, but cursor is at the start
+				if(pCurrentListEntry->pInputStringEntry != NULL){
+					
+					pNewStringEntry->pNext = pCurrentListEntry->pInputStringEntry;
+					pNewStringEntry->pPrevious = NULL;
+
+					// Modify the next entry, if any
+					if(pNewStringEntry->pNext != NULL){
+						((inputStringEntry_t *)(pNewStringEntry->pNext))->pPrevious = pNewStringEntry;
+					}
+					// Modify the string list entry point:
+					pCurrentListEntry->pInputStringEntry = pNewStringEntry;
+				}
+				else {
+					// If there isn't a next entry, and there is no string, then 
+					// attach the string to the list entry. This could be the case e.g, 
+					// after a '+' input. 
+					pCurrentListEntry->pInputStringEntry = pNewStringEntry;
+					pCurrentListEntry->pLastInputStringEntry = pNewStringEntry;
+				}
+				
+
+			}
+			else{
+				// There is a next and a previous list entry
+				if(pCurrentListEntry->depth != ((inputListEntry_t *)(pCurrentStringEntry->pPrevious))->depth){
+					// Depth is different between this entry and the next. 
+					// This requires a new list entry, as this is either depth increasing operator, 
+					// bracket or custom function, which none can have string entries. 
+					// Insert the new entry before this current one. 
+					inputListEntry_t *pNewListEntry = malloc(sizeof(inputListEntry_t));
+					if(pNewListEntry == NULL){
+						return calc_funStatus_ALLOCATE_ERROR;
+					}
+					initListEntry(pNewListEntry);
+					// Set the depth of this entry to the previous entry's depth. 
+					pNewListEntry->depth = ((inputListEntry_t*)(pCurrentListEntry->pPrevious))->depth;
+
+					// Set the input base of this new entry of the user input base
+					pNewListEntry->inputBase = pCalcCoreState->inputBase;
+
+					// Now add the string entry to this newly created list. 
+					pNewListEntry->pInputStringEntry = pNewStringEntry;
+					pNewListEntry->pLastInputStringEntry = pNewStringEntry;
+
+					// And at last, add this new list entry before the current one
+					pNewListEntry->pPrevious = pCurrentListEntry->pPrevious;
+					pNewListEntry->pNext = pCurrentListEntry;
+					// Change the pointers of previous entry to point to this new one
+					((inputListEntry_t*)(pCurrentListEntry->pPrevious))->pNext = pNewListEntry;
+					// And then change the current's previous pointer to the new list entry
+					pCurrentListEntry->pNext = pNewListEntry;
+				}
+				else{
+					// This entry has no string and no depth increase. Could be the case where
+					// there are several non-depth increasing operators, e.g. '+++++'. 
+					// Simply add the new string entry
+					pCurrentListEntry->pInputStringEntry = pNewStringEntry;
+					pCurrentListEntry->pLastInputStringEntry = pNewStringEntry;
+				}
+			}
+			
+		}
+	}
+
+
+/*OLD CODE: THIS IS JUST FOR REFERENCE*/
+		/*--------------------------------------------------*/
+
+	else if(charIsOperator(inputChar)){
+		// REF: (getOperator(pCurrentListEntry->op)->bIncDepth) is probably useful
+		// If depth increasing operator:
+		// 1. pCurrentEntry->pNext->operator = Depth increasing operator
+		// 2. pCurrentEntry->pNext->customFuntion = None
+		// 3. pCurrentEntry->pNext->depth = pCurrentEntry->depth + 1
+		// 4. pCurrentEntry->pNext->pNext != NULL
+		// Simply put, an entry with only operator and depth increase is operator.
+	}
+	else if(inputChar == OPENING_BRACKET){
+		// When adding an opening bracket to pCurrenEntry, make a new list entry such that:
+		// 1. pCurrentEntry->pNext->operator = None
+		// 2. pCurrentEntry->pNext->customFuntion = None
+		// 3. pCurrentEntry->pNext->depth = pCurrentEntry->depth + 1
+		// 4. pCurrentEntry->pNext->pNext != NULL
+		// Simply put, an empty entry with a depth increase corresponds to an opening bracket. 
+	}
+	else if(inputChar == CLOSING_BRACKET){
+		
+	}
+	else if(charIsCustomFunction(inputChar)){
+
+	}
+	else{
+		// Unknown input, return warning. 
+		return calc_funStatus_UNKNOWN_INPUT;
+	}
+	
 	// Return success
 	return calc_funStatus_SUCCESS;
 }
-
 /* Function to remove a character to the list. Only backspace possible. 
    Args: 
    - pInputList: Pointer to first entry of the input list
@@ -363,15 +606,16 @@ calc_funStatus_t calc_addInput(
       - Example
       - Returns 
 */
-calc_funStatus_t calc_removeInput(inputListEntry_t *pInputList, calcCoreState_t* pCalcCoreState){
-	// Check pointer to input list
-	if(pInputList == NULL){
-		return calc_funStatus_INPUT_LIST_NULL;
-	}
-
+calc_funStatus_t calc_removeInput(calcCoreState_t* pCalcCoreState){
 	// Check pointer to calculator core state
 	if(pCalcCoreState == NULL){
 		return calc_funStatus_CALC_CORE_STATE_NULL;
+	}
+	inputListEntry_t *pInputList = pCalcCoreState->pListEntrypoint;
+	
+	// Check pointer to input list
+	if(pInputList == NULL){
+		return calc_funStatus_INPUT_LIST_NULL;
 	}
 
 	// Get the current list and string entries based on the cursor. 
@@ -383,25 +627,7 @@ calc_funStatus_t calc_removeInput(inputListEntry_t *pInputList, calcCoreState_t*
 		&pCurrentListEntry, 
 		&pCurrentStringEntry
 	);
-	switch(listState){
-		case inputModStatus_SUCCESS:
-			// Everything went well, remove string if not start of string buffer. 
-			// If at the start of the string, either remove preceding operator or previous
-			// operator. 
-			break;
-		case inputModStatus_LIST_AT_OPERATOR_ENTRY:
-			// Remove last string input of previous entry, or if string input empty remove
-			// previous operator. If preceding operator exists without end operator, then remove
-			// preceding operator. 
-			break;
-		case inputModStatus_CURSOR_VALUE_LARGER_THAN_LIST_ENTRY:
-			// This is OK, no nothing, but cursor might need to be updated.
-			// However, this is at the start of the buffer, so nothing to remove. 
-			break; 
-		default:
-			// Unknown return, throw an error. 
-			break;
-	}
+
 }
 
 
