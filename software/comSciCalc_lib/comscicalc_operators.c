@@ -15,7 +15,6 @@
  */
 
 
-
 /* ----------------- DEFINES ----------------- */
 
 /* ----------------- HEADERS ----------------- */
@@ -23,11 +22,11 @@
 #include "comscicalc_operators.h"
 
 // Standard library
-
+#include <stdlib.h>
 /* ------------- GLOBAL VARIABLES ------------ */
 // List of operator function pointers
 // Ensure that each inputChar and op field is unique! 
-operatorEntry_t operators[NUM_OPERATORS] = {
+const operatorEntry_t operators[NUM_OPERATORS] = {
 	// Arithmetic operators, multiple input
 	{.inputChar = '+', .opString = "+\0", .op = operators_ADD,      .bIncDepth = false, .pFun = &calc_add},
 	{.inputChar = '-', .opString = "-\0", .op = operators_SUBTRACT, .bIncDepth = false, .pFun = &calc_subtract},

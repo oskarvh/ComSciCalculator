@@ -9,14 +9,18 @@
  *  
  */
 
+#ifndef COMSCICALC_H
+#define COMSCICALC_H
 /* -------------------------------------------
  * ----------------- DEFINES ----------------- 
  * -------------------------------------------*/
-#define OPERATOR_STRING_MAX_LEN 10 // Max length of the operator string
-#define CONSTRUCT_OPERATOR(OP, BITWISE, SINGLE_INPUT) ( (OP&0xF) | (BITWISE<<4) | (SINGLE_INPUT<<5))
-#define OPERATOR_IS_BITWISE(OP_ID) ( (OP_ID >> 4) & 0x01)
 #define OPENING_BRACKET '('
 #define CLOSING_BRACKET ')'
+
+/* -------------------------------------------
+ * ----------------- MACROS ------------------ 
+ * -------------------------------------------*/
+
 /* -------------------------------------------
  * ----------------- HEADERS -----------------
  * -------------------------------------------*/
@@ -34,35 +38,6 @@ enum inputBase {
     inputBase_BIN 		= 2,
     // Not assigned:
     inputBase_NONE 		= -1,
-};
-
-// Enum for the supported operators
-// bit 7-6: Reserved
-// bit 5: 1 = single input, 0 = multiple input
-// bit 4: 1 = bitwise, 0 = arithmetic
-// bit 3-0: Operator (0 is reserved, must be 1-15)
-enum op_id {
-	// Artihmetic operators, multiple input
-    operators_ADD 		= CONSTRUCT_OPERATOR(1, 0, 0),
-    operators_SUBTRACT 	= CONSTRUCT_OPERATOR(2, 0, 0),
-    operators_MULTI 	= CONSTRUCT_OPERATOR(3, 0, 0),
-    operators_DIVIDE	= CONSTRUCT_OPERATOR(4, 0, 0), 
-
-    // Arithmetic operators, single input
-    // Bitwise operators, multiple input
-    operators_AND 		= CONSTRUCT_OPERATOR(1, 1, 0),
-    operators_NAND 		= CONSTRUCT_OPERATOR(2, 1, 0),
-    operators_OR 		= CONSTRUCT_OPERATOR(3, 1, 0),
-    operators_XOR 		= CONSTRUCT_OPERATOR(4, 1, 0), 
-
-    // Arithmetic operators, single input
-    // EXAMPLE = (operators_t)CONSTRUCT_OPERATOR(n, 0, 1),
-    // This could be SIN, COS etc.  
-    // Bitwise operators, single input
-    operators_NOT 		= CONSTRUCT_OPERATOR(1, 1, 1),
-
-    // Not assigned:
-    operators_NONE 		= 0x00
 };
 
 // status of calc_* functions
@@ -100,7 +75,7 @@ enum inputModStatus {
 };
 
 typedef uint8_t inputBase_t;
-typedef uint8_t operators_t;
+typedef char operators_t;
 typedef int8_t calc_funStatus_t;
 typedef int8_t inputModStatus_t;
 
@@ -229,8 +204,8 @@ int32_t calc_not(int32_t a, int32_t b);
  * ------------ FUNCTION WRAPPERS ------------
  * -------------------------------------------*/
 inputModStatus_t getInputListEntryWrapper(
-	inputListEntry_t *pInputList, 
-	uint8_t cursorPosition,
+	calcCoreState_t *calcCoreState,
 	inputListEntry_t **ppInputListAtCursor, 
 	inputStringEntry_t **ppInputString
 );
+#endif
