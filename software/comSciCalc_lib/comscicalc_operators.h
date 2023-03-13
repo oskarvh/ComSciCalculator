@@ -77,6 +77,22 @@ typedef struct operatorEntry {
 	int32_t (*pFun)(int32_t a, int32_t b);
 } operatorEntry_t;
 
+// Struct to be used with a custom function
+typedef struct customFunc {
+    // Which input corresponds to this function
+    char inputChar;
+    // What string should be displayed for this operator?
+    char opString[OPERATOR_STRING_MAX_LEN];
+    // Pointer to custom function
+    // NULL if no function defined. 
+    int32_t (*pFunc)(void* args); 
+    // Number of arguments. 
+    // I.e. how many of the following entries should go into 
+    // this function
+    uint8_t numArgs;
+    
+} customFunc_t;
+
 /* -------------------------------------------
  * ---------------- VARIABLES ----------------
  * -------------------------------------------*/

@@ -92,21 +92,6 @@ typedef struct inputStringEntry {
 	uint16_t padding1;
 } inputStringEntry_t;
 
-// Struct to be used with a custom function
-typedef struct customFunc {
-	// Pointer to custom function
-	// NULL if no function defined. 
-
-	int32_t (*pFunc)(void* args); 
-	// Number of arguments. 
-	// I.e. how many of the following entries should go into 
-	// this function
-	uint8_t numArgs;
-
-	uint8_t padding0;
-	uint16_t padding1;
-} customFunc_t;
-
 // Struct for the input linked list entry
 typedef struct inputListEntry {
 	// Pointer to previous entry in the list. 
@@ -129,7 +114,7 @@ typedef struct inputListEntry {
 	// If this is defined, then no inputstring should be defined, 
 	// as the next N number of entries should be the 
 	// input to this function. 
-	customFunc_t customFunction;
+	void *pCustomFunction;
 
 	// Operator to next entry
 	// This operator is acting between this entry and next entry
@@ -179,6 +164,7 @@ calc_funStatus_t calc_coreInit(calcCoreState_t *pCalcCoreState);
 calc_funStatus_t calc_coreBufferTeardown(calcCoreState_t *pCalcCoreState);
 calc_funStatus_t calc_addInput(calcCoreState_t* pCalcCoreState, char inputChar);
 calc_funStatus_t calc_removeInput(calcCoreState_t* pCalcCoreState);
+calc_funStatus_t calc_printBuffer(calcCoreState_t* pCalcCoreState, char *pResString, uint16_t stringLen);
 
 // Calculator operator functions
 // NOTE: all operators must have 

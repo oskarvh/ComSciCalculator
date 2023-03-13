@@ -20,6 +20,7 @@
 #include "comscicalc_operators.h"
 // Standard libs
 #include <stdio.h>
+#include <string.h>
 
 
 /* -------------- TEST FUNCTION--------------- */
@@ -91,17 +92,9 @@ void main(){
 	}
 
 	// Print results:
-	printf("In buffer: ");
-	inputListEntry_t *pListEntry = coreState.pListEntrypoint;
-	while(pListEntry != NULL){
-		inputStringEntry_t *pInputStringEntry = (inputStringEntry_t *)pListEntry->pInputStringEntry;
-		while(pInputStringEntry != NULL){
-			printf("%c", pInputStringEntry->c);
-			pInputStringEntry = pInputStringEntry->pNext;
-		}
-		pListEntry = pListEntry->pNext;
-		printf("\r\n");
-	}
+	char pResString[100] = {0};
+	uint8_t state = calc_printBuffer(&coreState, pResString, 100);
+	printf("In buffer: %s\n", pResString);
 	printf("Expected:  651243 \r\n");
 
 	
@@ -158,22 +151,9 @@ void main(){
 	// Loop through the operator array and check if the operator is in there. 
 	// Not a nice way to do it, but the array is fairly small. 
 
-
-	printf("In buffer: ");
-
-	pListEntry = coreState.pListEntrypoint;
-	while(pListEntry != NULL){
-		inputStringEntry_t *pInputStringEntry = (inputStringEntry_t *)pListEntry->pInputStringEntry;
-		while(pInputStringEntry != NULL){
-			printf("%c", pInputStringEntry->c);
-			pInputStringEntry = pInputStringEntry->pNext;
-		}
-		if(pListEntry->op != operators_NONE){
-			printf("%c", pListEntry->op);
-		}
-		pListEntry = pListEntry->pNext;
-	}
-	printf("\r\n");	
+	memset(pResString, 0, 100);
+	state = calc_printBuffer(&coreState, pResString, 100);
+	printf("In buffer: %s\n", pResString);
 	printf("Expected:  123+45 \r\n");
 
 	// Teardown buffers:
@@ -226,21 +206,9 @@ void main(){
 	// Not a nice way to do it, but the array is fairly small. 
 
 
-	printf("In buffer: ");
-
-	pListEntry = coreState.pListEntrypoint;
-	while(pListEntry != NULL){
-		inputStringEntry_t *pInputStringEntry = (inputStringEntry_t *)pListEntry->pInputStringEntry;
-		while(pInputStringEntry != NULL){
-			printf("%c", pInputStringEntry->c);
-			pInputStringEntry = pInputStringEntry->pNext;
-		}
-		if(pListEntry->op != operators_NONE){
-			printf("%c", pListEntry->op);
-		}
-		pListEntry = pListEntry->pNext;
-	}
-	printf("\r\n");	
+	memset(pResString, 0, 100);
+	state = calc_printBuffer(&coreState, pResString, 100);
+	printf("In buffer: %s\n", pResString);
 	printf("Expected:  +12+3 \r\n");
 
 	// Teardown buffers:
@@ -295,22 +263,10 @@ void main(){
 	// Not a nice way to do it, but the array is fairly small. 
 
 
-	printf("In buffer: ");
-
-	pListEntry = coreState.pListEntrypoint;
-	while(pListEntry != NULL){
-		inputStringEntry_t *pInputStringEntry = (inputStringEntry_t *)pListEntry->pInputStringEntry;
-		while(pInputStringEntry != NULL){
-			printf("%c", pInputStringEntry->c);
-			pInputStringEntry = pInputStringEntry->pNext;
-		}
-		if(pListEntry->op != operators_NONE){
-			printf("%c", pListEntry->op);
-		}
-		pListEntry = pListEntry->pNext;
-	}
-	printf("\r\n");	
-	printf("Expected:  1N2+3 \r\n");
+	memset(pResString, 0, 100);
+	state = calc_printBuffer(&coreState, pResString, 100);
+	printf("In buffer: %s\n", pResString);
+	printf("Expected:  1NAND(2+3 \r\n");
 
 	// Teardown buffers:
 	if(calc_coreBufferTeardown(&coreState) != calc_funStatus_SUCCESS){
@@ -371,22 +327,12 @@ void main(){
 	// Not a nice way to do it, but the array is fairly small. 
 
 
-	printf("In buffer: ");
+	
 
-	pListEntry = coreState.pListEntrypoint;
-	while(pListEntry != NULL){
-		inputStringEntry_t *pInputStringEntry = (inputStringEntry_t *)pListEntry->pInputStringEntry;
-		while(pInputStringEntry != NULL){
-			printf("%c", pInputStringEntry->c);
-			pInputStringEntry = pInputStringEntry->pNext;
-		}
-		if(pListEntry->op != operators_NONE){
-			printf("%c", pListEntry->op);
-		}
-		pListEntry = pListEntry->pNext;
-	}
-	printf("\r\n");	
-	printf("Expected:  -+-*/ \r\n");
+	memset(pResString, 0, 100);
+	state = calc_printBuffer(&coreState, pResString, 100);
+	printf("In buffer: %s\n", pResString);
+	printf("Expected:  -+-*/ \r\n\r\n");
 
 	// Teardown buffers:
 	if(calc_coreBufferTeardown(&coreState) != calc_funStatus_SUCCESS){

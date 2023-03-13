@@ -71,6 +71,8 @@ List entries are a doubly linked list where each element consists of either:
 #include "comscicalc_operators.h"
 
 // Standard library
+#include <stdio.h>
+#include <string.h>
 
 /* ------------- GLOBAL VARIABLES ------------ */
 
@@ -157,8 +159,7 @@ static void initListEntry(inputListEntry_t *pListEntry){
 	pListEntry->pInputStringEntry		= NULL;
 	pListEntry->pLastInputStringEntry	= NULL;
 	pListEntry->op						= operators_NONE;
-	pListEntry->customFunction.pFunc	= NULL;
-	pListEntry->customFunction.numArgs	= 0;
+	pListEntry->pCustomFunction			= NULL;
 	pListEntry->depth 					= 0;
 }
 
@@ -194,13 +195,13 @@ static bool listEntryHealty(inputListEntry_t *pListEntry){
 			}
 		}
 		// Check 3: Cannot have operator and custom function
-		if(pListEntry->customFunction.pFunc != NULL){
+		if(pListEntry->pCustomFunction != NULL){
 			return false;
 		}
 	}
 
 	// Checks for custom function
-	if(pListEntry->customFunction.pFunc != NULL){
+	if(pListEntry->pCustomFunction != NULL){
 		// Check 1: If an custom function is present, there must be an entry after this. 
 		if(pListEntry->pNext == NULL){
 			return false;
@@ -792,6 +793,7 @@ calc_funStatus_t calc_addInput(
 	// Return success
 	return calc_funStatus_SUCCESS;
 }
+
 /* Function to remove a character to the list. Only backspace possible. 
    Args: 
    - pInputList: Pointer to first entry of the input list
@@ -835,6 +837,122 @@ calc_funStatus_t calc_removeInput(calcCoreState_t* pCalcCoreState){
 }
 
 
+/* Function to print the list entries. 
+   This function relies on the list being in good shape.  
+   Args: 
+   - pCalcCoreState: pointer to calculator core state
+   - pString: pointer to string which to print the buffer
+   - stringLen: maximum number of characters to write to pString
+   Returns:
+   - state of the function. 
+   State:
+   - Untested, Unfinished
+*/
+calc_funStatus_t calc_printBuffer(calcCoreState_t* pCalcCoreState, char *pResString, uint16_t stringLen){
+
+	// Check pointer to calculator core state
+	if(pCalcCoreState == NULL){
+		return calc_funStatus_CALC_CORE_STATE_NULL;
+	}
+	inputListEntry_t *pInputList = pCalcCoreState->pListEntrypoint;
+	
+	// Check pointer to input list
+	if(pInputList == NULL){
+		return calc_funStatus_INPUT_LIST_NULL;
+	}
+
+	// Check the string entry
+	if(pResString == NULL){
+		calc_funStatus_STRING_BUFFER_ERROR;
+	}
+
+	// Make a local variable of the string entry to interate on. 
+	char *pString = pResString;
+
+	// Variable to keep track of the number of chars written to string
+	// Add one as as we need a null terminator at the end. 
+	uint16_t numCharsWritten = 1;
+
+	// Loop through all buffers
+	while(pInputList != NULL){
+
+		// Get the pointer to the string entries:
+		inputStringEntry_t *pStringEntry = (inputStringEntry_t *)pInputList->pInputStringEntry;
+
+		// If the string itsn't empty, then print the 0x or 0b if hex or dec
+		if(pStringEntry != NULL){
+			if(pInputList->inputBase == inputBase_HEX){
+				// Print '0x' if there is room
+				if(numCharsWritten < (stringLen - 2) ){
+					numCharsWritten += sprintf(pString, "0x");
+					// Increase the pointer two steps. 
+					pString += 2;
+				}
+				else {
+					return calc_funStatus_STRING_BUFFER_ERROR;
+				}
+			}
+			if(pInputList->inputBase == inputBase_BIN){
+				// Print '0b' if there is room
+				if(numCharsWritten < (stringLen - 2) ){
+					numCharsWritten += sprintf(pString, "0b");
+					// Increase the pointer two steps. 
+					pString += 2;
+				}
+				else {
+					return calc_funStatus_STRING_BUFFER_ERROR;
+				}
+			}
+		}
+
+		// Loop through the string 
+		while(pStringEntry != NULL){
+			if(numCharsWritten < stringLen){
+				*pString++ = pStringEntry->c;
+			}
+			else {
+				return calc_funStatus_STRING_BUFFER_ERROR;
+			}
+			pStringEntry = pStringEntry->pNext;
+		}
+
+		// Print the operator. Note, if no operator then it's just a null terminator. 
+		const operatorEntry_t *pOperator = getOperator(pInputList->op);
+		uint8_t tmpStrLen = strlen(pOperator->opString);
+		if(numCharsWritten < stringLen-tmpStrLen){
+			numCharsWritten += sprintf(pString, pOperator->opString);
+			pString += tmpStrLen;
+		}
+
+		// Print the custom function. 
+		customFunc_t *pCustomFunction = pInputList->pCustomFunction;
+		if(pCustomFunction != NULL){
+			tmpStrLen = strlen(pCustomFunction->opString);
+			if(numCharsWritten < stringLen-tmpStrLen){
+				numCharsWritten += sprintf(pString, pCustomFunction->opString);
+				pString += tmpStrLen;
+			}
+		}
+
+		// Print brackets:
+		if(pInputList->pNext != NULL){
+			if( ((inputListEntry_t*)(pInputList->pNext))->depth > pInputList->depth ){
+				// Next entry has deeper depth, print opening bracket
+				*pString++ = OPENING_BRACKET;
+			}
+			if( ((inputListEntry_t*)(pInputList->pNext))->depth < pInputList->depth ){
+				// Next entry has shallower depth, print closing bracket
+				*pString++ = CLOSING_BRACKET;
+			}
+		}
+
+		// Go to the next list entry
+		pInputList = pInputList->pNext;
+	}
+	// Add a NULL terminator at the end. 
+	pString[numCharsWritten] = '\0';
+	return calc_funStatus_SUCCESS;
+}
 
 
 /* -------------------------------------------
