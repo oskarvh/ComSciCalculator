@@ -325,8 +325,6 @@ void main(){
 	// -+-*/
 	// Loop through the operator array and check if the operator is in there. 
 	// Not a nice way to do it, but the array is fairly small. 
-
-
 	
 
 	memset(pResString, 0, 100);
@@ -338,4 +336,80 @@ void main(){
 	if(calc_coreBufferTeardown(&coreState) != calc_funStatus_SUCCESS){
 		printf("Buffer teardown unsuccessful! \r\n");
 	}
+
+
+	// Testing brackets
+	if(calc_coreInit(&coreState) != calc_funStatus_SUCCESS){
+		printf("ERROR: Could not intialize calculator core state!\r\n");
+		// If this is the case, we cannot proceed. 
+		return;
+	}
+	coreState.inputBase = inputBase_DEC;
+
+	coreState.cursorPosition = 0;
+	// Test operator insertion
+	status = calc_addInput(&coreState, '+');
+	if(status != calc_funStatus_SUCCESS){
+		printf("Could not add input \r\n");
+		printf("Status = %d\n", status);
+	}
+
+	coreState.cursorPosition = 0;
+	status = calc_addInput(&coreState, '(');
+	if(status != calc_funStatus_SUCCESS){
+		printf("Could not add input \r\n");
+		printf("Status = %d\n", status);
+	}
+
+
+
+	// Add plus at the start
+	coreState.cursorPosition = 1;
+	// Problem is: In this case there are three entries, as a new operator always
+	// spawns a new empty entry when added last. 
+	status = calc_addInput(&coreState, '-');
+	if(status != calc_funStatus_SUCCESS){
+		printf("Could not add input \r\n");
+		printf("Status = %d\n", status);
+	}
+	
+	// Add plus at the start
+	coreState.cursorPosition = 3;
+	status = calc_addInput(&coreState, '-');
+	if(status != calc_funStatus_SUCCESS){
+		printf("Could not add input \r\n");
+		printf("Status = %d\n", status);
+	}
+
+	coreState.cursorPosition = 0;
+	status = calc_addInput(&coreState, ')');
+	if(status != calc_funStatus_SUCCESS){
+		printf("Could not add input \r\n");
+		printf("Status = %d\n", status);
+	}
+
+	coreState.cursorPosition = 5;
+	status = calc_addInput(&coreState, ')');
+	if(status != calc_funStatus_SUCCESS){
+		printf("Could not add input \r\n");
+		printf("Status = %d\n", status);
+	}
+	
+	
+	// -+-()
+	// Loop through the operator array and check if the operator is in there. 
+	// Not a nice way to do it, but the array is fairly small. 
+	
+
+	memset(pResString, 0, 100);
+	state = calc_printBuffer(&coreState, pResString, 100);
+	printf("In buffer: %s\n", pResString);
+	printf("Expected:  -+-*/ \r\n\r\n");
+
+	// Teardown buffers:
+	if(calc_coreBufferTeardown(&coreState) != calc_funStatus_SUCCESS){
+		printf("Buffer teardown unsuccessful! \r\n");
+	}
+
+
 }

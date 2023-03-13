@@ -62,7 +62,9 @@ List entries are a doubly linked list where each element consists of either:
 */
 
 /* ----------------- DEFINES ----------------- */
-
+#define INCREASE_DEPTH 0x01
+#define DECREASE_DEPTH 0x02
+#define KEEP_CURRENT_DEPTH 0x00
 /* ----------------- HEADERS ----------------- */
 // comsci header file
 #include "comscicalc.h"
@@ -126,6 +128,19 @@ static bool charIsOperator(char c){
 			// Operator entry found!
 			return true;
 		}
+	}
+	return false;
+}
+
+/* Function to check if character is bracket
+   Args: 
+   - c: incoming character. 
+   Returns:
+   - True if char is bracket, otherwise false
+*/
+static bool charIsBracket(char c){
+	if( (c == '(') || (c == ')') ){
+		return true;
 	}
 	return false;
 }
@@ -233,7 +248,18 @@ static bool entryIsDepthIncreasingOperator(inputListEntry_t *pListEntry){
 	return false;
 }
 
+/* -------- CALCULATOR CORE FUNCTIONS -------- */
 
+/* Function get the pointer to a custom function
+   Args: 
+   - inputChar: the character which corresponds to the custom function. 
+   Returns:
+   - Pointer to that custom funciton entry
+*/
+static customFunc_t *getCustomFunction(char inputChar){
+	// TODO
+	return NULL;
+}
 
 /* -------- CALCULATOR CORE FUNCTIONS -------- */
 
@@ -248,7 +274,6 @@ static bool entryIsDepthIncreasingOperator(inputListEntry_t *pListEntry){
    State: 
    - Function tested successfully
 */
-
 static inputModStatus_t getInputListEntry(
 		calcCoreState_t *calcCoreState,
 		inputListEntry_t **ppInputListAtCursor, 
@@ -397,29 +422,7 @@ calc_funStatus_t calc_coreBufferTeardown(calcCoreState_t *pCalcCoreState){
    Returns:
    - state of the function
    State:
-   - Untested, Unfinished
-
-   Function test cases:
-   1. pInputList = NULL
-      - Returns: INPUT_LIST_NULL
-   2. pCalcCoreState = NULL
-      - Returns: CALC_CORE_STATE_NULL
-   3. Add character to end (permutations: empty entires, non-emtpy entries)
-   4. Add operator at end
-   5. Add '(' at end
-   6. Add ')' at end
-   7. Add character in middle of string buffer 
-   8. Add operator in middle of string buffer
-   9. Add '(' in middle of string buffer
-   10.Add ')' in middle of string buffer
-   11.Add character at entry without string (e.g. parentheses)
-   12.Add operator at entry without string (e.g. parentheses)
-   13.Add '(' at entry without string (e.g. parentheses)
-   14.Add ')' at entry without string (e.g. parentheses)
-
-   n. test1
-      - Example
-      - Returns 
+   - Draft state, partially tested
 
 */
 calc_funStatus_t calc_addInput( 
@@ -439,7 +442,6 @@ calc_funStatus_t calc_addInput(
 	}
 
 	// Get the current list and string entries based on the cursor. 
-	
 	inputListEntry_t *pReturnedListEntry;
 	inputStringEntry_t *pCurrentStringEntry;
 	inputModStatus_t listState = getInputListEntry(
@@ -449,7 +451,6 @@ calc_funStatus_t calc_addInput(
 	);
 	inputListEntry_t *pCurrentListEntry = pReturnedListEntry;
 	
-
 	// Check health of list entry. E.g. if operator is present, no custom function is allowed. 
 	if(!listEntryHealty(pCurrentListEntry)){
 		return calc_funStatus_ENTRY_LIST_ERROR;
@@ -566,14 +567,33 @@ calc_funStatus_t calc_addInput(
 			
 		}
 	}
-	else if(charIsOperator(inputChar)){
+	else if( charIsOperator(inputChar) || charIsBracket(inputChar) || charIsCustomFunction(inputChar) ){
 		// If depth increasing operator:
 		// 1. pCurrentEntry->pNext->operator = Depth increasing operator
 		// 2. pCurrentEntry->pNext->customFuntion = None
 		// 3. pCurrentEntry->pNext->depth = pCurrentEntry->depth + 1
 		// 4. pCurrentEntry->pNext->pNext != NULL
 		// Simply put, an entry with only operator and depth increase is operator.
-		bool bIncreaseDepth = getOperator(inputChar)->bIncDepth;
+		uint8_t changeDepth = KEEP_CURRENT_DEPTH;
+		bool bOperator = charIsOperator(inputChar);
+		bool bBracket = charIsBracket(inputChar);
+		bool bCustomFunction = charIsCustomFunction(inputChar);
+
+		// Check if depth should increase or decrease
+		if(bOperator){
+			if(getOperator(inputChar)->bIncDepth){
+				changeDepth = INCREASE_DEPTH;
+			}
+		} 
+		else if(inputChar == OPENING_BRACKET){
+			changeDepth = INCREASE_DEPTH;
+		}
+		else if(inputChar == CLOSING_BRACKET){
+			changeDepth = DECREASE_DEPTH;
+		}
+		else if(bCustomFunction){
+			changeDepth = INCREASE_DEPTH;
+		}
 
 		// All operators require a new list entry
 		inputListEntry_t *pNewListEntry = malloc(sizeof(inputListEntry_t));
@@ -585,7 +605,6 @@ calc_funStatus_t calc_addInput(
 		// Inherit the depth of the current one, this is increased 
 		// at the end either way. 
 		pNewListEntry->depth = pCurrentListEntry->depth;
-
 
 		// Case is the same except depth increase if the input is depth increasing, 
 		// or if the current entry already has a current operator. 
@@ -613,8 +632,14 @@ calc_funStatus_t calc_addInput(
 					pCalcCoreState->pListEntrypoint = pNewListEntry;
 					pNewListEntry->depth = 0;
 				}
-				// Add operator to the new entry. 
-				pNewListEntry->op = inputChar;
+				// Add the input to the correct place
+				if(bOperator){
+					pNewListEntry->op = inputChar;
+				} 
+				else if(bCustomFunction){
+					pNewListEntry->pCustomFunction = getCustomFunction(inputChar);
+				}
+
 			}
 			else if(pCurrentStringEntry ==  pCurrentListEntry->pLastInputStringEntry){
 				// End of string entry. Add entry at the end if 
@@ -625,9 +650,14 @@ calc_funStatus_t calc_addInput(
 				pCurrentListEntry->pNext = pNewListEntry;
 
 				// Handle where to put the operator
-				if( bIncreaseDepth || (pCurrentListEntry->op != operators_NONE) ){
-					// Add operator to the new entry. 
-					pNewListEntry->op = inputChar;
+				if( (changeDepth == INCREASE_DEPTH) || (pCurrentListEntry->op != operators_NONE) ){
+					// Add the input to the correct place
+					if(bOperator){
+						pNewListEntry->op = inputChar;
+					} 
+					else if(bCustomFunction){
+						pNewListEntry->pCustomFunction = getCustomFunction(inputChar);
+					}
 
 					// Check if there is a next entry
 					if(pNewListEntry->pNext != NULL){
@@ -651,7 +681,9 @@ calc_funStatus_t calc_addInput(
 				}
 				else{
 					// Current entry does not have an operator, 
-					// and the new operator is not increasing the depth. Add here
+					// and the new operator is not increasing the depth. 
+					// Therefore this cannot be a custom function, just add
+					// the operator to the current entry. 
 					pCurrentListEntry->op = inputChar;
 				}
 			}
@@ -662,7 +694,7 @@ calc_funStatus_t calc_addInput(
 				// we actually need two new list entries here: 
 				// The one we already made, to hold the operator, and then a 
 				// next one to hold the detached string after this entry. 
-				if(bIncreaseDepth){
+				if(changeDepth == INCREASE_DEPTH){
 
 					inputListEntry_t *pDetachedListEntry = malloc(sizeof(inputListEntry_t));
 					if(pDetachedListEntry == NULL){
@@ -699,8 +731,13 @@ calc_funStatus_t calc_addInput(
 					// The detached head inherits the depth of the new list entry. 
 					pDetachedListEntry->depth = pNewListEntry->depth;
 
-					// Add the current operator to the new list entry. 
-					pNewListEntry->op = inputChar;
+					// Add the input to the correct place
+					if(bOperator){
+						pNewListEntry->op = inputChar;
+					} 
+					else if(bCustomFunction){
+						pNewListEntry->pCustomFunction = getCustomFunction(inputChar);
+					}
 				}
 				else {
 					// The new entry inherits the younger part of the earlier part
@@ -729,6 +766,8 @@ calc_funStatus_t calc_addInput(
 					// The operator is then added to the new entry. 
 					// If the new entry replaces the existing first entry, 
 					// also replace that. 
+					// No need to test for custom function, as this part doesn't 
+					// handle increase in depth. 
 					pNewListEntry->op = inputChar;
 				}
 			}
@@ -741,7 +780,13 @@ calc_funStatus_t calc_addInput(
 			pNewListEntry->pPrevious = pCurrentListEntry->pPrevious;
 			pNewListEntry->pNext = pCurrentListEntry;
 			pCurrentListEntry->pPrevious = pNewListEntry;
-			pNewListEntry->op = inputChar;
+			// Add the input to the correct place
+			if(bOperator){
+				pNewListEntry->op = inputChar;
+			} 
+			else if(bCustomFunction){
+				pNewListEntry->pCustomFunction = getCustomFunction(inputChar);
+			}
 
 			if(pNewListEntry->pPrevious != NULL){
 				((inputListEntry_t*)(pNewListEntry->pNext))->pPrevious = pNewListEntry;	
@@ -758,32 +803,21 @@ calc_funStatus_t calc_addInput(
 		}
 
 		// Propagate and increase depth for all entries after this one. 
-		if(bIncreaseDepth){
+		if(changeDepth != KEEP_CURRENT_DEPTH){
 			inputListEntry_t* pTmpListEntry = (inputListEntry_t*)pNewListEntry->pNext;
 			while(pTmpListEntry != NULL){
 				// Increase depth
-				pTmpListEntry->depth += 1;
+				if(changeDepth == INCREASE_DEPTH){
+					pTmpListEntry->depth += 1;
+				}
+				else {
+					pTmpListEntry->depth -= 1;
+				}
+				
 				// Move on to next entry
 				pTmpListEntry = (inputListEntry_t*)(pTmpListEntry->pNext);
 			}
 		}
-	}
-	else if(inputChar == OPENING_BRACKET){
-		// When adding an opening bracket to pCurrenEntry, make a new list entry such that:
-		// 1. pCurrentEntry->pNext->operator = None
-		// 2. pCurrentEntry->pNext->customFuntion = None
-		// 3. pCurrentEntry->pNext->depth = pCurrentEntry->depth + 1
-		// 4. pCurrentEntry->pNext->pNext != NULL
-		// Simply put, an empty entry with a depth increase corresponds to an opening bracket. 
-
-		// Should be the same as depth increasing operator. 
-	}
-	else if(inputChar == CLOSING_BRACKET){
-		// Should be the same as depth increasing operator, but decreasing the depth
-		// instead. 
-	}
-	else if(charIsCustomFunction(inputChar)){
-		// Should be the same as depth increasing operator. 
 	}
 	else{
 		// Unknown input, return warning. 

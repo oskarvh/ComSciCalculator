@@ -126,7 +126,7 @@ typedef struct inputListEntry {
 
 	// Depth of this operator, i.e. how many brackets deep is 
 	// this entry. 
-	uint8_t depth;
+	int8_t depth;
 
 	uint8_t padding;
 } inputListEntry_t;
