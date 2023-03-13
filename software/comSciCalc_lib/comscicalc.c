@@ -860,13 +860,59 @@ calc_funStatus_t calc_removeInput(calcCoreState_t* pCalcCoreState){
 	}
 
 	// Get the current list and string entries based on the cursor. 
-	inputListEntry_t *pCurrentListEntry;
+	inputListEntry_t *pReturnedListEntry;
 	inputStringEntry_t *pCurrentStringEntry;
 	inputModStatus_t listState = getInputListEntry(
 		pCalcCoreState,
-		&pCurrentListEntry, 
+		&pReturnedListEntry, 
 		&pCurrentStringEntry
 	);
+	inputListEntry_t *pCurrentListEntry = pReturnedListEntry;
+	
+	// Check health of list entry. E.g. if operator is present, no custom function is allowed. 
+	if(!listEntryHealty(pCurrentListEntry)){
+		return calc_funStatus_ENTRY_LIST_ERROR;
+	}
+
+	// Check if current entry is NULL, meaning that the cursor is pointing before
+	// the first entry. 
+	if(pCurrentListEntry == NULL){
+		// For all string entries, the current list entry should point
+		// to the first entry. 
+		pCurrentListEntry = pCalcCoreState->pListEntrypoint;
+	}
+
+	if(pCurrentStringEntry != NULL){
+		// Current string is not empty.
+		// Remove the string at the entry that this is pointing at. 
+		if(pCurrentStringEntry->pNext){
+			((inputListEntry_t *)(pCurrentStringEntry->pNext))->pPrevious = 
+			pCurrentStringEntry->pPrevious;
+		}
+		else {
+			// No next string entry, hence this was the last string entry in
+			// the list entry, therefore change the last entry point:
+			pCurrentListEntry->pLastInputStringEntry = pCurrentStringEntry->pPrevious;
+		}
+		if(pCurrentStringEntry->pPrevious){
+			((inputListEntry_t *)(pCurrentStringEntry->pPrevious))->pNext = 
+			pCurrentStringEntry->pNext;
+		}
+		else{
+			// No previous string entry, hence this was the first string entry in
+			// the list entry, therefore change the last entry point:
+			pCurrentListEntry->pInputStringEntry = pCurrentStringEntry->pNext;
+		}
+		// Free the current entry
+		free(pCurrentStringEntry);
+
+		// If the current entry is empty, and has a next entry, 
+		// e.g. 1+23, where 1 and + are removed, then there will be 
+		// an emtpy entry at the start:[]->23, which should simply become 23. 
+	}
+	else {
+	}
+
 
 }
 

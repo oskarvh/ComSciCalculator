@@ -37,28 +37,29 @@
 #include <Python.h>
 
 // comsci header file - to link the comsci functions here
-#include "comscicalc.h"
+//#include "comSciCalc_lib/comscicalc.h"
 
 
 /* ----------------- MAIN -------------------- */
 // Function callable from python
-static PyObject * test_comSciCalc(PyObject *self, PyObject *args){
+static PyObject * _comSciCalc(PyObject *self, PyObject *args){
 	// String object: PyUnicode_FromString("String")
+	return PyUnicode_FromString("Hello world");
 }
 
-static struct PyMethodDef methods[] {
-	{"comSciPython", (PyCFunction)test_comSciCalc, METH_VARARGS}, 
+static struct PyMethodDef methods[] = {
+	{"comSciCalc", (PyCFunction)_comSciCalc, METH_VARARGS}, 
 	{NULL, NULL}
 };
 
-static struct PyModuleDef module {
-	PyModuleDef _HEAD_INIT, 
-	"comSciPython", 
+static struct PyModuleDef module = {
+	PyModuleDef_HEAD_INIT, 
+	"_comSciCalc", 
 	NULL, 
 	-1, 
-	methods
+	methods,
 };
 
-PyMODINIT_FUNC PyInit_comSciPython(void){
-	return PyModule_Create(&module)
+PyMODINIT_FUNC PyInit__comSciCalc(void){
+	return PyModule_Create(&module);
 }
