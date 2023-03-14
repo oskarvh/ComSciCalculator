@@ -194,4 +194,5 @@ inputModStatus_t getInputListEntryWrapper(
 	inputListEntry_t **ppInputListAtCursor, 
 	inputStringEntry_t **ppInputString
 );
+
 #endif

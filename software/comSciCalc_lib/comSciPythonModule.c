@@ -31,20 +31,71 @@
 
 /* ----------------- DEFINES ----------------- */
 #define PY_SSIZE_T_CLEAN
+#define MAX_LEN_RESULT_BUFFER 255
 /* ----------------- HEADERS ----------------- */
 
 // Python extended library - used to glue the C codebase to python
 #include <Python.h>
-
+// Standard lib
+#include <string.h>
 // comsci header file - to link the comsci functions here
-//#include "comSciCalc_lib/comscicalc.h"
+#include "comscicalc.h"
+#include "comscicalc_operators.h"
 
 
 /* ----------------- MAIN -------------------- */
 // Function callable from python
 static PyObject * _comSciCalc(PyObject *self, PyObject *args){
-	// String object: PyUnicode_FromString("String")
-	return PyUnicode_FromString("Hello world");
+	// Read string from python. Note, python will allocate space, 
+	// just need a pointer to the string. 
+	char *inputString;
+	int inputBase;
+	if(!PyArg_ParseTuple(args, "si", &inputString, &inputBase)){
+		return NULL;
+	}
+
+	char pResString[MAX_LEN_RESULT_BUFFER] = {0};
+
+	// Make an instance of the calculator core
+	calcCoreState_t comSciCalc_core;
+
+	// Initialize the core state
+	if(calc_coreInit(&comSciCalc_core) != calc_funStatus_SUCCESS){
+		// Initialization failed
+		return Py_BuildValue("s", "Error: Initialization failed");
+	}
+	comSciCalc_core.inputBase = inputBase;
+
+	// Loop through the input string, and either add or remove entries
+	while( *inputString != '\0'){
+		calc_funStatus_t inputStatus = calc_funStatus_SUCCESS;
+		if(*inputString == 8){
+			// 8 is backspace in ascii. 
+			inputStatus = calc_removeInput(&comSciCalc_core, *inputString);
+		}
+		else {
+			// If not backspace then add input. 
+			inputStatus = calc_addInput(&comSciCalc_core, *inputString);
+		}
+		if(inputStatus != calc_funStatus_SUCCESS){
+			printf("Warning: adding/removing c=[%c], dec=[%i] failed. Status: %i\r\n", 
+				*inputString, *inputString, inputStatus);
+		}
+
+		inputString++;
+	}
+
+	// Get the string from the calculator core
+	if(calc_printBuffer(&comSciCalc_core, pResString, MAX_LEN_RESULT_BUFFER)){
+		return Py_BuildValue("s", "Error: Print buffer failed");
+	}
+
+	// Teardown core
+	if(calc_coreBufferTeardown(&comSciCalc_core) != calc_funStatus_SUCCESS){
+		return Py_BuildValue("s", "Error: Teardown failed");
+	}
+
+	return Py_BuildValue("s", pResString);
 }
 
 static struct PyMethodDef methods[] = {

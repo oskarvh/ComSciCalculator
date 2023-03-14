@@ -39,7 +39,7 @@ const operatorEntry_t operators[NUM_OPERATORS] = {
 	
 	// Bitwise operators, mulitple input
 	{.inputChar = '&', .opString = "AND\0",  .op = operators_AND,  .bIncDepth = true, .pFun = &calc_and},
-	{.inputChar = 'N', .opString = "NAND\0", .op = operators_NAND, .bIncDepth = true, .pFun = &calc_nand},
+	{.inputChar = 'n', .opString = "NAND\0", .op = operators_NAND, .bIncDepth = true, .pFun = &calc_nand},
 	{.inputChar = '|', .opString = "OR\0",   .op = operators_OR,   .bIncDepth = true, .pFun = &calc_or},
 	{.inputChar = '^', .opString = "XOR\0",  .op = operators_XOR,  .bIncDepth = true, .pFun = &calc_xor},
 	{.inputChar = 0,   .opString = "\0", .op = operators_NONE, .bIncDepth = true, .pFun = NULL},

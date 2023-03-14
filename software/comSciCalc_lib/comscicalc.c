@@ -650,7 +650,7 @@ calc_funStatus_t calc_addInput(
 				pCurrentListEntry->pNext = pNewListEntry;
 
 				// Handle where to put the operator
-				if( (changeDepth == INCREASE_DEPTH) || (pCurrentListEntry->op != operators_NONE) ){
+				if( (changeDepth != KEEP_CURRENT_DEPTH) || (pCurrentListEntry->op != operators_NONE) ){
 					// Add the input to the correct place
 					if(bOperator){
 						pNewListEntry->op = inputChar;
