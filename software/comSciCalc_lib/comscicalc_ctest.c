@@ -46,7 +46,7 @@ void main(){
 	coreState.inputBase = inputBase_DEC;
 
 	// String to be tested
-	char pTestString[] = "(n1)23)\0";
+	char pTestString[] = "123+456\0";
 
 	char *pTestStringIter = pTestString;
 	uint8_t status = calc_funStatus_SUCCESS;

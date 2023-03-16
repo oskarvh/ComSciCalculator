@@ -16,7 +16,10 @@
  * -------------------------------------------*/
 #define OPENING_BRACKET '('
 #define CLOSING_BRACKET ')'
-
+// Define this if using a simpler list, where 
+// the list entry is the same for operator as for
+// input character. 
+#define UNIFIED_STRING_ENTRY 
 /* -------------------------------------------
  * ----------------- MACROS ------------------ 
  * -------------------------------------------*/
@@ -79,18 +82,33 @@ typedef char operators_t;
 typedef int8_t calc_funStatus_t;
 typedef int8_t inputModStatus_t;
 
-// Struct used for the input string linked list
-typedef struct inputStringEntry {
-	// Pointer to previous entry. NULL if first element in list
-	void *pPrevious;
-	// Pointer to next entry. NULL if last element in list
-	void * pNext;
-	// Character in this entry.
-	char c;
+// Type for the character flags. 
+typedef uint8_t typeFlag_t;
+#define INPUT_TYPE_EMPTY 0
+#define INPUT_TYPE_NUMBER 1
+#define INPUT_TYPE_OPERATOR 2
+#define INPUT_TYPE_FUNCTION 3
+#define DEPTH_CHANGE_KEEP 0
+#define DEPTH_CHANGE_INCREASE 1
+#define DEPTH_CHANGE_DECREASE 2
+#define DEPTH_CHANGE_RESERVED 3
+#define CONSTRUCT_TYPEFLAG(depthFlag, inputType) (depthFlag << 2 | inputType)
+#define GET_DEPTH_FLAG(typeFlag) ((typeFlag>>2)&0x3)
+#define GET_INPUT_TYPE(typeFlag) ((typeFlag)&0x3)
 
-	uint8_t padding0;
-	uint16_t padding1;
-} inputStringEntry_t;
+// Struct to be used for operator or char entry
+typedef struct inputType {
+	// The character from the input
+	char c;
+	// Flags used for identifying what
+	// type of input this is. 
+	// Call me old school but I try to avoid
+	// bitfields. 
+	// bit 0-1: 0 = empty, 1 = number, 3 = operator, 3 = custom function
+	// bit 2-3: 0 = keep depth, 1 = increase depth, 2 = decrease depth, 3 = reserved
+	// bit 4-7: reserved.
+	typeFlag_t typeFlag;
+} inputType_t;
 
 // Struct for the input linked list entry
 typedef struct inputListEntry {
@@ -102,33 +120,19 @@ typedef struct inputListEntry {
 	// If no next entry available, this should be NULL
 	void *pNext;
 
-	// Pointer to input string linked list entry
-	// NULL if no entry is made
-	inputStringEntry_t *pInputStringEntry;
-
-	// Pointer to last entry of string linked list
-	// NULL if no entry is made
-	inputStringEntry_t *pLastInputStringEntry;
-
-	// Custom function. 
-	// If this is defined, then no inputstring should be defined, 
-	// as the next N number of entries should be the 
-	// input to this function. 
-	void *pCustomFunction;
-
-	// Operator to next entry
-	// This operator is acting between this entry and next entry
-	operators_t op;
+	// Character for this entry. 
+	// bit 0-7: input character
+	// bit 8-9: type (operator, number, function, bracket)
+	inputType_t entry;
 
 	// Input format in this entry
-	// The entire entry must be in the same base
+	// The entire string must be in the same entry. 
 	inputBase_t inputBase;
 
-	// Depth of this operator, i.e. how many brackets deep is 
-	// this entry. 
-	int8_t depth;
+	// Pointer to either operator or custom function
+	// entry. NOTE: not to the actual function! 
+	void *pFunEntry;
 
-	uint8_t padding;
 } inputListEntry_t;
 
 // Struct to handle the calculator core state
@@ -189,10 +193,6 @@ int32_t calc_not(int32_t a, int32_t b);
 /* -------------------------------------------
  * ------------ FUNCTION WRAPPERS ------------
  * -------------------------------------------*/
-inputModStatus_t getInputListEntryWrapper(
-	calcCoreState_t *calcCoreState,
-	inputListEntry_t **ppInputListAtCursor, 
-	inputStringEntry_t **ppInputString
-);
+
 
 #endif

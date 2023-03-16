@@ -85,7 +85,7 @@ typedef struct customFunc {
     char opString[OPERATOR_STRING_MAX_LEN];
     // Pointer to custom function
     // NULL if no function defined. 
-    int32_t (*pFunc)(void* args); 
+    int32_t (*pFun)(void* args); 
     // Number of arguments. 
     // I.e. how many of the following entries should go into 
     // this function
