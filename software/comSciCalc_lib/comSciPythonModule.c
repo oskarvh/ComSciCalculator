@@ -42,22 +42,97 @@
 #include "comscicalc.h"
 #include "comscicalc_operators.h"
 
+// Make a global instance of the calculator core
+// Might be a bit of a hack, and I'm not sure if this method is leaky, 
+// but it seems to work. This needs to be investigated though. 
+calcCoreState_t comSciCalc_core;
 
 /* ----------------- MAIN -------------------- */
 // Function callable from python
+static PyObject * _comSciCalc_Init(PyObject *self){
+	// Initialize the core state
+	if(calc_coreInit(&comSciCalc_core) != calc_funStatus_SUCCESS){
+		// Initialization failed
+		return Py_BuildValue("s", "Error: Initialization failed");
+	}
+	
+	return Py_BuildValue("");	
+}
+
+static PyObject * _comSciCalc_Teardown(PyObject *self){
+	// Initialize the core state
+	// Teardown core
+	if(calc_coreBufferTeardown(&comSciCalc_core) != calc_funStatus_SUCCESS){
+		return Py_BuildValue("s", "Error: Teardown failed");
+	}
+	
+	return Py_BuildValue("");	
+}
+
+static PyObject * _comSciCalc_PrintBuffer(PyObject *self){
+	// Allocate buffer to print. 
+	char pResString[MAX_LEN_RESULT_BUFFER] = {0};
+	// Get the string from the calculator core
+	if(calc_printBuffer(&comSciCalc_core, pResString, MAX_LEN_RESULT_BUFFER)){
+		return Py_BuildValue("s", "Error: Print buffer failed");
+	}
+
+	return Py_BuildValue("s", pResString);	
+}
+
+static PyObject * _comSciCalc_AddInput(PyObject *self, PyObject *args){
+	char *inputString;
+	int inputBase;
+	int cursorPos;
+	if(!PyArg_ParseTuple(args, "sii", &inputString, &inputBase, &cursorPos)){
+		return NULL;
+	}
+
+	// Set the input base
+	comSciCalc_core.inputBase = inputBase;
+	comSciCalc_core.cursorPosition = cursorPos;
+
+	// Loop through the input string, and add input at cursor
+	while( *inputString != '\0'){
+		// Add input. 
+		calc_funStatus_t inputStatus = calc_addInput(&comSciCalc_core, *inputString);
+		if(inputStatus != calc_funStatus_SUCCESS){
+			printf("Warning: adding c=[%c], dec=[%i] at cursorPos %d failed. Status: %i\r\n", 
+				*inputString, *inputString, cursorPos, inputStatus);
+		}
+		inputString++;
+	}
+}
+
+static PyObject * _comSciCalc_DeleteInput(PyObject *self, PyObject *args){
+	int cursorPos;
+	if(!PyArg_ParseTuple(args, "i", &cursorPos)){
+		return NULL;
+	}
+
+	comSciCalc_core.cursorPosition = cursorPos;
+
+	calc_funStatus_t inputStatus = inputStatus = calc_removeInput(&comSciCalc_core);
+	if(inputStatus != calc_funStatus_SUCCESS){
+		printf("Warning: Removing char at cursor %d failed. Status: %i\r\n", 
+			cursorPos, inputStatus);
+	}
+}
+
+
 static PyObject * _comSciCalc(PyObject *self, PyObject *args){
 	// Read string from python. Note, python will allocate space, 
 	// just need a pointer to the string. 
 	char *inputString;
 	int inputBase;
+	char *cursorPos;
 	if(!PyArg_ParseTuple(args, "si", &inputString, &inputBase)){
 		return NULL;
 	}
 
 	char pResString[MAX_LEN_RESULT_BUFFER] = {0};
 
-	// Make an instance of the calculator core
-	calcCoreState_t comSciCalc_core;
+	
 
 	// Initialize the core state
 	if(calc_coreInit(&comSciCalc_core) != calc_funStatus_SUCCESS){
@@ -98,18 +173,27 @@ static PyObject * _comSciCalc(PyObject *self, PyObject *args){
 	return Py_BuildValue("s", pResString);
 }
 
+
 static struct PyMethodDef methods[] = {
 	{"comSciCalc", (PyCFunction)_comSciCalc, METH_VARARGS}, 
+	{"comSciCalc_Init", (PyCFunction)_comSciCalc_Init, METH_NOARGS},
+	{"comSciCalc_Teardown", (PyCFunction)_comSciCalc_Teardown, METH_NOARGS},
+	{"comSciCalc_PrintBuffer", (PyCFunction)_comSciCalc_PrintBuffer, METH_NOARGS},
+	{"comSciCalc_AddInput", (PyCFunction)_comSciCalc_AddInput, METH_VARARGS},
+	{"comSciCalc_DeleteInput", (PyCFunction)_comSciCalc_DeleteInput, METH_VARARGS},
+	// Add move functions here? 
 	{NULL, NULL}
 };
 
+
 static struct PyModuleDef module = {
 	PyModuleDef_HEAD_INIT, 
-	"_comSciCalc", 
-	NULL, 
+	"_comSciCalc", // __name__
+	NULL,  //__doc__
 	-1, 
 	methods,
 };
+
 
 PyMODINIT_FUNC PyInit__comSciCalc(void){
 	return PyModule_Create(&module);

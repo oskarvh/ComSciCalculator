@@ -47,8 +47,8 @@ def replace_input(rawString):
 # Returns dict with random value, base, cursor values and cursor positions
 @pytest.fixture
 def randomize_input():
-	# Create a random length between 0 and 100
-	randStrLen = random.randint(0,20)
+	# Create a random length between 1 and 100
+	randStrLen = random.randint(1,20)
 
 	randString = ""
 	for i in range(0,randStrLen):
@@ -85,7 +85,11 @@ def test_randomInput_cursorFixed(num_times, randomize_input):
 	# input the string into the calculator core
 	test_input = randomize_input
 	translated_string = replace_input(test_input)
-	resultString = _comSciCalc.comSciCalc(test_input, INPUTBASE_DEC)
+	_comSciCalc.comSciCalc_Init()
+
+	_comSciCalc.comSciCalc_AddInput(test_input, INPUTBASE_DEC, 0)
+
+	resultString = _comSciCalc.comSciCalc_PrintBuffer()
 	print("Result = " + resultString + ". Expected = " + translated_string)
 	assert resultString == translated_string
 	

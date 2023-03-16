@@ -55,6 +55,18 @@
  * Another nice thing with the entry containing an entire string is that 
  * handling base changes (hex/dec/bin) is easier. 
  * It's a tradeoff though. I'll try it out using linker switches first though. 
+ *
+ * March 15:
+ * I spent a whole lot of time thinking this through, and in the spirit of 
+ * keeping things simple, I decided to act on last nights decision. 
+ * Tests that the old code was failing is now passing. Although a first
+ * pass didn't test cursor != 0, they are at least passing the random input tests. 
+ * I'm feeling happier with this solution, as it is simpler. 
+ * I don't think that the solver would have been a whole lot easier with the 
+ * last approach, but changing input base would. That being said, it is not 
+ * impossible to do. Come to think of it, the approach would be the same except
+ * finding the start and end of the string is less efficient now, but not harder. 
+ *
  */
 
 /*
@@ -522,6 +534,32 @@ calc_funStatus_t calc_addInput(
       - Returns 
 */
 calc_funStatus_t calc_removeInput(calcCoreState_t* pCalcCoreState){
+	// Check pointer to calculator core state
+	if(pCalcCoreState == NULL){
+		return calc_funStatus_CALC_CORE_STATE_NULL;
+	}
+	inputListEntry_t *pInputList = pCalcCoreState->pListEntrypoint;
+
+	// Get the current list and string entries based on the cursor. 
+	inputListEntry_t *pCurrentListEntry;
+	inputModStatus_t listState = getInputListEntry(
+		pCalcCoreState,
+		&pCurrentListEntry
+	);	
+
+	// The aim is to remove the pointer currently pointed at, 
+	// so first align the pointers of previous and next entires
+	// and then free the memory. 
+	if(pCurrentListEntry->pNext != NULL){
+		((inputListEntry_t*)(pCurrentListEntry->pNext))->pPrevious = 
+			pCurrentListEntry->pPrevious;
+	}
+	if(pCurrentListEntry->pPrevious != NULL){
+		((inputListEntry_t*)(pCurrentListEntry->pPrevious))->pNext = 
+			pCurrentListEntry->pNext;
+	}
+	free(pCurrentListEntry); 
+	
 	return calc_funStatus_SUCCESS;
 }
 
