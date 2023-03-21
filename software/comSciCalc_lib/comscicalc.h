@@ -178,20 +178,10 @@ calc_funStatus_t calc_printBuffer(calcCoreState_t* pCalcCoreState, char *pResStr
  * ---------------- VARIABLES ----------------
  * -------------------------------------------*/
 
-// Unit test global variable to hold the 
-// state of the calculator core. 
-calcCoreState_t UT_calcCoreState;
 
 /* -------------------------------------------
  * ------------ FUNCTION WRAPPERS ------------
  * -------------------------------------------*/
 
-int UT_calc_coreInit(void);
-int UT_calc_coreBufferTeardown(void);
-int UT_calc_addInput(char c);
-int UT_calc_removeInput(void);
-char UT_calc_printBuffer(void);
-int UT_calc_setCursor(int cursorVal);
-void UT_calc_setBase(uint8_t base);
 
 #endif
