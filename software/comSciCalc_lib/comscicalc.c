@@ -89,19 +89,19 @@ List entries are a doubly linked list where each element consists of either:
 */
 
 /* ----------------- DEFINES ----------------- */
-#define INCREASE_DEPTH 0x01
-#define DECREASE_DEPTH 0x02
-#define KEEP_CURRENT_DEPTH 0x00
+
 /* ----------------- HEADERS ----------------- */
 // comsci header file
 #include "comscicalc.h"
 
-// Operator functions
-#include "comscicalc_operators.h"
-
 // Standard library
 #include <stdio.h>
 #include <string.h>
+
+// Python specifics
+#ifdef USE_PYTHON_C_BINDINGS
+#include <Python.h>
+#endif
 
 /* ------------- GLOBAL VARIABLES ------------ */
 
@@ -361,6 +361,7 @@ static inputModStatus_t getInputListEntry(
 			else {
 				// If there isn't then return the number
 				// of steps taken in this list. 
+				*ppInputListAtCursor = pListEntry;
 				return i;
 			}
 		}
@@ -391,6 +392,7 @@ calc_funStatus_t calc_coreBufferTeardown(calcCoreState_t *pCalcCoreState){
 	if(pListEntry == NULL){
 		return calc_funStatus_INPUT_LIST_NULL;
 	}
+	
 	// Find the first entry, if this isn't it. 
 	while( (pListEntry->pPrevious) != NULL){
 		pListEntry = (inputListEntry_t*)(pListEntry->pPrevious);
@@ -400,7 +402,11 @@ calc_funStatus_t calc_coreBufferTeardown(calcCoreState_t *pCalcCoreState){
 	while(pListEntry != NULL){
 		// Free the list entry
 		inputListEntry_t *pNext = (inputListEntry_t *)pListEntry->pNext;
+#ifdef USE_PYTHON_C_BINDINGS
+		Py_RawMemFree(pListEntry)
+#else
 		free(pListEntry);
+#endif
 		pListEntry = pNext;
 	}
 
@@ -437,8 +443,17 @@ calc_funStatus_t calc_addInput(
 		&pCurrentListEntry
 	);	
 
+	if(listState > 0){
+		// Cursor went too far. TBD should this be recified here?
+		pCalcCoreState->cursorPosition = (uint8_t)listState;
+	}
+
 	// Allocate a new entry
+#ifdef USE_PYTHON_C_BINDINGS
+	inputListEntry_t *pNewListEntry = Py_RawMemMalloc(sizeof(inputListEntry_t));
+#else
 	inputListEntry_t *pNewListEntry = malloc(sizeof(inputListEntry_t));
+#endif
 	if(pNewListEntry == NULL){
 		return calc_funStatus_ALLOCATE_ERROR;
 	}
@@ -483,7 +498,13 @@ calc_funStatus_t calc_addInput(
 	}
 	else{
 		// Unknown input. Free and return
+		if(pNewListEntry != NULL){
+#ifdef USE_PYTHON_C_BINDINGS
+		Py_RawMemFree(pNewListEntry)
+#else
 		free(pNewListEntry);
+#endif
+		}
 		return calc_funStatus_UNKNOWN_INPUT;
 	}
 
@@ -558,7 +579,13 @@ calc_funStatus_t calc_removeInput(calcCoreState_t* pCalcCoreState){
 		((inputListEntry_t*)(pCurrentListEntry->pPrevious))->pNext = 
 			pCurrentListEntry->pNext;
 	}
-	free(pCurrentListEntry); 
+	if(pCurrentListEntry != NULL){
+#ifdef USE_PYTHON_C_BINDINGS
+		Py_RawMemFree(pCurrentListEntry)
+#else
+		free(pCurrentListEntry);
+#endif
+	}
 	
 	return calc_funStatus_SUCCESS;
 }
@@ -714,3 +741,61 @@ calc_funStatus_t calc_printBuffer(calcCoreState_t* pCalcCoreState, char *pResStr
 /* -------------------------------------------
  * ------------ FUNCTION WRAPPERS ------------
  * -------------------------------------------*/
+// The UT prefix stands for Unit Test. 
+// Unit test function to interface to initialize the 
+// UT_calcCoreState global variable. 
+int UT_calc_coreInit(void){
+    return calc_coreInit(&UT_calcCoreState);
+}
+
+// Unit test function to tear down all the 
+// allocated buffers, except the global variable.
+int UT_calc_coreBufferTeardown(void){
+    return calc_coreBufferTeardown(&UT_calcCoreState);
+}
+
+// Unit test wrapper for adding an input to the 
+// calculator core
+int UT_calc_addInput(char *c){
+    return calc_addInput(&UT_calcCoreState, c);
+}
+
+// Unit test function to remove an input entry. 
+int UT_calc_removeInput(void){
+    return calc_removeInput(&UT_calcCoreState);
+}
+
+
+// Unit test function to set the cursor value for 
+// removing or adding input
+int UT_calc_setCursor(int cursorVal){
+    UT_calcCoreState.cursorPosition = (uint8_t)cursorVal;
+    return 0;
+}
+
+// Unit test function to set the base of the input
+void UT_calc_setBase(uint8_t base){
+    UT_calcCoreState.inputBase = base;
+}
+
+// Unit test function to return the printed buffer. 
+// Since I don't know how to print the whole buffer, 
+// this function will just print the first char 
+// of the buffer, free it and then if none left return 0
+char UT_calc_printBuffer(void){
+    if(UT_calcCoreState.pListEntrypoint != NULL){
+        // Print the first entry and free it. 
+        inputListEntry_t *pListEntrypoint = UT_calcCoreState.pListEntrypoint;
+        char returnVal = pListEntrypoint->entry.c;
+        UT_calcCoreState.pListEntrypoint = pListEntrypoint->pNext;
+        if(pListEntrypoint->pNext != NULL){
+            ((inputListEntry_t*)(pListEntrypoint->pNext))->pPrevious = NULL;
+        }
+        free(pListEntrypoint);
+        return returnVal;
+
+    }
+    else{
+        return '\0';    
+    }
+}

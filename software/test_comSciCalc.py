@@ -2,21 +2,58 @@
 # Copyright, 2023
 # Script to test the computer scientist calculator, using c extensions
 
-# TODO: add support for different input formats
+# This script is based on the unit test described by A. Steffen on YT:
+# https://www.youtube.com/watch?v=zW_HyDTPjO0
+#
+# It uses the unittest module in conjuction with CFFI to compile
+# and test functions.  
 
-# Standard Python
-import _comSciCalc
-from enum import Enum
-import random
+import unittest
+import uuid
+import subprocess
+import cffi
+import importlib
+from parameterized import parameterized
 
-# Extended python
-import pytest
-import numpy as np
+# Function to call the GCC preprocessor to get the function
+# definitions and variables. 
+def preprocess(source):
+    return subprocess.run(['gcc', '-E', '-P', '-'],
+                          input=source, stdout=subprocess.PIPE,
+                          universal_newlines=True, check=True).stdout
 
-INPUTBASE_DEC = 0
-INPUTBASE_HEX = 1
-INPUTBASE_BIN = 2
-INPUTBASE_NONE = -1
+# Function to exclude the include statements in a header file
+def readHeaderFileAndExcludeIncludes(filename):
+    processed_include = ""
+    with open(filename) as include_file:
+        for line in include_file:
+            if not ("#include" in line):
+                processed_include += line
+    return processed_include
+
+# Function to load the C library. 
+# Caution: there are some hacks in there!
+def loadComSciCalc_lib():
+    # load source code
+    source_files = ["comSciCalc_lib/comscicalc.c", \
+    	"comSciCalc_lib/comscicalc_operators.c"]
+
+    # Generate a random name to avoid cashing. 
+    # A bit of a hack but I can live with that for now. 
+    name = "comSciCalc_" + uuid.uuid4().hex
+
+    # Handle preprocessor directives. Ingore header includes. 
+    includes = preprocess(readHeaderFileAndExcludeIncludes("comSciCalc_lib/comscicalc.h"))
+    includes += preprocess(readHeaderFileAndExcludeIncludes("comSciCalc_lib/comscicalc_operators.h"))
+    ffibuilder = cffi.FFI()
+    ffibuilder.cdef(includes)
+    ffibuilder.set_source(name, 
+        '''#include "comSciCalc_lib/comscicalc.h"''', 
+        sources = source_files)
+    ffibuilder.compile()
+
+    module = importlib.import_module(name)
+    return module.lib
 
 ACCEPTED_INPUT = [\
 '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', \
@@ -39,57 +76,42 @@ TRANSLATED_INPUT = [ \
 # Function to replace the input chars to output strings. 
 # e.g. '&' shall be printed as AND( etc. 
 def replace_input(rawString):
-	for tr in TRANSLATED_INPUT:
-		rawString = rawString.replace(tr[0], tr[1])
-	return rawString
+    for tr in TRANSLATED_INPUT:
+        rawString = rawString.replace(tr[0], tr[1])
+    return rawString
 
-# Pytest fixture to generate random input values. 
-# Returns dict with random value, base, cursor values and cursor positions
-@pytest.fixture
-def randomize_input():
-	# Create a random length between 1 and 100
-	randStrLen = random.randint(1,20)
+# Class that collects the unit test cases
+class ComSciCalcTestMethods(unittest.TestCase):
+    # Setup function. This is ran before each test case
+    def setUp(self):
+    	# Compile and load the library
+    	self.comSciCalc_module = loadComSciCalc_lib()
 
-	randString = ""
-	for i in range(0,randStrLen):
-		randIndex = random.randint(0,len(ACCEPTED_INPUT)-1)
-		randString += ACCEPTED_INPUT[randIndex]
+    # Function to get the buffer from the entry. 
+    # Note: the embedded function will free itself, 
+    # so teardown should not be called after this. 
+    def getBuffer(self):
+        resStr = ""
+        c = "placeholder"
+        while c != '\0':
+            c = self.comSciCalc_module.UT_calc_printBuffer()
+            c = c.decode("utf-8")
+            resStr += c
 
-	# TODO: create random cursor position
-	return randString
-
-
-# Test simple input, without changing the cursor
-@pytest.mark.parametrize(
-	"test_input, input_base", [
-		("123+567",INPUTBASE_DEC ), 
-		("+123", INPUTBASE_DEC),
-		("123+", INPUTBASE_DEC),
-		("+++---", INPUTBASE_DEC),
-		("+n+n+n", INPUTBASE_DEC),
-		("nnnn", INPUTBASE_DEC),
-		("(n123))", INPUTBASE_DEC),
-		("()())))((", INPUTBASE_DEC)
-	])
-def test_basicInput_cursorFixed(test_input, input_base):
-	# input the string into the calculator core
-	translated_string = replace_input(test_input)
-	resultString = _comSciCalc.comSciCalc(test_input, input_base)
-	print("Result = " + resultString + ". Expected = " + translated_string)
-	assert resultString == translated_string
+        # return all but the last NULL char. 
+        return resStr[:-1]
+    @parameterized.expand([
+            ["1234", "1234", ],
+            ["12+45", "12+45"],
+        ])
+    # Test function: simple add input function
+    def test_adding_input(self, input_string, result_string):
+        self.comSciCalc_module.UT_calc_coreInit()
+        self.comSciCalc_module.UT_calc_setBase(self.comSciCalc_module.inputBase_DEC)
+        for c in input_string:
+            self.comSciCalc_module.UT_calc_addInput(c.encode())
+        self.assertEqual(self.getBuffer(), result_string)
 
 
-@pytest.mark.parametrize("num_times", range(5))
-# Test with randomized input, fixed cursor
-def test_randomInput_cursorFixed(num_times, randomize_input):
-	# input the string into the calculator core
-	test_input = randomize_input
-	translated_string = replace_input(test_input)
-	_comSciCalc.comSciCalc_Init()
-
-	_comSciCalc.comSciCalc_AddInput(test_input, INPUTBASE_DEC, 0)
-
-	resultString = _comSciCalc.comSciCalc_PrintBuffer()
-	print("Result = " + resultString + ". Expected = " + translated_string)
-	assert resultString == translated_string
-	
+if __name__ == '__main__':
+    unittest.main()

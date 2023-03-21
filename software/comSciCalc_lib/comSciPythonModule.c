@@ -32,6 +32,8 @@
 /* ----------------- DEFINES ----------------- */
 #define PY_SSIZE_T_CLEAN
 #define MAX_LEN_RESULT_BUFFER 255
+#define OBJECT_CLASS
+#define USE_PYTHON_C_BINDINGS
 /* ----------------- HEADERS ----------------- */
 
 // Python extended library - used to glue the C codebase to python
@@ -45,9 +47,13 @@
 // Make a global instance of the calculator core
 // Might be a bit of a hack, and I'm not sure if this method is leaky, 
 // but it seems to work. This needs to be investigated though. 
+
+// Conclusion: This does not work. It would be really nice 
+// to create a python object with C extensions. That way, python
+// shouldn't destruct the memory until the object it torn down, instead
+// of when the function is returned. 
 calcCoreState_t comSciCalc_core;
 
-/* ----------------- MAIN -------------------- */
 // Function callable from python
 static PyObject * _comSciCalc_Init(PyObject *self){
 	// Initialize the core state
@@ -56,7 +62,7 @@ static PyObject * _comSciCalc_Init(PyObject *self){
 		return Py_BuildValue("s", "Error: Initialization failed");
 	}
 	
-	return Py_BuildValue("");	
+	return Py_BuildValue("");
 }
 
 static PyObject * _comSciCalc_Teardown(PyObject *self){
@@ -99,8 +105,10 @@ static PyObject * _comSciCalc_AddInput(PyObject *self, PyObject *args){
 		if(inputStatus != calc_funStatus_SUCCESS){
 			printf("Warning: adding c=[%c], dec=[%i] at cursorPos %d failed. Status: %i\r\n", 
 				*inputString, *inputString, cursorPos, inputStatus);
+			return Py_BuildValue("s", "Warning: Adding char failed");
 		}
 		inputString++;
+		return Py_BuildValue("");
 	}
 }
 
@@ -116,10 +124,149 @@ static PyObject * _comSciCalc_DeleteInput(PyObject *self, PyObject *args){
 	if(inputStatus != calc_funStatus_SUCCESS){
 		printf("Warning: Removing char at cursor %d failed. Status: %i\r\n", 
 			cursorPos, inputStatus);
+		return Py_BuildValue("s", "Warning: Removing char failed");
 	}
+	return Py_BuildValue("");
 }
 
+#ifdef OBJECT_CLASS
+/*****************************************************************
+ * Struct that defines the class of the ComSciCalc core. 
+ * I hope that this allows for a statically allocated object
+ * that can then be free to use OS calls to allocate and free
+ * memory in a C-like fashion. We'll see though, there is no
+ * guarantee that this isn't detected by the garbage collector, 
+ * and that is starts to mess up our pointers. 
+ *****************************************************************/
+typedef struct {
+    PyObject_HEAD
+    calcCoreState_t *pComSciCalc_core;
+} ComSciCoreObject_t;
 
+/*****************************************************************
+ * Function to create a new instance of the comSciCalc class. 
+ * This is what pythons __new__() method will call. 
+ * Simply allocate space for the object itself (self), and the 
+ * core struct. 
+ *****************************************************************/
+static PyObject *ComSciCoreObject_new(PyTypeObject *type, PyObject *args, PyObject *kwds){
+    ComSciCoreObject_t *self;
+    self = (ComSciCoreObject_t*)type->tp_alloc(type, 0);
+    if(self != NULL){
+    	// Allocation of the object successful. 
+    	// Need to allocate space for the comSciCalc core and
+    	// set that pointer to the newly allocated space
+    	self->pComSciCalc_core = PyMem_RawMalloc(sizeof(calcCoreState_t));
+    }
+    return (PyObject*)self;
+}
+
+/*****************************************************************
+ * Function to deallocate the memory allocated by the 
+ * __new__ method.
+ *****************************************************************/
+static void ComSciCoreObject_dealloc(ComSciCoreObject_t *self) {
+
+    // Run the clean up function first.
+    calc_coreBufferTeardown(self->pComSciCalc_core);
+
+    // Deallocate space for the core struct
+    PyMem_RawFree(self->pComSciCalc_core);
+
+    // Finally, free the object itself.
+    Py_TYPE(self)->tp_free((PyObject*)self);
+}
+
+/***************************************************************** 
+ * Initialization function. This is called by the __init__()
+ * method. Note that it's not guaranteed that init functions
+ * are run by python. Returns 0 if OK, -1 if not. 
+ *****************************************************************/
+static int ComSciCoreObject_init(ComSciCoreObject_t *self, PyObject *args, PyObject *kwds){
+    
+    // Initialize the core state
+	if(calc_coreInit(&comSciCalc_core) != calc_funStatus_SUCCESS){
+		// Initialization failed
+		return -1;
+	}
+	
+	return 0;	
+}
+
+/***************************************************************** 
+ * Method declaration, i.e. binding C functions to python 
+ * functions. 
+ *****************************************************************/
+static struct PyMethodDef classMethods[] = {
+	{"comSciCalc_Init", (PyCFunction)_comSciCalc_Init, METH_NOARGS},
+	{"comSciCalc_PrintBuffer", (PyCFunction)_comSciCalc_PrintBuffer, METH_NOARGS},
+	{"comSciCalc_AddInput", (PyCFunction)_comSciCalc_AddInput, METH_VARARGS},
+	{"comSciCalc_DeleteInput", (PyCFunction)_comSciCalc_DeleteInput, METH_VARARGS},
+	// Add move functions here? 
+	{NULL, NULL}
+};
+
+/***************************************************************** 
+ * Members declaration. This can be used if we want a variable
+ * in C to be a member of the class. To begin with, this is not
+ * important to us, so just set the first member to NULL
+ *****************************************************************/
+//static PyMemberDef classMembers[] = {
+//    {NULL},  /* Sentinel */
+//};
+
+/***************************************************************** 
+ * Module definition. Normally the methods would be declared here
+ * but that's being linked via the type object, and created by
+ * the PyInit function. 
+ *****************************************************************/
+static PyModuleDef classModule = {
+    PyModuleDef_HEAD_INIT,
+    .m_name = "_comSciCalc",
+    .m_doc = "Example module that creates an extension type.",
+    .m_size = -1,
+};
+
+
+
+static PyTypeObject ComSciCalc_type = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name = "_comSciCalc.comSciCalc_core",
+    .tp_doc = PyDoc_STR("Class for interfacing with the computer scientest calculator ComSciCalc."),
+    .tp_basicsize = sizeof(ComSciCoreObject_t),
+    .tp_itemsize = 0,
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+    .tp_new = ComSciCoreObject_new,
+    .tp_init = (initproc) ComSciCoreObject_init,
+    .tp_dealloc = (destructor) ComSciCoreObject_dealloc,
+    .tp_members = NULL, //classMembers,
+    .tp_methods = classMethods
+};
+
+/***************************************************************** 
+ * Initialization function.  
+ *****************************************************************/
+PyMODINIT_FUNC PyInit__comSciCalc(void)
+{
+    PyObject *m;
+    if (PyType_Ready(&ComSciCalc_type) < 0)
+        return NULL;
+
+    m = PyModule_Create(&classModule);
+    if (m == NULL)
+        return NULL;
+
+    Py_INCREF(&ComSciCalc_type);
+    if (PyModule_AddObject(m, "comSciCalc_core", (PyObject *) &ComSciCalc_type) < 0) {
+        Py_DECREF(&ComSciCalc_type);
+        Py_DECREF(m);
+        return NULL;
+    }
+
+    return m;
+}
+
+#else // OBJECT_CLASS
 static PyObject * _comSciCalc(PyObject *self, PyObject *args){
 	// Read string from python. Note, python will allocate space, 
 	// just need a pointer to the string. 
@@ -198,3 +345,4 @@ static struct PyModuleDef module = {
 PyMODINIT_FUNC PyInit__comSciCalc(void){
 	return PyModule_Create(&module);
 }
+#endif 

@@ -27,6 +27,10 @@
 /* -------------------------------------------
  * ----------------- HEADERS -----------------
  * -------------------------------------------*/
+// Operator functions
+#include "comscicalc_operators.h"
+
+// Standard library
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -170,29 +174,24 @@ calc_funStatus_t calc_addInput(calcCoreState_t* pCalcCoreState, char inputChar);
 calc_funStatus_t calc_removeInput(calcCoreState_t* pCalcCoreState);
 calc_funStatus_t calc_printBuffer(calcCoreState_t* pCalcCoreState, char *pResString, uint16_t stringLen);
 
-// Calculator operator functions
-// NOTE: all operators must have 
-int32_t calc_add(int32_t a, int32_t b);
-int32_t calc_subtract(int32_t a, int32_t b);
-int32_t calc_multiply(int32_t a, int32_t b);
-int32_t calc_divide(int32_t a, int32_t b);
-
-int32_t calc_and(int32_t a, int32_t b);
-int32_t calc_nand(int32_t a, int32_t b);
-int32_t calc_or(int32_t a, int32_t b);
-int32_t calc_xor(int32_t a, int32_t b);
-
-int32_t calc_not(int32_t a, int32_t b);
-
 /* -------------------------------------------
  * ---------------- VARIABLES ----------------
  * -------------------------------------------*/
 
-
+// Unit test global variable to hold the 
+// state of the calculator core. 
+calcCoreState_t UT_calcCoreState;
 
 /* -------------------------------------------
  * ------------ FUNCTION WRAPPERS ------------
  * -------------------------------------------*/
 
+int UT_calc_coreInit(void);
+int UT_calc_coreBufferTeardown(void);
+int UT_calc_addInput(char c);
+int UT_calc_removeInput(void);
+char UT_calc_printBuffer(void);
+int UT_calc_setCursor(int cursorVal);
+void UT_calc_setBase(uint8_t base);
 
 #endif
