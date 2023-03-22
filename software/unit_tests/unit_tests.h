@@ -5,7 +5,7 @@
  */
 
 /* ----------------- DEFINES ----------------- */
-#define MAX_STR_LEN 255
+#define MAX_STR_LEN 50
 /* ----------------- HEADERS ----------------- */
 
 // ComSciCalc headers
@@ -15,23 +15,13 @@
 /* -------------------------------------------
  * ------- ENUMS, TYPEDEFS AND STRUCTS -------
  * -------------------------------------------*/
-// Struct for the test setup
-typedef struct testSetup {
-    calcCoreState_t *pCoreState;
-    char *pInputString;
-    char *pExpectedString;
-    char *pOutputString; 
-    int *pCursor;
-    inputBase_t inputBase;
-} testSetup_t;
-
 // Struct for the test parameters. 
 typedef struct testParams {
     char pInputString[MAX_STR_LEN];
     char pExpectedString[MAX_STR_LEN];
     char pOutputString[MAX_STR_LEN];
     int pCursor[MAX_STR_LEN];
-    inputBase_t inputBase;
+    inputBase_t inputBase[MAX_STR_LEN];
 } testParams_t;
 
 /* -------------------------------------------
@@ -40,9 +30,8 @@ typedef struct testParams {
 
 // Setup and teardown functions. Need custom here. 
 void setupTestStruct(calcCoreState_t *pCoreState, 
-    testSetup_t *pTestSetup, 
     testParams_t *pTestParams);
-void teardownTestStruct(testSetup_t *pTestSetup);
+void teardownTestStruct(calcCoreState_t *pCoreState);
 
 // Function to add the input to the calc core. 
-void calcCoreAddInput(testSetup_t *pTestSetup);
+void calcCoreAddInput(calcCoreState_t *pCoreState, testParams_t *pTestParams);

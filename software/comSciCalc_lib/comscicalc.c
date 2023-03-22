@@ -185,22 +185,6 @@ static const operatorEntry_t *getOperator(char c){
 	return NULL;
 }
 
-/* Function to initialize a list entry, excluding pointer
-   Args: 
-   - pListEntry: Pointer to list entry
-*/
-#ifndef UNIFIED_STRING_ENTRY
-static void initListEntry(inputListEntry_t *pListEntry){
-	pListEntry->pPrevious				= NULL;
-	pListEntry->pNext					= NULL;
-	pListEntry->inputBase				= inputBase_NONE;
-	pListEntry->pInputStringEntry		= NULL;
-	pListEntry->pLastInputStringEntry	= NULL;
-	pListEntry->op						= operators_NONE;
-	pListEntry->pCustomFunction			= NULL;
-	pListEntry->depth 					= 0;
-}
-#endif
 /* Function to check if input character corresponds to custom function. 
    Args: 
    - c: Input character. 
@@ -212,67 +196,7 @@ static bool charIsCustomFunction(char c){
 	return false;
 }
 
-/* Function to check health of list entry. 
-   Args: 
-   - pListEntry: Pointer to list entry 
-   Returns:
-   - True if list entry is healty, false otherwise
-*/
-#ifndef UNIFIED_STRING_ENTRY
-static bool listEntryHealty(inputListEntry_t *pListEntry){
-	// Checks for operator
-	if(pListEntry->op != operators_NONE){
-		// Check 1: If an operator is present, there must be an entry after this. 
-		if(pListEntry->pNext == NULL){
-			return false;
-		}
-		// Check 2: If an operator requires an increase in depth, and there isn't one in entry
-		if(getOperator(pListEntry->op)->bIncDepth){
-			// There is always a next operator, as we've already checked this
-			if(pListEntry->depth == ((inputListEntry_t*)(pListEntry->pNext))->depth){
-				return false;
-			}
-		}
-		// Check 3: Cannot have operator and custom function
-		if(pListEntry->pCustomFunction != NULL){
-			return false;
-		}
-	}
 
-	// Checks for custom function
-	if(pListEntry->pCustomFunction != NULL){
-		// Check 1: If an custom function is present, there must be an entry after this. 
-		if(pListEntry->pNext == NULL){
-			return false;
-		}
-		// Check 2: Custom functions require a depth increase
-		// There is always a next operator, as we've already checked this
-		if(pListEntry->depth == ((inputListEntry_t*)(pListEntry->pNext))->depth){
-			return false;
-		}
-		// Check 3: Cannot have an operator and custom function at the same time. 
-		if(pListEntry->op != operators_NONE){
-			return false;
-		}
-	}
-	return true;
-}
-#endif
-/* Function to check an entry corresponds to a depth increasing operator 
-   Args: 
-   - pListEntry: Pointer to list entry 
-   Returns:
-   - True if list entry is depth increasing operator
-*/
-#ifndef UNIFIED_STRING_ENTRY
-static bool entryIsDepthIncreasingOperator(inputListEntry_t *pListEntry){
-	if( (pListEntry->op != operators_NONE) && 
-		(pListEntry->depth == (((inputListEntry_t*)(pListEntry->pNext))->depth)+1) ){
-		return true;
-	}
-	return false;
-}
-#endif
 /* -------- CALCULATOR CORE FUNCTIONS -------- */
 
 /* Function get the pointer to a custom function
@@ -296,7 +220,7 @@ static customFunc_t *getCustomFunction(char inputChar){
    Returns:
    - Status
    State:
-   - Untested, Unfinished
+   - Draft, testing
 */
 calc_funStatus_t calc_coreInit(calcCoreState_t *pCalcCoreState){
 	// Check the calc code pointer
@@ -313,6 +237,9 @@ calc_funStatus_t calc_coreInit(calcCoreState_t *pCalcCoreState){
 	// Set the first pointer to NULL
 	pCalcCoreState->pListEntrypoint = NULL;
 
+    // Set the allocation counter to 0
+    pCalcCoreState->allocCounter = 0;
+
 	return calc_funStatus_SUCCESS;
 }
 
@@ -325,7 +252,7 @@ calc_funStatus_t calc_coreInit(calcCoreState_t *pCalcCoreState){
    Returns:
    - state of the function
    State: 
-   - Function tested successfully
+   - Draft, testing
 */
 static inputModStatus_t getInputListEntry(
 		calcCoreState_t *calcCoreState,
@@ -374,7 +301,7 @@ static inputModStatus_t getInputListEntry(
    Returns:
    - Status
    State:
-   - Untested, Unfinished
+   - Draft, testing
 */
 calc_funStatus_t calc_coreBufferTeardown(calcCoreState_t *pCalcCoreState){
 	// Check the calc code pointer
@@ -384,8 +311,10 @@ calc_funStatus_t calc_coreBufferTeardown(calcCoreState_t *pCalcCoreState){
 
 	// Get the pointer to the list entry.
 	inputListEntry_t *pListEntry = pCalcCoreState->pListEntrypoint;
+
     // List entry is allowed to be NULL as well
 	if(pListEntry != NULL){
+
     	// Find the first entry, if this isn't it. 
     	while( (pListEntry->pPrevious) != NULL){
     		pListEntry = (inputListEntry_t*)(pListEntry->pPrevious);
@@ -394,8 +323,9 @@ calc_funStatus_t calc_coreBufferTeardown(calcCoreState_t *pCalcCoreState){
     	// Go from start to finish and free all entries
     	while(pListEntry != NULL){
     		// Free the list entry
-    		inputListEntry_t *pNext = (inputListEntry_t *)pListEntry->pNext;
+    		inputListEntry_t *pNext = (inputListEntry_t*)pListEntry->pNext;
     		free(pListEntry);
+            pCalcCoreState->allocCounter--;
     		pListEntry = pNext;
     	}
     }
@@ -412,14 +342,14 @@ calc_funStatus_t calc_coreBufferTeardown(calcCoreState_t *pCalcCoreState){
    Returns:
    - state of the function
    State:
-   - Draft state
-
+   - Draft, testing
 */
-calc_funStatus_t calc_addInput( 
+calc_funStatus_t calc_addInput(
 	calcCoreState_t* pCalcCoreState,
 	char inputChar
 	)
 {
+
 	// Check pointer to calculator core state
 	if(pCalcCoreState == NULL){
 		return calc_funStatus_CALC_CORE_STATE_NULL;
@@ -440,6 +370,7 @@ calc_funStatus_t calc_addInput(
 
 	// Allocate a new entry
 	inputListEntry_t *pNewListEntry = malloc(sizeof(inputListEntry_t));
+    pCalcCoreState->allocCounter++;
 
 	if(pNewListEntry == NULL){
 		return calc_funStatus_ALLOCATE_ERROR;
@@ -487,6 +418,7 @@ calc_funStatus_t calc_addInput(
 		// Unknown input. Free and return
 		if(pNewListEntry != NULL){
 		  free(pNewListEntry);
+          pCalcCoreState->allocCounter--;
 		}
 		return calc_funStatus_UNKNOWN_INPUT;
 	}
@@ -511,9 +443,8 @@ calc_funStatus_t calc_addInput(
 		if(pNewListEntry->pNext != NULL){
 			((inputListEntry_t*)(pNewListEntry->pNext))->pPrevious = pNewListEntry;
 		}
-		if(pNewListEntry->pPrevious != NULL){
-			((inputListEntry_t*)(pNewListEntry->pPrevious))->pNext = pNewListEntry;
-		}
+		pCurrentListEntry->pNext = pNewListEntry;
+		
 	}
 	return calc_funStatus_SUCCESS;
 }
@@ -525,17 +456,7 @@ calc_funStatus_t calc_addInput(
    Returns:
    - state of the function
    State:
-   - Untested, Unfinished
-
-   Function test cases:
-   1. pInputList = NULL
-      - Returns: INPUT_LIST_NULL
-   2. pCalcCoreState = NULL
-      - Returns: CALC_CORE_STATE_NULL
-
-   n. test1
-      - Example
-      - Returns 
+   - Draft, in testing. 
 */
 calc_funStatus_t calc_removeInput(calcCoreState_t* pCalcCoreState){
 	// Check pointer to calculator core state
@@ -551,6 +472,14 @@ calc_funStatus_t calc_removeInput(calcCoreState_t* pCalcCoreState){
 		&pCurrentListEntry
 	);	
 
+    // If the current list entry pointer is NULL, 
+    // then we have either added nothing, or we're at the 
+    // head of the list. 
+    if(pCurrentListEntry == NULL){
+        // We cannot do anything, as we cannot remove anything! 
+        return calc_funStatus_INPUT_LIST_NULL;
+    }
+
 	// The aim is to remove the pointer currently pointed at, 
 	// so first align the pointers of previous and next entires
 	// and then free the memory. 
@@ -562,10 +491,15 @@ calc_funStatus_t calc_removeInput(calcCoreState_t* pCalcCoreState){
 		((inputListEntry_t*)(pCurrentListEntry->pPrevious))->pNext = 
 			pCurrentListEntry->pNext;
 	}
-	if(pCurrentListEntry != NULL){
-		free(pCurrentListEntry);
-	}
+    if(pCurrentListEntry->pPrevious == NULL){
+        // If the previous pointer was NULL, this was the head of the
+        // list. Align the entry point. 
+        pCalcCoreState->pListEntrypoint = pCurrentListEntry->pNext;
+    }
 	
+	free(pCurrentListEntry);
+    pCalcCoreState->allocCounter--;
+
 	return calc_funStatus_SUCCESS;
 }
 

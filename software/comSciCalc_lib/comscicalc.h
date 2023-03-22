@@ -158,7 +158,8 @@ typedef struct calcCoreState {
 	// base, as this will be used when new entires are made. 
 	inputBase_t inputBase;
 
-	uint16_t padding;
+    uint8_t allocCounter;
+	uint8_t padding;
 } calcCoreState_t;
 
 
