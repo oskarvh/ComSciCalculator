@@ -118,9 +118,9 @@ void test_addRemoveInput(void){
         printf("Got     : %s \r\nExpected: %s\r\n", 
                 addInputSuiteTestParams[i].pOutputString,
                 addInputSuiteTestParams[i].pExpectedString);
-        //TEST_ASSERT_EQUAL_STRING(
-        //    addInputSuiteTestParams[i].pExpectedString,
-        //    addInputSuiteTestParams[i].pOutputString);
+        TEST_ASSERT_EQUAL_STRING(
+            addInputSuiteTestParams[i].pExpectedString,
+            addInputSuiteTestParams[i].pOutputString);
         teardownTestStruct(&calcCore);
         // Check that an equal amount of mallocs and free's happened
         // in the calculator core
