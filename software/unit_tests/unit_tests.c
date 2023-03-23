@@ -87,7 +87,6 @@ void teardownTestStruct(calcCoreState_t *pCoreState){
 void calcCoreAddInput(calcCoreState_t *pCoreState, testParams_t *pTestParams){
     // Extract the variables from the test setup struct
     char *pInputString = pTestParams->pInputString;
-    char *pOutputString = pTestParams->pOutputString;
     int *pCursor = pTestParams->pCursor;
 
     // Loop through the input string
@@ -115,9 +114,15 @@ void calcCoreAddInput(calcCoreState_t *pCoreState, testParams_t *pTestParams){
         }
         pInputString++;
     }
-    
+}
+
+/* -------------------------------------------------
+ * Function to print the test buffer. 
+ * ------------------------------------------------- */
+void calcCoreGetBuffer(calcCoreState_t *pCoreState, testParams_t *pTestParams){
     // Get the output, using the comSciCalc library function
-    status = calc_printBuffer(pCoreState, pOutputString, MAX_STR_LEN);
+    char *pOutputString = pTestParams->pOutputString;
+    uint8_t status = calc_printBuffer(pCoreState, pOutputString, MAX_STR_LEN);
     if(status != calc_funStatus_SUCCESS){
         printf("Could not print \r\n");
         printf("Status = %d\n", status);

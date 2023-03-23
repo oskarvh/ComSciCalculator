@@ -503,18 +503,131 @@ calc_funStatus_t calc_removeInput(calcCoreState_t* pCalcCoreState){
 	return calc_funStatus_SUCCESS;
 }
 
+/* --------------------------------------------------------------
+ * Function to find the deepest point within the buffer. 
+ * Returns the pointer to the start and end of the deepest point. 
+ * Works by increasing a counter when the depth increases, 
+ * and for each consecutive depth increase updates the start 
+ * pointer, until a depth decrease is found. 
+ * It always returns the first deepest point. 
+ * From that starting point, it then locates the next 
+ * depth decrease, which would be the end. 
+ * Input: Pointers to pointer of where to write the results. 
+ * Moreover, the starting point is given by *ppStart. 
+ *
+ * Return values:
+ * 0: successful
+ * -1: Brackets not matched. 
+ * 1: Whole section has the same depth.  
+ * Status: Tested, seems to work. 
+ * -------------------------------------------------------------- */
+int findDeepestPoint(inputListEntry_t **ppStart, inputListEntry_t **ppEnd){
+    // Counter to keep track of the current depth.
+    int currentDepth = 0;
+    int deepestDepth = 0;
 
-/* Function to print the list entries. 
-   This function relies on the list being in good shape.  
-   Args: 
-   - pCalcCoreState: pointer to calculator core state
-   - pString: pointer to string which to print the buffer
-   - stringLen: maximum number of characters to write to pString
-   Returns:
-   - state of the function. 
-   State:
-   - Untested, Unfinished
-*/
+    // Local variables to keep track of the start and end point. 
+    // Set the start and end points to start and end of the buffer, 
+    inputListEntry_t *pStart = *ppStart;
+    inputListEntry_t *pEnd = *ppEnd;
+    inputListEntry_t *pIter = *ppStart;
+
+    // Loop until the end of the list has been found
+    while(pIter != NULL){
+        if(GET_DEPTH_FLAG(pIter->entry.typeFlag) == DEPTH_CHANGE_INCREASE){
+            // Increase in depth. Increase the current depth
+            currentDepth++;
+            
+            if(currentDepth > deepestDepth){
+                // This is the new deepest point
+                deepestDepth = currentDepth;
+                pStart = pIter;
+            }
+        }
+        else if(GET_DEPTH_FLAG(pIter->entry.typeFlag) == DEPTH_CHANGE_DECREASE){
+            // Decrease in depth
+            currentDepth--;
+        }
+        pIter = pIter->pNext;
+    }
+
+    // If the depth doesn't match up, this cannot be solved. 
+    if(currentDepth != 0){
+        return -1;
+    }
+
+    // Set the pointer to the end to the pointer to the start
+    pEnd = pStart;
+    // ... and loop through to the next decrease, or end of the list. 
+    while(pEnd != NULL){
+        if(GET_DEPTH_FLAG(pEnd->entry.typeFlag) == DEPTH_CHANGE_DECREASE){
+            break;
+        }
+        pEnd = pEnd->pNext;
+    }
+
+    // Record the values and return
+    *ppStart = pStart;
+    *ppEnd = pEnd;
+    return 0;
+}
+/* --------------------------------------------------------------
+ * Solver. This is one of the core function of the calculator.
+ * 
+ * This goes through the buffer, and starts solve parts of the 
+ * buffer from the deepest point. 
+ *
+ * The solver will solve using int, if there isn't a float 
+ * present. 
+ *
+ * There are several ways to solve this. Either solving the 
+ * multiplications first, then functions and operators requiring
+ * depth increase, then the rest. However, since there can be 
+ * nested brackets, the best way might be to solve it by:
+ * 1. Go through the buffer and locate the deepest calculation
+ * 2. Partially solve the inside of the deepest brackets. 
+ * 3. Solve the function outside of the brackets, if any. 
+ * 4. Repeat steps 1-3 until there are no depth increases left
+ * 5. Finally solve for each left and return
+ * -------------------------------------------------------------- */
+calc_funStatus_t calc_solver(calcCoreState_t* pCalcCoreState){
+    pCalcCoreState->solved = false;
+
+    // Local variables to keep track while the solver is
+    // at work. Should be copied to core state when done. 
+    int result = 0;
+    bool solved = false;
+    int depth = 0;
+
+    // Loop through and find the deepest point of the buffer
+    inputListEntry_t *pStart = pCalcCoreState->pListEntrypoint;
+    inputListEntry_t *pEnd = NULL;
+
+    // Do a NULL check on the start:
+    if(pStart == NULL){
+        // No list to solve for. Simply return
+        return calc_funStatus_INPUT_LIST_NULL;
+    }
+
+    
+
+    
+
+    return calc_funStatus_SUCCESS;
+}
+
+/* --------------------------------------------------------------
+ * Function to print the list entries. 
+ * This function relies on the list being in good shape.  
+ * Args: 
+ * - pCalcCoreState: pointer to calculator core state
+ * - pString: pointer to string which to print the buffer
+ * - stringLen: maximum number of characters to write to pString
+ *  Returns:
+ *  - state of the function. 
+ *  State:
+ * - Draft
+ * -------------------------------------------------------------- */
 calc_funStatus_t calc_printBuffer(calcCoreState_t* pCalcCoreState, char *pResString, uint16_t stringLen){
 
 	// Check pointer to calculator core state
@@ -651,6 +764,11 @@ calc_funStatus_t calc_printBuffer(calcCoreState_t* pCalcCoreState, char *pResStr
 }
 
 
-/* -------------------------------------------
- * ------------ FUNCTION WRAPPERS ------------
- * -------------------------------------------*/
+/* --------------------------------------------
+ * ------------- FUNCTION WRAPPERS ------------
+ * ---These are exposed for testing purposes---
+ * --------------------------------------------*/
+
+int wrap_findDeepestPoint(inputListEntry_t **ppStart, inputListEntry_t **ppEnd){
+    return findDeepestPoint(ppStart, ppEnd);
+}

@@ -35,3 +35,4 @@ void teardownTestStruct(calcCoreState_t *pCoreState);
 
 // Function to add the input to the calc core. 
 void calcCoreAddInput(calcCoreState_t *pCoreState, testParams_t *pTestParams);
+void calcCoreGetBuffer(calcCoreState_t *pCoreState, testParams_t *pTestParams);

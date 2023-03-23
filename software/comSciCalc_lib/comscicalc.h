@@ -48,6 +48,7 @@ enum inputBase {
 };
 
 // status of calc_* functions
+// TODO: add soft errors and hard errors here
 enum calc_funStatus {
 	calc_funStatus_SUCCESS 				= 0, 
 	// Input list pointer is NULL
@@ -70,6 +71,8 @@ enum calc_funStatus {
 	calc_funStatus_ENTRY_LIST_ERROR		= 8,
 	// Teardown of list entries incomplete
 	calc_funStatus_TEARDOWN_INCOMPLETE 	= 9,
+	// Solver could not be completed
+	calc_funStatus_SOLVE_INCOMPLETE 	= 10,
 };
 
 // Status of functions handling input lists
@@ -159,7 +162,15 @@ typedef struct calcCoreState {
 	inputBase_t inputBase;
 
     uint8_t allocCounter;
-	uint8_t padding;
+
+    // Bool indicating if the current buffer has been 
+    // solved or not. 
+	bool solved;
+
+	// Result of the current buffer
+	// Note that the type isn't important here
+	uint32_t result;
+
 } calcCoreState_t;
 
 
@@ -174,6 +185,8 @@ calc_funStatus_t calc_coreBufferTeardown(calcCoreState_t *pCalcCoreState);
 calc_funStatus_t calc_addInput(calcCoreState_t* pCalcCoreState, char inputChar);
 calc_funStatus_t calc_removeInput(calcCoreState_t* pCalcCoreState);
 calc_funStatus_t calc_printBuffer(calcCoreState_t* pCalcCoreState, char *pResString, uint16_t stringLen);
+calc_funStatus_t calc_solver(calcCoreState_t* pCalcCoreState);
+
 
 /* -------------------------------------------
  * ---------------- VARIABLES ----------------
@@ -183,6 +196,6 @@ calc_funStatus_t calc_printBuffer(calcCoreState_t* pCalcCoreState, char *pResStr
 /* -------------------------------------------
  * ------------ FUNCTION WRAPPERS ------------
  * -------------------------------------------*/
-
+int wrap_findDeepestPoint(inputListEntry_t **ppStart, inputListEntry_t **ppEnd);
 
 #endif

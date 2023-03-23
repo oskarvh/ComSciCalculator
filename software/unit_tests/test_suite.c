@@ -28,6 +28,8 @@
 // Unit test header
 #include "unit_tests.h"
 
+
+static bool verbose;
 // This function will run before each test. 
 void setUp(void) {
     // set stuff up here
@@ -38,10 +40,20 @@ void tearDown(void) {
     // clean stuff up here
 }
 
-/* -------------------------------------------
- * Testing adding and removing input
- * -------------------------------------------*/
-testParams_t addInputSuiteTestParams[] = {
+/* ----------------------------------------------------------------
+ * Testing adding and removing input. 
+ * Note, \b is removing. 
+ * Usage: The input string corresponds to the
+ * characters sent to the comSciCalc core, 
+ * where \b is backslash (i.e. remove). 
+ * Each entry has a corresponding cursor value
+ * and input base value. 
+ * The output is recorded in the pOutputString
+ * in the format that the string would be 
+ * displayed on screen. 
+ * That is then compared to the expected string. 
+ * ----------------------------------------------------------------*/
+testParams_t addInputTestParams[] = {
     {
         .pInputString = "123\0",
         .pCursor = {0,0,0},
@@ -49,7 +61,13 @@ testParams_t addInputSuiteTestParams[] = {
         .pOutputString = {0},
         .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
     },
-    
+    {
+        .pInputString = "1234\b\0",
+        .pCursor = {0,0,0,0,0},
+        .pExpectedString = "123\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+    },
     {
         .pInputString = "123\0",
         .pCursor = {0,0,0},
@@ -80,13 +98,6 @@ testParams_t addInputSuiteTestParams[] = {
     },
     {
         .pInputString = "123\b\0",
-        .pCursor = {0,0,0,0},
-        .pExpectedString = "12\0",
-        .pOutputString = {0},
-        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
-    },
-    {
-        .pInputString = "123\b\0",
         .pCursor = {0,0,0,1},
         .pExpectedString = "13\0",
         .pOutputString = {0},
@@ -105,37 +116,166 @@ testParams_t addInputSuiteTestParams[] = {
         .pExpectedString = "NAND(3\0",
         .pOutputString = {0},
         .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
-    }
+    },
+    {
+        .pInputString = "1n3\b\0",
+        .pCursor = {0,0,0,3},
+        .pExpectedString = "1NAND(3\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+    },
+    {
+        .pInputString = "123+n456*(12+45))\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "123+NAND(456*(12+45))\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+    },
 };
 void test_addRemoveInput(void){   
     calcCoreState_t calcCore;
-    int numTests = sizeof(addInputSuiteTestParams)/sizeof(addInputSuiteTestParams[0]);
+    int numTests = sizeof(addInputTestParams)/sizeof(addInputTestParams[0]);
     for(int i = 0 ; i < numTests ; i++){
         //printf("Test %i\r\n", i);
-        setupTestStruct(&calcCore, &addInputSuiteTestParams[i]);
-        calcCoreAddInput(&calcCore, &addInputSuiteTestParams[i]);
-        printf("------------------------------------------------\r\n");
-        printf("Got     : %s \r\nExpected: %s\r\n", 
-                addInputSuiteTestParams[i].pOutputString,
-                addInputSuiteTestParams[i].pExpectedString);
+        setupTestStruct(&calcCore, &addInputTestParams[i]);
+        calcCoreAddInput(&calcCore, &addInputTestParams[i]);
+        calcCoreGetBuffer(&calcCore, &addInputTestParams[i]);
+        if(verbose){
+            printf("------------------------------------------------\r\n");
+            printf("Got     : %s \r\nExpected: %s\r\n", 
+                    addInputTestParams[i].pOutputString,
+                    addInputTestParams[i].pExpectedString);
+        }
         TEST_ASSERT_EQUAL_STRING(
-            addInputSuiteTestParams[i].pExpectedString,
-            addInputSuiteTestParams[i].pOutputString);
+            addInputTestParams[i].pExpectedString,
+            addInputTestParams[i].pOutputString);
         teardownTestStruct(&calcCore);
+
         // Check that an equal amount of mallocs and free's happened
         // in the calculator core
         //printf("Allocation counter = %i\r\n", calcCore.allocCounter);
-        printf("------------------------------------------------\r\n\r\n");
-        TEST_ASSERT_EQUAL_INT(
-            0,
-            calcCore.allocCounter);
+        TEST_ASSERT_EQUAL_INT(0, calcCore.allocCounter);
+        if(verbose){
+            printf("------------------------------------------------\r\n\r\n");
+        }
     }
 }
 
 
+/* ----------------------------------------------------------------
+ * Test for the function to find the deepest point within 
+ * a list. 
+ * ----------------------------------------------------------------*/
+testParams_t findDeepestPointTestParams[] = {
+    {
+        .pInputString = "123\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "123\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+    },
+    {
+        .pInputString = "123(456)\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "(456)\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+    },
+    {
+        .pInputString = "123(456\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "123(456\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+    },
+    {
+        .pInputString = "123456)\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "123456)\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+    },
+    {
+        .pInputString = "123+n456)\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "NAND(456)\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+    },
+    {
+        .pInputString = "123+n456*(12+45))\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "(12+45)\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+    },
+};
+void test_findingDeepestPoint(void){
+    calcCoreState_t calcCore;
+    
+    // Loop through all tests
+    int numTests = sizeof(findDeepestPointTestParams)/sizeof(findDeepestPointTestParams[0]);
+    for(int i = 0 ; i < numTests ; i++){
+        setupTestStruct(&calcCore, &findDeepestPointTestParams[i]);
+        calcCoreAddInput(&calcCore, &findDeepestPointTestParams[i]);
+
+        // Instead of printing this directly, find the deepest point
+        inputListEntry_t *pStart = calcCore.pListEntrypoint;
+        inputListEntry_t *pEnd = NULL;
+        int status = wrap_findDeepestPoint(&pStart, &pEnd);
+
+        // Temporarily modify the list structure
+        inputListEntry_t *pOrigEntrypoint = calcCore.pListEntrypoint;
+        inputListEntry_t *pStartPrev = NULL;
+        if(pStart != NULL){
+            pStartPrev = pStart->pPrevious;
+            pStart->pPrevious = NULL;
+        }
+        inputListEntry_t *pEndNext = NULL;
+        if(pEnd != NULL) {
+            pEndNext = pEnd->pNext;
+            pEnd->pNext = NULL;
+        }
+
+        calcCore.pListEntrypoint = pStart;
+        // IMPORTANT: If we abort between here, we'll leak memory
+
+        calcCoreGetBuffer(&calcCore, &findDeepestPointTestParams[i]);
+
+        // Reset the list again!  
+        calcCore.pListEntrypoint = pOrigEntrypoint;
+        if(pStart != NULL){
+            pStart->pPrevious = pStartPrev;
+        }
+        if(pEnd != NULL) {
+            pEnd->pNext = pEndNext;
+        }
+        if(verbose){
+            printf("------------------------------------------------\r\n");
+            printf("Got     : %s \r\nExpected: %s\r\n", 
+                    findDeepestPointTestParams[i].pOutputString,
+                    findDeepestPointTestParams[i].pExpectedString);
+        }
+        TEST_ASSERT_EQUAL_STRING(
+            findDeepestPointTestParams[i].pExpectedString,
+            findDeepestPointTestParams[i].pOutputString);
+        teardownTestStruct(&calcCore);
+
+        // Check that an equal amount of mallocs and free's happened
+        // in the calculator core
+        //printf("Allocation counter = %i\r\n", calcCore.allocCounter);
+        TEST_ASSERT_EQUAL_INT(0, calcCore.allocCounter);
+        if(verbose){
+            printf("------------------------------------------------\r\n\r\n");
+        }
+    }
+}
+
 int main(void)
 {
+    verbose = true;
     UNITY_BEGIN();
     RUN_TEST(test_addRemoveInput);
+    RUN_TEST(test_findingDeepestPoint);
     return UNITY_END();
 }
