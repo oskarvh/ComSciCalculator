@@ -23,6 +23,9 @@
 
 // Standard library
 #include <stdlib.h>
+#include <stdarg.h>
+#include <stdio.h>
+
 /* ------------- GLOBAL VARIABLES ------------ */
 // List of operator function pointers
 // Ensure that each inputChar and op field is unique! 
@@ -69,53 +72,227 @@ const operatorEntry_t operators[NUM_OPERATORS] = {
 
 };
 
+int test(uint8_t num_args, ...){
+	va_list valist;
+	va_start(valist, num_args);
+
+	// Only expecting two variable arguments here
+	printf("input format: %i, Num args: %i\r\n");
+	if(num_args != 2){
+		return incorrect_args;
+	}
+	
+	// Read out the args as uint32_t. Will be casted later on
+	uint32_t a = va_arg(valist, uint32_t);
+	uint32_t b = va_arg(valist, uint32_t);
+	printf("Adding %i and %i\r\n");
+	va_end(valist);
+}
 
 /* ------ CALCULATOR OPERATOR FUNCTIONS ------ */
-// Note: These can be overloaded, but the return is always 32 bits, 
-// with two 32 bit inputs. This might come to change in the future if
-// any major roadblocks become apparent. 
-int32_t calc_add(int32_t a, int32_t b){
-	return a+b;
+
+int8_t calc_add(uint32_t *pResult, inputFormat_t inputFormat, int num_args, ...){
+	va_list valist;
+	va_start(valist, num_args);
+
+	// Only expecting two variable arguments here
+	if(num_args != 2){
+		return incorrect_args;
+	}
+	
+	// Read out the args as uint32_t. Will be casted later on
+	uint32_t a = va_arg(valist, uint32_t);
+	uint32_t b = va_arg(valist, uint32_t);
+	va_end(valist);
+	// Make calculation based on format
+	switch(inputFormat){
+		case INPUT_FMT_UINT:
+			// Solve for N bit unsigned integer
+			(*((SUBRESULT_UINT*)pResult)) = a+b;
+			// TODO: add overflow detection
+		break;
+		case INPUT_FMT_SINT:
+			// Solve for N bit signed integer
+			(*((SUBRESULT_INT*)pResult)) = a+b;
+			// TODO: add overflow detection
+		break;
+		case INPUT_FMT_FLOAT:
+			// Solve for 32bit floats
+			(*((SUBRESULT_FLOAT*)pResult)) = a+b;
+			// TODO: add overflow detection
+		break;
+		case INPUT_FMT_FIXED:
+			// TODO:Solve for fixed point. 
+			// TODO: add overflow detection
+		break;
+	}
+	return function_solved;
 }
 
-int32_t calc_subtract(int32_t a, int32_t b){
-	return a-b;
+int8_t calc_subtract(void *pResult, inputFormat_t inputFormat, int num_args, ...){
+	va_list valist;
+	va_start(valist, num_args);
+
+	// Only expecting two variable arguments here
+	if(num_args != 2){
+		return incorrect_args;
+	}
+	// Read out the args as uint32_t. Will be casted later on
+	uint32_t a = va_arg(valist, uint32_t);
+	uint32_t b = va_arg(valist, uint32_t);
+	va_end(valist);
+	// Make calculation based on format
+	switch(inputFormat){
+		case INPUT_FMT_UINT:
+			// Solve for N bit unsigned integer
+			(*((SUBRESULT_UINT*)pResult)) = a-b;
+			// TODO: add overflow detection
+		break;
+		case INPUT_FMT_SINT:
+			// Solve for N bit signed integer
+			(*((SUBRESULT_INT*)pResult)) = a-b;
+			// TODO: add overflow detection
+		break;
+		case INPUT_FMT_FLOAT:
+			// Solve for 32bit float
+			(*((SUBRESULT_FLOAT*)pResult)) = a-b;
+			// TODO: add overflow detection
+		break;
+		case INPUT_FMT_FIXED:
+			// TODO:Solve for fixed point. 
+			// TODO: add overflow detection
+		break;
+	}
+	return function_solved;
 }
 
-int32_t calc_multiply(int32_t a, int32_t b){
-	return a*b;
+int8_t calc_multiply(void *pResult, inputFormat_t inputFormat, int num_args, ...){
+	va_list valist;
+	va_start(valist, num_args);
+
+	// Only expecting two variable arguments here
+	if(num_args != 2){
+		return incorrect_args;
+	}
+	// Read out the args as uint32_t. Will be casted later on
+	uint32_t a = va_arg(valist, uint32_t);
+	uint32_t b = va_arg(valist, uint32_t);
+	va_end(valist);
+	// Make calculation based on format
+	switch(inputFormat){
+		case INPUT_FMT_UINT:
+			// Solve for 32bit unsigned integer
+			(*((SUBRESULT_UINT*)pResult)) = a*b;
+			// TODO: add overflow detection
+		break;
+		case INPUT_FMT_SINT:
+			// Solve for 32 bit signed integer
+			(*((SUBRESULT_INT*)pResult)) = a*b;
+			// TODO: add overflow detection
+		break;
+		case INPUT_FMT_FLOAT:
+			// Solve for 32bit float
+			(*((SUBRESULT_FLOAT*)pResult)) = a*b;
+			// TODO: add overflow detection
+		break;
+		case INPUT_FMT_FIXED:
+			// TODO:Solve for fixed point. 
+			// TODO: add overflow detection
+		break;
+	}
+	return function_solved;
 }
 
-int32_t calc_divide(int32_t a, int32_t b){
-	return 0; //TODO: 
+int8_t calc_divide(void *pResult, inputFormat_t inputFormat, int num_args, ...){
+		va_list valist;
+	va_start(valist, num_args);
+
+	// Only expecting two variable arguments here
+	if(num_args != 2){
+		return incorrect_args;
+	}
+	// Read out the args as uint32_t. Will be casted later on
+	uint32_t a = va_arg(valist, uint32_t);
+	uint32_t b = va_arg(valist, uint32_t);
+	va_end(valist);
+	// Make calculation based on format
+	switch(inputFormat){
+		case INPUT_FMT_UINT:
+			// Solve for 32bit unsigned integer
+			(*((SUBRESULT_UINT*)pResult)) = a/b;
+			// TODO: add overflow detection
+		break;
+		case INPUT_FMT_SINT:
+			// Solve for 32 bit signed integer
+			(*((SUBRESULT_INT*)pResult)) = a/b;
+			// TODO: add overflow detection
+		break;
+		case INPUT_FMT_FLOAT:
+			// Solve for 32bit float
+			(*((SUBRESULT_FLOAT*)pResult)) = a/b;
+			// TODO: add overflow detection
+		break;
+		case INPUT_FMT_FIXED:
+			// TODO:Solve for fixed point. 
+			// TODO: add overflow detection
+		break;
+	}
+	return function_solved;
 }
 
-int32_t calc_and(int32_t a, int32_t b){
-	return a&b;
+int8_t calc_and(void *pResult, inputFormat_t inputFormat, int num_args, ...){
+	return function_solved;
 }
 
-int32_t calc_nand(int32_t a, int32_t b){
-	return ~(a&b);
+int8_t calc_nand(void *pResult, inputFormat_t inputFormat, int num_args, ...){
+	return function_solved;
 }
 
-int32_t calc_or(int32_t a, int32_t b){
-	return a|b;
+int8_t calc_or(void *pResult, inputFormat_t inputFormat, int num_args, ...){
+	return function_solved;
 }
 
-int32_t calc_xor(int32_t a, int32_t b){
-	return a^b;
+int8_t calc_xor(void *pResult, inputFormat_t inputFormat, int num_args, ...){
+	return function_solved;
 }
 
-int32_t calc_not(int32_t a){
-	return ~a;
+int8_t calc_not(void *pResult, inputFormat_t inputFormat, int num_args, ...){
+	va_list valist;
+	va_start(valist, num_args);
+
+	// Only expecting one variable arguments here
+	if(num_args != 1){
+		return incorrect_args;
+	}
+	// Read out the args as uint32_t. Will be casted later on
+	uint32_t a = va_arg(valist, uint32_t);
+	va_end(valist);
+	// Make calculation based on format
+	switch(inputFormat){
+		case INPUT_FMT_UINT:
+		case INPUT_FMT_SINT:
+			// Solve for 32bit unsigned or signed integer
+			(*((SUBRESULT_UINT*)pResult)) = ~a;
+			// TODO: add overflow detection
+		break;
+		case INPUT_FMT_FLOAT:
+			// Does not make sense for float. But I'll allow it. 
+			(*((SUBRESULT_FLOAT*)pResult)) = ~a;
+		break;
+		case INPUT_FMT_FIXED:
+			// TODO:Solve for fixed point. 
+			// TODO: add overflow detection
+		break;
+	}
+	return function_solved;
 }
 
-int32_t calc_leftshift(int32_t a, int32_t b){
-	return a<<b;
+int8_t calc_leftshift(void *pResult, inputFormat_t inputFormat, int num_args, ...){
+	return function_solved;
 }
 
-int32_t calc_rightshift(int32_t a, int32_t b){
-	return a>>b;
+int8_t calc_rightshift(void *pResult, inputFormat_t inputFormat, int num_args, ...){
+	return function_solved;
 }
 
 /* -------------------------------------------

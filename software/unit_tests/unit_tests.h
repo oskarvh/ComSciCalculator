@@ -22,7 +22,7 @@ typedef struct testParams {
     char pOutputString[MAX_STR_LEN];
     int pCursor[MAX_STR_LEN];
     inputBase_t inputBase[MAX_STR_LEN];
-    RESULT expectedResult;
+    uint32_t expectedResult;
 } testParams_t;
 
 /* -------------------------------------------

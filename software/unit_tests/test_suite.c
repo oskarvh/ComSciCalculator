@@ -348,6 +348,14 @@ testParams_t solverParams[] = {
         .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
         .expectedResult = 56877,
     },
+    {
+        .pInputString = "(123,456)\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "(123,456)\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 56877,
+    },
 };
 void test_solver(void){   
     calcCoreState_t calcCore;

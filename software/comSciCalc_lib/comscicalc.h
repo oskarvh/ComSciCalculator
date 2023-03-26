@@ -18,8 +18,7 @@
 #define CLOSING_BRACKET ')'
 // Defines that dictate the sub result and
 // result bit length
-#define SUBRESULT uint32_t
-#define RESULT int32_t
+
 /* -------------------------------------------
  * ----------------- MACROS ------------------ 
  * -------------------------------------------*/
@@ -86,28 +85,13 @@ enum inputModStatus {
 };
 
 typedef uint8_t inputBase_t;
+
 typedef char operators_t;
 typedef int8_t calc_funStatus_t;
 typedef int8_t inputModStatus_t;
-typedef SUBRESULT math_operator(SUBRESULT, SUBRESULT);
-typedef SUBRESULT function_operator(void* args);
 
-// Type for the character flags. 
-typedef uint8_t typeFlag_t;
-#define INPUT_TYPE_EMPTY 0
-#define INPUT_TYPE_NUMBER 1
-#define INPUT_TYPE_OPERATOR 2
-#define INPUT_TYPE_RESERVED 3
-#define DEPTH_CHANGE_KEEP 0
-#define DEPTH_CHANGE_INCREASE 1
-#define DEPTH_CHANGE_DECREASE 2
-#define DEPTH_CHANGE_RESERVED 3
-#define SUBRESULT_TYPE_CHAR 0
-#define SUBRESULT_TYPE_INT 0
-#define CONSTRUCT_TYPEFLAG(subResType, depthFlag, inputType) (subResType << 4 | depthFlag << 2 | inputType)
-#define GET_DEPTH_FLAG(typeFlag) ((typeFlag>>2)&0x3)
-#define GET_INPUT_TYPE(typeFlag) ((typeFlag)&0x3)
-#define GET_SUBRESULT_TYPE(typeFlag) ((typeFlag>>4)&0x1)
+
+
 // Struct to be used for operator or char entry
 typedef struct inputType {
 	// The character from the input
@@ -119,11 +103,12 @@ typedef struct inputType {
 	// bit 0-1: 0 = empty, 1 = number, 3 = operator, 3 = custom function
 	// bit 2-3: 0 = keep depth, 1 = increase depth, 2 = decrease depth, 3 = reserved
 	// bit 4: 0 = char input, 1 = subresult
-	// bit 5-7: reserved.
+	// Bit 5-6: Input is: 0 = unsigned int, 1 = signed int, 2 = floating point, 3 = fixed point
+	// bit 7: reserved.
 	typeFlag_t typeFlag;
 
 	// Partial restult. Only used for when solving. 
-	SUBRESULT subresult;
+	SUBRESULT_UINT subresult;
 } inputType_t;
 
 // Struct for the input linked list entry
@@ -169,6 +154,10 @@ typedef struct calcCoreState {
 	// base, as this will be used when new entires are made. 
 	inputBase_t inputBase;
 
+	// The input format, signed or unsigned int, float or fixed point
+	inputFormat_t inputFormat;
+
+	// DEBUG: counter for the number of free's and malloc's
     uint8_t allocCounter;
 
     // Bool indicating if the current buffer has been 
@@ -176,7 +165,7 @@ typedef struct calcCoreState {
 	bool solved;
 
 	// Result of the current buffer
-	RESULT result;
+	SUBRESULT_UINT result;
 
 } calcCoreState_t;
 

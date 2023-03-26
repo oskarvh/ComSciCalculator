@@ -118,6 +118,16 @@
  * After some thought I removed the custom function, it's now merged into 
  * operators. 
  *
+ * TODO list:
+ * 0. Finish the basic implementaion of the solver. This requires extension later on. 
+ * 1. Enable entry of unsigned, signed, floating point and fixed point. 
+ * 2. Extend calulation funciton to handle varialble arguments (DONE).
+ * 3. Extend input conversion to handle signed, unsigned, float and fixed point. 
+ * 4. Add support for comma sign in depth increasing functions. 
+ * 
+ * GENERAL FEATURES
+ * Add C formatter to pre-commit.
+ * Add doxygen and clean up the source code because it looks like shit now.
  */
 
 /*
@@ -218,6 +228,20 @@ static bool charIsBracket(char c){
 	return false;
 }
 
+/* Function to check if character is accepted, e.g. comma or dot. 
+   Args: 
+   - c: incoming character. 
+   Returns:
+   - True if char is accepted, otherwise false
+*/
+static bool charIsOther(char c){
+	if( (c == ',') || (c == '.') ){
+		return true;
+	}
+	return false;
+}
+
+
 /* Function to get the operator entry based on input character. 
    Args: 
    - c: incoming character. 
@@ -269,6 +293,7 @@ calc_funStatus_t calc_coreInit(calcCoreState_t *pCalcCoreState){
     // Set the result to 0 and solved to false
     pCalcCoreState->result = 0;
     pCalcCoreState->solved = false;
+    pCalcCoreState->inputFormat = INPUT_FMT_UINT;
 
 	return calc_funStatus_SUCCESS;
 }
@@ -408,22 +433,23 @@ calc_funStatus_t calc_addInput(
 
 	// Add the input
 	pNewListEntry->entry.c = inputChar;
+    inputFormat_t inputFormat = pCalcCoreState->inputFormat;
     // Set the input subresult to 0
     pNewListEntry->entry.subresult = 0;
 	if(charIsNumerical(pCalcCoreState->inputBase,inputChar)){
 		pNewListEntry->entry.typeFlag = 
-			CONSTRUCT_TYPEFLAG(SUBRESULT_TYPE_CHAR, DEPTH_CHANGE_KEEP, INPUT_TYPE_NUMBER);
+			CONSTRUCT_TYPEFLAG(inputFormat, SUBRESULT_TYPE_CHAR, DEPTH_CHANGE_KEEP, INPUT_TYPE_NUMBER);
 	} 
 	else if( charIsOperator(inputChar) ){
 		// Get the operator
 		const operatorEntry_t *pOp = getOperator(inputChar);
 		if(pOp->bIncDepth){
 			pNewListEntry->entry.typeFlag = 
-				CONSTRUCT_TYPEFLAG(SUBRESULT_TYPE_CHAR, DEPTH_CHANGE_INCREASE, INPUT_TYPE_OPERATOR);
+				CONSTRUCT_TYPEFLAG(inputFormat, SUBRESULT_TYPE_CHAR, DEPTH_CHANGE_INCREASE, INPUT_TYPE_OPERATOR);
 		}
 		else {
 			pNewListEntry->entry.typeFlag = 
-				CONSTRUCT_TYPEFLAG(SUBRESULT_TYPE_CHAR, DEPTH_CHANGE_KEEP, INPUT_TYPE_OPERATOR);
+				CONSTRUCT_TYPEFLAG(inputFormat, SUBRESULT_TYPE_CHAR, DEPTH_CHANGE_KEEP, INPUT_TYPE_OPERATOR);
 		}
 		pNewListEntry->pFunEntry = (void*)pOp;
 
@@ -431,11 +457,21 @@ calc_funStatus_t calc_addInput(
 	else if( charIsBracket(inputChar) ){
 		if(inputChar == OPENING_BRACKET){
 			pNewListEntry->entry.typeFlag = 
-				CONSTRUCT_TYPEFLAG(SUBRESULT_TYPE_CHAR, DEPTH_CHANGE_INCREASE, INPUT_TYPE_EMPTY);
+				CONSTRUCT_TYPEFLAG(inputFormat, SUBRESULT_TYPE_CHAR, DEPTH_CHANGE_INCREASE, INPUT_TYPE_EMPTY);
 		}
 		else {
 			pNewListEntry->entry.typeFlag = 
-				CONSTRUCT_TYPEFLAG(SUBRESULT_TYPE_CHAR, DEPTH_CHANGE_DECREASE, INPUT_TYPE_EMPTY);
+				CONSTRUCT_TYPEFLAG(inputFormat, SUBRESULT_TYPE_CHAR, DEPTH_CHANGE_DECREASE, INPUT_TYPE_EMPTY);
+		}
+	}
+    else if( charIsOther(inputChar) ){
+		if(inputChar == ','){
+			pNewListEntry->entry.typeFlag = 
+				CONSTRUCT_TYPEFLAG(inputFormat, SUBRESULT_TYPE_CHAR, DEPTH_CHANGE_KEEP, INPUT_TYPE_EMPTY);
+		}
+		else {
+			pNewListEntry->entry.typeFlag = 
+				CONSTRUCT_TYPEFLAG(inputFormat, SUBRESULT_TYPE_CHAR, DEPTH_CHANGE_KEEP, INPUT_TYPE_EMPTY);
 		}
 	}
 	else{
@@ -641,18 +677,60 @@ int copyAndConvertList(calcCoreState_t* pCalcCoreState, inputListEntry_t **ppSol
         if(GET_INPUT_TYPE(pCurrentListEntry->entry.typeFlag) == INPUT_TYPE_NUMBER){
             // If the current entry is numerical, aggregate this
             // until the entry is either NULL or not numerical
-            pNewListEntry->entry.typeFlag = CONSTRUCT_TYPEFLAG(SUBRESULT_TYPE_INT, DEPTH_CHANGE_KEEP, INPUT_TYPE_NUMBER);
+            inputFormat_t inputFormat = pCalcCoreState->inputFormat;
+            pNewListEntry->entry.typeFlag = CONSTRUCT_TYPEFLAG(inputFormat, SUBRESULT_TYPE_INT, DEPTH_CHANGE_KEEP, INPUT_TYPE_NUMBER);
             pNewListEntry->entry.subresult = 0;
             while(GET_INPUT_TYPE(pCurrentListEntry->entry.typeFlag) == INPUT_TYPE_NUMBER){
                 // Aggregate the input based on the input base
                 if(pCurrentListEntry->inputBase == inputBase_DEC){
-                    pNewListEntry->entry.subresult *= 10;
+                    if( (inputFormat == INPUT_FMT_UINT) ){
+                        SUBRESULT_UINT *pRes  = (SUBRESULT_UINT *)&(pNewListEntry->entry.subresult);
+                        *pRes = (*pRes)*10;
+                    }
+                    else if( (inputFormat == INPUT_FMT_SINT) ){
+                        SUBRESULT_INT *pRes  = (SUBRESULT_INT *)&(pNewListEntry->entry.subresult);
+                        *pRes = (*pRes)*10;
+                    }
+                    else if( (inputFormat == INPUT_FMT_FLOAT) ){
+                        // TODO
+                    }
+                    else if( (inputFormat == INPUT_FMT_FIXED) ){
+                        // TODO
+                    }
+                    
                 }
                 if(pCurrentListEntry->inputBase == inputBase_HEX){
+                    if( (inputFormat == INPUT_FMT_UINT) ){
+                        SUBRESULT_UINT *pRes  = (SUBRESULT_UINT *)&(pNewListEntry->entry.subresult);
+                        *pRes = (*pRes)*16;
+                    }
+                    else if( (inputFormat == INPUT_FMT_SINT) ){
+                        SUBRESULT_INT *pRes  = (SUBRESULT_INT *)&(pNewListEntry->entry.subresult);
+                        *pRes = (*pRes)*16;
+                    }
+                    else if( (inputFormat == INPUT_FMT_FLOAT) ){
+                        // TODO
+                    }
+                    else if( (inputFormat == INPUT_FMT_FIXED) ){
+                        // TODO
+                    }
                     pNewListEntry->entry.subresult *= 16;
                 }
                 if(pCurrentListEntry->inputBase == inputBase_BIN){
-                    pNewListEntry->entry.subresult *= 2;
+                    if( (inputFormat == INPUT_FMT_UINT) ){
+                        SUBRESULT_UINT *pRes  = (SUBRESULT_UINT *)&(pNewListEntry->entry.subresult);
+                        *pRes = (*pRes)*2;
+                    }
+                    else if( (inputFormat == INPUT_FMT_SINT) ){
+                        SUBRESULT_INT *pRes  = (SUBRESULT_INT *)&(pNewListEntry->entry.subresult);
+                        *pRes = (*pRes)*2;
+                    }
+                    else if( (inputFormat == INPUT_FMT_FLOAT) ){
+                        // TODO
+                    }
+                    else if( (inputFormat == INPUT_FMT_FIXED) ){
+                        // TODO
+                    }
                 }
                 pNewListEntry->entry.subresult += charToInt(pCurrentListEntry->entry.c);
                 //printf("Input: %c, output: %i\r\n", pCurrentListEntry->entry.c, pNewListEntry->entry.subresult);
@@ -748,7 +826,6 @@ int solveExpression(calcCoreState_t* pCalcCoreState, inputListEntry_t **ppResult
     bool operatorFound = true;
     inputListEntry_t *pHigestOp = NULL;
     while(pStart->pNext != pEnd){
-        printf("IN THE LOOP\r\n");
         // Solve between pStart and pEnd. 
         // Start by finding the highest priority operator
         // Priority is ascending, with 0 being the highest priority. 
@@ -815,11 +892,22 @@ int solveExpression(calcCoreState_t* pCalcCoreState, inputListEntry_t **ppResult
         // subresult field, set the subresult type to int and the 
         // input type to number. 
         printf("Solving %i %s %i\n",pPrev->entry.subresult, ((operatorEntry_t*)(pHigestOp->pFunEntry))->opString, pNext->entry.subresult);
+        
+        inputFormat_t inputFormat = pCalcCoreState->inputFormat;
+        int8_t (*pFun)(uint32_t *pResult, inputFormat_t inputFormat, int num_args, ...) = (function_operator*)(((operatorEntry_t*)(pHigestOp->pFunEntry))->pFun);
+        SUBRESULT_UINT pSubresult = &(pHigestOp->entry.subresult);
+        int8_t calcStatus = (*pFun)(&(pHigestOp->entry.subresult), inputFormat, 2, pPrev->entry.subresult, pNext->entry.subresult);
+        if(calcStatus < 0){
+            printf("ERROR: Calculation not solvable");
+            return -8;
+        }
+        if(calcStatus > 0){
+            printf("Warning: calculation had some problems");
+        }
 
-        SUBRESULT(*pFun)(SUBRESULT, SUBRESULT) = (math_operator*)(((operatorEntry_t*)(pHigestOp->pFunEntry))->pFun);
-        pHigestOp->entry.subresult = (*pFun)(pPrev->entry.subresult, pNext->entry.subresult);
+        //pHigestOp->entry.subresult = (*pFun)(pPrev->entry.subresult, pNext->entry.subresult);
         printf("Subresult = %i \r\n", pHigestOp->entry.subresult);
-        pHigestOp->entry.typeFlag = CONSTRUCT_TYPEFLAG(SUBRESULT_TYPE_INT, DEPTH_CHANGE_KEEP, INPUT_TYPE_NUMBER);
+        pHigestOp->entry.typeFlag = CONSTRUCT_TYPEFLAG(inputFormat, SUBRESULT_TYPE_INT, DEPTH_CHANGE_KEEP, INPUT_TYPE_NUMBER);
         
         // The subresult is now stored in the operators entry, so we have to 
         // remove the two number on either side, and replace it with 
@@ -897,7 +985,7 @@ calc_funStatus_t calc_solver(calcCoreState_t* pCalcCoreState){
 
     // Local variables to keep track while the solver is
     // at work. Should be copied to core state when done. 
-    RESULT result = 0;
+    SUBRESULT_UINT result = 0;
     bool solved = false;
     int depth = 0;
     bool overflow = false;
@@ -955,6 +1043,7 @@ calc_funStatus_t calc_solver(calcCoreState_t* pCalcCoreState){
         }
         if((pResult->pNext == NULL) && (pResult->pPrevious == NULL)){
             printf("SOLVED! Result is %i\r\n", pResult->entry.subresult);
+            pCalcCoreState->result = pResult->entry.subresult;
             solved = true;
             break;
         }
