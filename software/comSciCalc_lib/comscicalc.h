@@ -16,10 +16,10 @@
  * -------------------------------------------*/
 #define OPENING_BRACKET '('
 #define CLOSING_BRACKET ')'
-// Define this if using a simpler list, where 
-// the list entry is the same for operator as for
-// input character. 
-#define UNIFIED_STRING_ENTRY 
+// Defines that dictate the sub result and
+// result bit length
+#define SUBRESULT uint32_t
+#define RESULT int32_t
 /* -------------------------------------------
  * ----------------- MACROS ------------------ 
  * -------------------------------------------*/
@@ -39,6 +39,7 @@
  * ------- ENUMS, TYPEDEFS AND STRUCTS -------
  * -------------------------------------------*/
 // Enum for the possible type of input.
+// TODO: add support for float and fixed point here
 enum inputBase {
     inputBase_DEC		= 0,
     inputBase_HEX 		= 1,
@@ -88,21 +89,25 @@ typedef uint8_t inputBase_t;
 typedef char operators_t;
 typedef int8_t calc_funStatus_t;
 typedef int8_t inputModStatus_t;
+typedef SUBRESULT math_operator(SUBRESULT, SUBRESULT);
+typedef SUBRESULT function_operator(void* args);
 
 // Type for the character flags. 
 typedef uint8_t typeFlag_t;
 #define INPUT_TYPE_EMPTY 0
 #define INPUT_TYPE_NUMBER 1
 #define INPUT_TYPE_OPERATOR 2
-#define INPUT_TYPE_FUNCTION 3
+#define INPUT_TYPE_RESERVED 3
 #define DEPTH_CHANGE_KEEP 0
 #define DEPTH_CHANGE_INCREASE 1
 #define DEPTH_CHANGE_DECREASE 2
 #define DEPTH_CHANGE_RESERVED 3
-#define CONSTRUCT_TYPEFLAG(depthFlag, inputType) (depthFlag << 2 | inputType)
+#define SUBRESULT_TYPE_CHAR 0
+#define SUBRESULT_TYPE_INT 0
+#define CONSTRUCT_TYPEFLAG(subResType, depthFlag, inputType) (subResType << 4 | depthFlag << 2 | inputType)
 #define GET_DEPTH_FLAG(typeFlag) ((typeFlag>>2)&0x3)
 #define GET_INPUT_TYPE(typeFlag) ((typeFlag)&0x3)
-
+#define GET_SUBRESULT_TYPE(typeFlag) ((typeFlag>>4)&0x1)
 // Struct to be used for operator or char entry
 typedef struct inputType {
 	// The character from the input
@@ -113,8 +118,12 @@ typedef struct inputType {
 	// bitfields. 
 	// bit 0-1: 0 = empty, 1 = number, 3 = operator, 3 = custom function
 	// bit 2-3: 0 = keep depth, 1 = increase depth, 2 = decrease depth, 3 = reserved
-	// bit 4-7: reserved.
+	// bit 4: 0 = char input, 1 = subresult
+	// bit 5-7: reserved.
 	typeFlag_t typeFlag;
+
+	// Partial restult. Only used for when solving. 
+	SUBRESULT subresult;
 } inputType_t;
 
 // Struct for the input linked list entry
@@ -139,7 +148,6 @@ typedef struct inputListEntry {
 	// Pointer to either operator or custom function
 	// entry. NOTE: not to the actual function! 
 	void *pFunEntry;
-
 } inputListEntry_t;
 
 // Struct to handle the calculator core state
@@ -168,8 +176,7 @@ typedef struct calcCoreState {
 	bool solved;
 
 	// Result of the current buffer
-	// Note that the type isn't important here
-	uint32_t result;
+	RESULT result;
 
 } calcCoreState_t;
 

@@ -19,48 +19,20 @@
 /* -------------------------------------------
  * ----------------- MACROS ------------------ 
  * -------------------------------------------*/
-#define CONSTRUCT_OPERATOR(OP, BITWISE, SINGLE_INPUT) ( (OP&0xF) | (BITWISE<<4) | (SINGLE_INPUT<<5))
-#define OPERATOR_IS_BITWISE(OP_ID) ( (OP_ID >> 4) & 0x01)
+
 /* -------------------------------------------
  * ----------------- HEADERS -----------------
  * -------------------------------------------*/
 // Standard library
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdarg.h>
 
 
 /* -------------------------------------------
  * ------- ENUMS, TYPEDEFS AND STRUCTS -------
  * -------------------------------------------*/
 
-// Enum for the supported operators
-// bit 7-6: Reserved
-// bit 5: 1 = single input, 0 = multiple input
-// bit 4: 1 = bitwise, 0 = arithmetic
-// bit 3-0: Operator (0 is reserved, must be 1-15)
-enum op_id {
-	// Artihmetic operators, multiple input
-    operators_ADD 		= CONSTRUCT_OPERATOR(1, 0, 0),
-    operators_SUBTRACT 	= CONSTRUCT_OPERATOR(2, 0, 0),
-    operators_MULTI 	= CONSTRUCT_OPERATOR(3, 0, 0),
-    operators_DIVIDE	= CONSTRUCT_OPERATOR(4, 0, 0), 
-
-    // Arithmetic operators, single input
-    // Bitwise operators, multiple input
-    operators_AND 		= CONSTRUCT_OPERATOR(1, 1, 0),
-    operators_NAND 		= CONSTRUCT_OPERATOR(2, 1, 0),
-    operators_OR 		= CONSTRUCT_OPERATOR(3, 1, 0),
-    operators_XOR 		= CONSTRUCT_OPERATOR(4, 1, 0), 
-
-    // Arithmetic operators, single input
-    // EXAMPLE = (operators_t)CONSTRUCT_OPERATOR(n, 0, 1),
-    // This could be SIN, COS etc.  
-    // Bitwise operators, single input
-    operators_NOT 		= CONSTRUCT_OPERATOR(1, 1, 1),
-
-    // Not assigned:
-    operators_NONE 		= 0x00
-};
 
 // Struct for storing operators
 typedef struct operatorEntry {
@@ -68,30 +40,23 @@ typedef struct operatorEntry {
 	char inputChar;
 	// What string should be displayed for this operator?
 	char opString[OPERATOR_STRING_MAX_LEN];
-	// Operator flag
-	char op;
+	// Solving priority
+	uint8_t solvPrio;
 	// Flag to be used if depth of the next entry shall be
 	// increased. Used for functions with natual brackets. 
 	bool bIncDepth;
+    // Pointer to documentation for the function. 
+    char *pDoc;
 	// Function pointer to function. NULL if no function
-	int32_t (*pFun)(int32_t a, int32_t b);
+	//int32_t (*pFun)(int32_t a, int32_t b);
+    void *pFun;
+    // Number of arguments. 
+    // NOTE: for operators that does not increase depth, 
+    // the number of arguments is always 2, and therefore this
+    // parameter will be ignored. 
+    uint8_t numArgs;
 } operatorEntry_t;
 
-// Struct to be used with a custom function
-typedef struct customFunc {
-    // Which input corresponds to this function
-    char inputChar;
-    // What string should be displayed for this operator?
-    char opString[OPERATOR_STRING_MAX_LEN];
-    // Pointer to custom function
-    // NULL if no function defined. 
-    int32_t (*pFun)(void* args); 
-    // Number of arguments. 
-    // I.e. how many of the following entries should go into 
-    // this function
-    uint8_t numArgs;
-    
-} customFunc_t;
 
 /* -------------------------------------------
  * ---------------- VARIABLES ----------------
@@ -108,13 +73,15 @@ int32_t calc_add(int32_t a, int32_t b);
 int32_t calc_subtract(int32_t a, int32_t b);
 int32_t calc_multiply(int32_t a, int32_t b);
 int32_t calc_divide(int32_t a, int32_t b);
+int32_t calc_leftshift(int32_t a, int32_t b);
+int32_t calc_rightshift(int32_t a, int32_t b);
 
 int32_t calc_and(int32_t a, int32_t b);
 int32_t calc_nand(int32_t a, int32_t b);
 int32_t calc_or(int32_t a, int32_t b);
 int32_t calc_xor(int32_t a, int32_t b);
 
-int32_t calc_not(int32_t a, int32_t b);
+int32_t calc_not(int32_t a);
 
 // Custom functions
 // int32_t customFunctionName(void* args);

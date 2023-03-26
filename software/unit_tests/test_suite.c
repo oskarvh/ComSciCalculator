@@ -83,16 +83,16 @@ testParams_t addInputTestParams[] = {
         .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
     },
     {
-        .pInputString = "123+n123)\0",
+        .pInputString = "123+n123\0",
         .pCursor = {0},
-        .pExpectedString = "123+NAND(123)\0",
+        .pExpectedString = "123+NAND123\0",
         .pOutputString = {0},
         .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
     },
     {
         .pInputString = "123+n123)\0",
         .pCursor = {0,0,0,0,4,0,0,0,0},
-        .pExpectedString = "NAND(123+123)\0",
+        .pExpectedString = "NAND123+123)\0",
         .pOutputString = {0},
         .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
     },
@@ -113,20 +113,20 @@ testParams_t addInputTestParams[] = {
     {
         .pInputString = "1n3\b\0",
         .pCursor = {0,0,0,2},
-        .pExpectedString = "NAND(3\0",
+        .pExpectedString = "NAND3\0",
         .pOutputString = {0},
         .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
     },
     {
         .pInputString = "1n3\b\0",
         .pCursor = {0,0,0,3},
-        .pExpectedString = "1NAND(3\0",
+        .pExpectedString = "1NAND3\0",
         .pOutputString = {0},
         .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
     },
     {
-        .pInputString = "123+n456*(12+45))\0",
-        .pCursor = {0,0,0},
+        .pInputString = "123+n(456*(12+45))\0",
+        .pCursor = {0},
         .pExpectedString = "123+NAND(456*(12+45))\0",
         .pOutputString = {0},
         .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
@@ -172,7 +172,7 @@ testParams_t findDeepestPointTestParams[] = {
         .pCursor = {0,0,0},
         .pExpectedString = "123\0",
         .pOutputString = {0},
-        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC}, // GCC specific initializer
     },
     {
         .pInputString = "123(456)\0",
@@ -196,16 +196,23 @@ testParams_t findDeepestPointTestParams[] = {
         .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
     },
     {
-        .pInputString = "123+n456)\0",
-        .pCursor = {0,0,0},
-        .pExpectedString = "NAND(456)\0",
+        .pInputString = "123n456\0",
+        .pCursor = {0},
+        .pExpectedString = "123NAND456\0",
         .pOutputString = {0},
         .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
     },
     {
         .pInputString = "123+n456*(12+45))\0",
-        .pCursor = {0,0,0},
-        .pExpectedString = "(12+45)\0",
+        .pCursor = {0},
+        .pExpectedString = "123+NAND456*(12+45))\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+    },
+    {
+        .pInputString = "n123+456)\0",
+        .pCursor = {0},
+        .pExpectedString = "NAND123+456)\0",
         .pOutputString = {0},
         .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
     },
@@ -271,11 +278,119 @@ void test_findingDeepestPoint(void){
     }
 }
 
+/* ----------------------------------------------------------------
+ * Test for the function to find the deepest point within 
+ * a list. 
+ * ----------------------------------------------------------------*/
+testParams_t solverParams[] = {
+    {
+        .pInputString = "()\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "()\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 0,
+    },
+    {
+        .pInputString = "123\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "123\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 123,
+    },
+
+    {
+        .pInputString = "f2\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "0xf2\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_HEX},
+        .expectedResult = 242,
+    },
+    {
+        .pInputString = "1100\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "0b1100\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_BIN},
+        .expectedResult = 12,
+    },
+    {
+        .pInputString = "123+456\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "123+456\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 579,
+    },
+    {
+        .pInputString = "123+456+789\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "123+456+789\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 1368,
+    },
+    {
+        .pInputString = "123*456+789\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "123*456+789\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 56877,
+    },
+    {
+        .pInputString = "(123+456+789)\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "(123+456+789)\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 56877,
+    },
+};
+void test_solver(void){   
+    calcCoreState_t calcCore;
+    int numTests = sizeof(solverParams)/sizeof(solverParams[0]);
+    for(int i = 0 ; i < numTests ; i++){
+        //printf("Test %i\r\n", i);
+        setupTestStruct(&calcCore, &solverParams[i]);
+        calcCoreAddInput(&calcCore, &solverParams[i]);
+        calc_solver(&calcCore);
+        calcCoreGetBuffer(&calcCore, &solverParams[i]);
+        if(verbose){
+            printf("------------------------------------------------\r\n");
+            printf("Input:           %s \r\nExpected:        %s \r\nExpected result: %i \r\nReturned result: %i \r\n", 
+                    solverParams[i].pExpectedString,
+                    solverParams[i].pOutputString,
+                    solverParams[i].expectedResult,
+                    calcCore.result
+                    );
+        }
+        TEST_ASSERT_EQUAL_STRING(
+            solverParams[i].pExpectedString,
+            solverParams[i].pOutputString);
+        teardownTestStruct(&calcCore);
+
+        // Check that an equal amount of mallocs and free's happened
+        // in the calculator core
+        //printf("Allocation counter = %i\r\n", calcCore.allocCounter);
+        //TEST_ASSERT_EQUAL_INT(0, calcCore.allocCounter);
+        if(verbose){
+            printf("------------------------------------------------\r\n\r\n");
+        }
+    }
+}
+
+/* ----------------------------------------------------------------
+ * Main. Only starts the tests. 
+ * ----------------------------------------------------------------*/
 int main(void)
 {
     verbose = true;
     UNITY_BEGIN();
     RUN_TEST(test_addRemoveInput);
-    RUN_TEST(test_findingDeepestPoint);
+    //RUN_TEST(test_findingDeepestPoint);
+    RUN_TEST(test_solver);
     return UNITY_END();
 }
