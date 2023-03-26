@@ -346,15 +346,23 @@ testParams_t solverParams[] = {
         .pExpectedString = "(123+456+789)\0",
         .pOutputString = {0},
         .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
-        .expectedResult = 56877,
+        .expectedResult = 1368,
     },
     {
-        .pInputString = "(123,456)\0",
+        .pInputString = "~123,456)\0",
         .pCursor = {0,0,0},
-        .pExpectedString = "(123,456)\0",
+        .pExpectedString = "NOT(123,456)\0",
         .pOutputString = {0},
         .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
-        .expectedResult = 56877,
+        .expectedResult = 0,
+    },
+    {
+        .pInputString = "s12,34,56,78)\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "SUM(12,34,56,78)\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 180,
     },
 };
 void test_solver(void){   

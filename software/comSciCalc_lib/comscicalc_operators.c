@@ -31,69 +31,50 @@
 // Ensure that each inputChar and op field is unique! 
 const operatorEntry_t operators[NUM_OPERATORS] = {
 	// Arithmetic operators, multiple input
-	{.inputChar = '+', .opString = "+\0",  .solvPrio = 3, .bIncDepth = false, .pFun = &calc_add},
-	{.inputChar = '-', .opString = "-\0",  .solvPrio = 3, .bIncDepth = false, .pFun = &calc_subtract},
-	{.inputChar = '*', .opString = "*\0",  .solvPrio = 0, .bIncDepth = false, .pFun = &calc_multiply},
-	{.inputChar = '/', .opString = "/\0",  .solvPrio = 1, .bIncDepth = false, .pFun = &calc_divide},
-	{.inputChar = '<', .opString = "<<\0", .solvPrio = 2, .bIncDepth = false, .pFun = &calc_leftshift},
-	{.inputChar = '>', .opString = ">>\0", .solvPrio = 2, .bIncDepth = false, .pFun = &calc_rightshift},
-	{.inputChar = 0,   .opString = "\0",   .solvPrio = 255, .bIncDepth = false, .pFun = NULL},
-	{.inputChar = 0,   .opString = "\0",   .solvPrio = 255, .bIncDepth = false, .pFun = NULL},
+	{.inputChar = '+', .opString = "+\0",  .solvPrio = 3, .bIncDepth = false, .numArgs = 2, .pFun = &calc_add},
+	{.inputChar = '-', .opString = "-\0",  .solvPrio = 3, .bIncDepth = false, .numArgs = 2, .pFun = &calc_subtract},
+	{.inputChar = '*', .opString = "*\0",  .solvPrio = 0, .bIncDepth = false, .numArgs = 2, .pFun = &calc_multiply},
+	{.inputChar = '/', .opString = "/\0",  .solvPrio = 1, .bIncDepth = false, .numArgs = 2, .pFun = &calc_divide},
+	{.inputChar = '<', .opString = "<<\0", .solvPrio = 2, .bIncDepth = false, .numArgs = 2, .pFun = &calc_leftshift},
+	{.inputChar = '>', .opString = ">>\0", .solvPrio = 2, .bIncDepth = false, .numArgs = 2, .pFun = &calc_rightshift},
+	{.inputChar = 's', .opString = "SUM\0",   .solvPrio = 0, .bIncDepth = true, .numArgs = -1, .pFun = &calc_sum},
+	{.inputChar = 0,   .opString = "\0",   .solvPrio = 255, .bIncDepth = false, .numArgs = 0, .pFun = NULL},
 	
 	// Bitwise operators, mulitple input
-	{.inputChar = '&', .opString = "AND\0",  .solvPrio = 0, .bIncDepth = false, .pFun = &calc_and},
-	{.inputChar = 'n', .opString = "NAND\0", .solvPrio = 0, .bIncDepth = false, .pFun = &calc_nand},
-	{.inputChar = '|', .opString = "OR\0",   .solvPrio = 0, .bIncDepth = false, .pFun = &calc_or},
-	{.inputChar = '^', .opString = "XOR\0",  .solvPrio = 0, .bIncDepth = false, .pFun = &calc_xor},
-	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .pFun = NULL},
-	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .pFun = NULL},
-	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .pFun = NULL},
-	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .pFun = NULL},
+	{.inputChar = '&', .opString = "AND\0",  .solvPrio = 0, .bIncDepth = false, .numArgs = 2, .pFun = &calc_and},
+	{.inputChar = 'n', .opString = "NAND\0", .solvPrio = 0, .bIncDepth = false, .numArgs = 2, .pFun = &calc_nand},
+	{.inputChar = '|', .opString = "OR\0",   .solvPrio = 0, .bIncDepth = false, .numArgs = 2, .pFun = &calc_or},
+	{.inputChar = '^', .opString = "XOR\0",  .solvPrio = 0, .bIncDepth = false, .numArgs = 2, .pFun = &calc_xor},
+	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .numArgs = 0, .pFun = NULL},
+	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .numArgs = 0, .pFun = NULL},
+	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .numArgs = 0, .pFun = NULL},
+	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .numArgs = 0, .pFun = NULL},
 	
 	// Arithmetic operators, single input
-	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .pFun = NULL},
-	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .pFun = NULL},
-	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .pFun = NULL},
-	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .pFun = NULL},
-	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .pFun = NULL},
-	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .pFun = NULL},
-	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .pFun = NULL},
-	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .pFun = NULL},
+	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .numArgs = 0, .pFun = NULL},
+	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .numArgs = 0, .pFun = NULL},
+	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .numArgs = 0, .pFun = NULL},
+	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .numArgs = 0, .pFun = NULL},
+	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .numArgs = 0, .pFun = NULL},
+	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .numArgs = 0, .pFun = NULL},
+	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .numArgs = 0, .pFun = NULL},
+	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .numArgs = 0, .pFun = NULL},
 	
 	// Bitwise operators, single input
-	{.inputChar = '~', .opString = "NOT\0", .solvPrio = 0, .bIncDepth = true, .pFun = &calc_not},
-	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .pFun = NULL},
-	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .pFun = NULL},
-	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .pFun = NULL},
-	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .pFun = NULL},
-	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .pFun = NULL},
-	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .pFun = NULL},
-	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .pFun = NULL}
-
+	{.inputChar = '~', .opString = "NOT\0", .solvPrio = 0, .bIncDepth = true, .numArgs = 1, .pFun = &calc_not},
+	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .numArgs = 0, .pFun = NULL},
+	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .numArgs = 0, .pFun = NULL},
+	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .numArgs = 0, .pFun = NULL},
+	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .numArgs = 0, .pFun = NULL},
+	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .numArgs = 0, .pFun = NULL},
+	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .numArgs = 0, .pFun = NULL},
+	{.inputChar = 0,   .opString = "\0", .solvPrio = 255, .bIncDepth = true, .numArgs = 0, .pFun = NULL}
 };
 
-int test(uint8_t num_args, ...){
-	va_list valist;
-	va_start(valist, num_args);
-
-	// Only expecting two variable arguments here
-	printf("input format: %i, Num args: %i\r\n");
-	if(num_args != 2){
-		return incorrect_args;
-	}
-	
-	// Read out the args as uint32_t. Will be casted later on
-	uint32_t a = va_arg(valist, uint32_t);
-	uint32_t b = va_arg(valist, uint32_t);
-	printf("Adding %i and %i\r\n");
-	va_end(valist);
-}
 
 /* ------ CALCULATOR OPERATOR FUNCTIONS ------ */
 
-int8_t calc_add(uint32_t *pResult, inputFormat_t inputFormat, int num_args, ...){
-	va_list valist;
-	va_start(valist, num_args);
+int8_t calc_add(SUBRESULT_UINT *pResult, inputFormat_t inputFormat, int num_args, SUBRESULT_UINT *args){
 
 	// Only expecting two variable arguments here
 	if(num_args != 2){
@@ -101,9 +82,10 @@ int8_t calc_add(uint32_t *pResult, inputFormat_t inputFormat, int num_args, ...)
 	}
 	
 	// Read out the args as uint32_t. Will be casted later on
-	uint32_t a = va_arg(valist, uint32_t);
-	uint32_t b = va_arg(valist, uint32_t);
-	va_end(valist);
+
+	SUBRESULT_UINT a = args[0];
+	SUBRESULT_UINT b = args[1];
+	printf("adding %i and %i\r\n", a, b);
 	// Make calculation based on format
 	switch(inputFormat){
 		case INPUT_FMT_UINT:
@@ -129,18 +111,16 @@ int8_t calc_add(uint32_t *pResult, inputFormat_t inputFormat, int num_args, ...)
 	return function_solved;
 }
 
-int8_t calc_subtract(void *pResult, inputFormat_t inputFormat, int num_args, ...){
-	va_list valist;
-	va_start(valist, num_args);
-
+int8_t calc_subtract(SUBRESULT_UINT *pResult, inputFormat_t inputFormat, int num_args, SUBRESULT_UINT *args){
 	// Only expecting two variable arguments here
 	if(num_args != 2){
 		return incorrect_args;
 	}
+	
 	// Read out the args as uint32_t. Will be casted later on
-	uint32_t a = va_arg(valist, uint32_t);
-	uint32_t b = va_arg(valist, uint32_t);
-	va_end(valist);
+
+	SUBRESULT_UINT a = args[0];
+	SUBRESULT_UINT b = args[1];
 	// Make calculation based on format
 	switch(inputFormat){
 		case INPUT_FMT_UINT:
@@ -166,18 +146,16 @@ int8_t calc_subtract(void *pResult, inputFormat_t inputFormat, int num_args, ...
 	return function_solved;
 }
 
-int8_t calc_multiply(void *pResult, inputFormat_t inputFormat, int num_args, ...){
-	va_list valist;
-	va_start(valist, num_args);
-
+int8_t calc_multiply(SUBRESULT_UINT *pResult, inputFormat_t inputFormat, int num_args, SUBRESULT_UINT *args){
 	// Only expecting two variable arguments here
 	if(num_args != 2){
 		return incorrect_args;
 	}
+	
 	// Read out the args as uint32_t. Will be casted later on
-	uint32_t a = va_arg(valist, uint32_t);
-	uint32_t b = va_arg(valist, uint32_t);
-	va_end(valist);
+
+	SUBRESULT_UINT a = args[0];
+	SUBRESULT_UINT b = args[1];
 	// Make calculation based on format
 	switch(inputFormat){
 		case INPUT_FMT_UINT:
@@ -203,18 +181,16 @@ int8_t calc_multiply(void *pResult, inputFormat_t inputFormat, int num_args, ...
 	return function_solved;
 }
 
-int8_t calc_divide(void *pResult, inputFormat_t inputFormat, int num_args, ...){
-		va_list valist;
-	va_start(valist, num_args);
-
+int8_t calc_divide(SUBRESULT_UINT *pResult, inputFormat_t inputFormat, int num_args, SUBRESULT_UINT *args){
 	// Only expecting two variable arguments here
 	if(num_args != 2){
 		return incorrect_args;
 	}
+	
 	// Read out the args as uint32_t. Will be casted later on
-	uint32_t a = va_arg(valist, uint32_t);
-	uint32_t b = va_arg(valist, uint32_t);
-	va_end(valist);
+
+	SUBRESULT_UINT a = args[0];
+	SUBRESULT_UINT b = args[1];
 	// Make calculation based on format
 	switch(inputFormat){
 		case INPUT_FMT_UINT:
@@ -240,33 +216,31 @@ int8_t calc_divide(void *pResult, inputFormat_t inputFormat, int num_args, ...){
 	return function_solved;
 }
 
-int8_t calc_and(void *pResult, inputFormat_t inputFormat, int num_args, ...){
+int8_t calc_and(SUBRESULT_UINT *pResult, inputFormat_t inputFormat, int num_args, SUBRESULT_UINT *args){
 	return function_solved;
 }
 
-int8_t calc_nand(void *pResult, inputFormat_t inputFormat, int num_args, ...){
+int8_t calc_nand(SUBRESULT_UINT *pResult, inputFormat_t inputFormat, int num_args, SUBRESULT_UINT *args){
 	return function_solved;
 }
 
-int8_t calc_or(void *pResult, inputFormat_t inputFormat, int num_args, ...){
+int8_t calc_or(SUBRESULT_UINT *pResult, inputFormat_t inputFormat, int num_args, SUBRESULT_UINT *args){
 	return function_solved;
 }
 
-int8_t calc_xor(void *pResult, inputFormat_t inputFormat, int num_args, ...){
+int8_t calc_xor(SUBRESULT_UINT *pResult, inputFormat_t inputFormat, int num_args, SUBRESULT_UINT *args){
 	return function_solved;
 }
 
-int8_t calc_not(void *pResult, inputFormat_t inputFormat, int num_args, ...){
-	va_list valist;
-	va_start(valist, num_args);
-
+int8_t calc_not(SUBRESULT_UINT *pResult, inputFormat_t inputFormat, int num_args, SUBRESULT_UINT *args){
 	// Only expecting one variable arguments here
 	if(num_args != 1){
 		return incorrect_args;
 	}
+	
 	// Read out the args as uint32_t. Will be casted later on
-	uint32_t a = va_arg(valist, uint32_t);
-	va_end(valist);
+
+	SUBRESULT_UINT a = args[0];
 	// Make calculation based on format
 	switch(inputFormat){
 		case INPUT_FMT_UINT:
@@ -287,11 +261,51 @@ int8_t calc_not(void *pResult, inputFormat_t inputFormat, int num_args, ...){
 	return function_solved;
 }
 
-int8_t calc_leftshift(void *pResult, inputFormat_t inputFormat, int num_args, ...){
+int8_t calc_leftshift(SUBRESULT_UINT *pResult, inputFormat_t inputFormat, int num_args, SUBRESULT_UINT *args){
 	return function_solved;
 }
 
-int8_t calc_rightshift(void *pResult, inputFormat_t inputFormat, int num_args, ...){
+int8_t calc_rightshift(SUBRESULT_UINT *pResult, inputFormat_t inputFormat, int num_args, SUBRESULT_UINT *args){
+	return function_solved;
+}
+
+int8_t calc_sum(SUBRESULT_UINT *pResult, inputFormat_t inputFormat, int num_args, SUBRESULT_UINT *args){
+	
+	if(args == NULL){
+		return -1;
+	}
+	// Make calculation based on format
+	switch(inputFormat){
+		case INPUT_FMT_UINT:
+			// Solve for N bit unsigned integer
+			(*((SUBRESULT_UINT*)pResult)) = 0;
+			for(int i = 0 ; i < num_args ; i++){
+				printf("Summing number %i\r\n", i);
+				(*((SUBRESULT_UINT*)pResult)) += (SUBRESULT_UINT)args[i];
+			}
+			// TODO: add overflow detection
+		break;
+		case INPUT_FMT_SINT:
+			// Solve for N bit signed integer
+			(*((SUBRESULT_INT*)pResult)) = 0;
+			for(int i = 0 ; i < num_args ; i++){
+				(*((SUBRESULT_INT*)pResult)) += (SUBRESULT_INT)args[i];
+			}
+			// TODO: add overflow detection
+		break;
+		case INPUT_FMT_FLOAT:
+			// Solve for 32bit floats
+			(*((SUBRESULT_FLOAT*)pResult)) = 0;
+			for(int i = 0 ; i < num_args ; i++){
+				(*((SUBRESULT_FLOAT*)pResult)) += (SUBRESULT_FLOAT)args[i];
+			}
+			// TODO: add overflow detection
+		break;
+		case INPUT_FMT_FIXED:
+			// TODO:Solve for fixed point. 
+			// TODO: add overflow detection
+		break;
+	}
 	return function_solved;
 }
 

@@ -123,7 +123,7 @@
  * 1. Enable entry of unsigned, signed, floating point and fixed point. 
  * 2. Extend calulation funciton to handle varialble arguments (DONE).
  * 3. Extend input conversion to handle signed, unsigned, float and fixed point. 
- * 4. Add support for comma sign in depth increasing functions. 
+ * 4. Add support for comma sign in depth increasing functions. (input done)
  * 
  * GENERAL FEATURES
  * Add C formatter to pre-commit.
@@ -758,6 +758,50 @@ int copyAndConvertList(calcCoreState_t* pCalcCoreState, inputListEntry_t **ppSol
 }
 
 /* --------------------------------------------------------------
+ * Function to count the number of arguments between pStart 
+ * and pEnd. Arguments are separated by ','
+ * -------------------------------------------------------------- */
+uint8_t countArgs(inputListEntry_t *pStart, inputListEntry_t *pEnd){
+
+    if(pStart == NULL){
+        return 0;
+    }
+    uint8_t count = 1;
+    while( (pStart != pEnd) && (pStart != NULL) ){
+        if(pStart->entry.c == ','){
+            count++;
+        }
+        pStart = pStart->pNext;
+    }
+    return count;
+
+}
+/* --------------------------------------------------------------
+ * Function to read out N arguments for function. 
+ * Arguments are separated by ','. 
+ * -------------------------------------------------------------- */
+int8_t readOutArgs(SUBRESULT_UINT *pArgs, int8_t operatorNumArgs, inputListEntry_t *pStart){
+    // pArgs must have been allocated
+    if(pStart == NULL){
+        return -1;
+    }
+    // Read out operatorNumArgs arguments from the list. 
+    uint8_t readArgs = 0;
+    while(readArgs < operatorNumArgs){
+        if(pStart == NULL){
+            return -1;
+        }
+        if(GET_SUBRESULT_TYPE(pStart->entry.typeFlag) == SUBRESULT_TYPE_INT){
+            // Argument found. 
+            printf("Argument[%i] = %i\r\n", readArgs, pStart->entry.subresult);
+            *pArgs++ = pStart->entry.subresult;
+            readArgs++;
+        }
+        pStart = pStart->pNext;
+    }
+}
+
+/* --------------------------------------------------------------
  * Function to solve a single expression. 
  * This function parses an expression in the format of:
  * [bracket/function/operator/none][expression][bracket/none]
@@ -894,9 +938,12 @@ int solveExpression(calcCoreState_t* pCalcCoreState, inputListEntry_t **ppResult
         printf("Solving %i %s %i\n",pPrev->entry.subresult, ((operatorEntry_t*)(pHigestOp->pFunEntry))->opString, pNext->entry.subresult);
         
         inputFormat_t inputFormat = pCalcCoreState->inputFormat;
-        int8_t (*pFun)(uint32_t *pResult, inputFormat_t inputFormat, int num_args, ...) = (function_operator*)(((operatorEntry_t*)(pHigestOp->pFunEntry))->pFun);
-        SUBRESULT_UINT pSubresult = &(pHigestOp->entry.subresult);
-        int8_t calcStatus = (*pFun)(&(pHigestOp->entry.subresult), inputFormat, 2, pPrev->entry.subresult, pNext->entry.subresult);
+        int8_t (*pFun)(SUBRESULT_UINT *pResult, inputFormat_t inputFormat, int num_args, SUBRESULT_UINT *args) = (function_operator*)(((operatorEntry_t*)(pHigestOp->pFunEntry))->pFun);
+        SUBRESULT_UINT pSubresult = (SUBRESULT_UINT)(&(pHigestOp->entry.subresult));
+        SUBRESULT_UINT pArgs [2];
+        pArgs[0] = (SUBRESULT_UINT)(pPrev->entry.subresult);
+        pArgs[1] = (SUBRESULT_UINT)(pNext->entry.subresult);
+        int8_t calcStatus = (*pFun)(&(pHigestOp->entry.subresult), inputFormat, 2, pArgs);
         if(calcStatus < 0){
             printf("ERROR: Calculation not solvable");
             return -8;
@@ -931,16 +978,55 @@ int solveExpression(calcCoreState_t* pCalcCoreState, inputListEntry_t **ppResult
     // if applicable, solve the outer most operator as well. 
     if(outerExpression){
         printf("Need to solve outer function as well!\n");
-        // TODO. 
+        uint8_t numArgsInBuffer = countArgs(pExprStart, pExprEnd);
+        printf("Number of args: %i\r\n", numArgsInBuffer);
+        
+        if(GET_INPUT_TYPE(pExprStart->entry.typeFlag) == INPUT_TYPE_OPERATOR){
+            // This is a depth increasing operator.
+            // There can be a variable amount of arguments here, 
+            // separated by ',' if needed. 
+            // Check if function accepts variable input
+            int8_t operatorNumArgs = ((operatorEntry_t *)(pExprStart->pFunEntry))->numArgs;
+            if(operatorNumArgs == 0){
+                // Variable amount of arguments. 
+                // Reserved. 
+                printf("Operator arguments is 0. Does not make sense\r\n");
+                return -10;
+            }
+            else if (operatorNumArgs > 0){
+                // Fixed amount of arguments. 
+                if(numArgsInBuffer != operatorNumArgs){
+                    printf("Operator accepts %i arguments, but %i arguments was given.\r\n", operatorNumArgs, numArgsInBuffer);
+                    return -11;
+                }
+            }
+            // Allocate a temporary buffer to hold all arguments and calculate
+            SUBRESULT_UINT *pArgs = malloc(numArgsInBuffer*sizeof(SUBRESULT_UINT));
+            if(pArgs == NULL){
+                printf("Arguments could not be allocated!\r\n");
+                return -12;
+            }
+            readOutArgs(pArgs, numArgsInBuffer, pExprStart);
+            inputFormat_t inputFormat = pCalcCoreState->inputFormat;
+            int8_t (*pFun)(SUBRESULT_UINT *pResult, inputFormat_t inputFormat, int num_args, SUBRESULT_UINT *args) = (function_operator*)(((operatorEntry_t*)(pExprStart->pFunEntry))->pFun);
+            SUBRESULT_UINT pSubresult = (SUBRESULT_UINT)(&(pExprStart->entry.subresult));
+            int8_t calcStatus = (*pFun)(&(pExprStart->entry.subresult), inputFormat, numArgsInBuffer, pArgs);
+            free(pArgs);
+        }
+        else {
+            // If there is more that one arguments, but no operator, 
+            // that is an error
+            if(numArgsInBuffer > 1){
+                return -9;
+            }
+            // No operator, simply ignore it and
+            // pass on the result. 
+            pExprStart->entry.subresult = pStart->entry.subresult;
+            pExprStart->entry.typeFlag = pStart->entry.typeFlag;
+        }
+
         pStart = pExprStart;
         pEnd = pExprEnd;
-
-        // The operator is now at pStart. Check that it isn't just a bracket though
-        if(GET_INPUT_TYPE(pStart->entry.typeFlag) == INPUT_TYPE_OPERATOR){
-            // This is a depth increasing operator.
-            
-            // Save the results to pStart.
-        }
 
         // Free everything after pStart until the end. 
         while(pStart->pNext != pExprEnd){

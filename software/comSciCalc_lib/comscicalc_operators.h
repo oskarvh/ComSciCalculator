@@ -62,7 +62,8 @@
 // Type for the character flags. 
 typedef uint8_t typeFlag_t;
 typedef uint8_t inputFormat_t;
-// Typedefs for subresult types
+// Typedefs for subresult types. 
+// NOTE: ALL THESE MUST BE THE SAME BIT LENGTH!
 typedef uint32_t SUBRESULT_UINT;
 typedef int32_t SUBRESULT_INT;
 typedef double SUBRESULT_FLOAT;
@@ -78,7 +79,7 @@ enum functionStatus {
     incorrect_args 		= -1,
 };
 
-typedef int8_t function_operator(void *pResult, inputFormat_t inputFormat, int num_args, ...);
+typedef int8_t function_operator(SUBRESULT_UINT *pResult, inputFormat_t inputFormat, int num_args, SUBRESULT_UINT *args);
 
 // Struct for storing operators
 typedef struct operatorEntry {
@@ -97,10 +98,12 @@ typedef struct operatorEntry {
 	//int32_t (*pFun)(int32_t a, int32_t b);
     void *pFun;
     // Number of arguments. 
-    // NOTE: for operators that does not increase depth, 
-    // the number of arguments is always 2, and therefore this
-    // parameter will be ignored. 
-    uint8_t numArgs;
+    // -1: variable arguments, give input as pointers. 
+    // 0 : reserved(use for variable maybe?)
+    // >0: number of arguments accepted. 
+    // NOTE: for non-depth increasing operators, 
+    // this must be 2. All others are ignored. 
+    int8_t numArgs;
 } operatorEntry_t;
 
 
@@ -114,21 +117,22 @@ const operatorEntry_t operators[NUM_OPERATORS];
  * -------------------------------------------*/
 
 // Calculator operator functions to be used in "operators" table
-int8_t calc_add(uint32_t *pResult, inputFormat_t inputFormat, int num_args, ...);
-int8_t calc_subtract(void *pResult, inputFormat_t inputFormat, int num_args, ...);
-int8_t calc_multiply(void *pResult, inputFormat_t inputFormat, int num_args, ...);
-int8_t calc_divide(void *pResult, inputFormat_t inputFormat, int num_args, ...);
-int8_t calc_leftshift(void *pResult, inputFormat_t inputFormat, int num_args, ...);
-int8_t calc_rightshift(void *pResult, inputFormat_t inputFormat, int num_args, ...);
+int8_t calc_add(SUBRESULT_UINT *pResult, inputFormat_t inputFormat, int num_args, SUBRESULT_UINT *args);
+int8_t calc_subtract(SUBRESULT_UINT *pResult, inputFormat_t inputFormat, int num_args, SUBRESULT_UINT *args);
+int8_t calc_multiply(SUBRESULT_UINT *pResult, inputFormat_t inputFormat, int num_args, SUBRESULT_UINT *args);
+int8_t calc_divide(SUBRESULT_UINT *pResult, inputFormat_t inputFormat, int num_args, SUBRESULT_UINT *args);
+int8_t calc_leftshift(SUBRESULT_UINT *pResult, inputFormat_t inputFormat, int num_args, SUBRESULT_UINT *args);
+int8_t calc_rightshift(SUBRESULT_UINT *pResult, inputFormat_t inputFormat, int num_args, SUBRESULT_UINT *args);
+int8_t calc_sum(SUBRESULT_UINT *pResult, inputFormat_t inputFormat, int num_args, SUBRESULT_UINT *args);
 
-int8_t calc_and(void *pResult, inputFormat_t inputFormat, int num_args, ...);
-int8_t calc_nand(void *pResult, inputFormat_t inputFormat, int num_args, ...);
-int8_t calc_or(void *pResult, inputFormat_t inputFormat, int num_args, ...);
-int8_t calc_xor(void *pResult, inputFormat_t inputFormat, int num_args, ...);
+int8_t calc_and(SUBRESULT_UINT *pResult, inputFormat_t inputFormat, int num_args, SUBRESULT_UINT *args);
+int8_t calc_nand(SUBRESULT_UINT *pResult, inputFormat_t inputFormat, int num_args, SUBRESULT_UINT *args);
+int8_t calc_or(SUBRESULT_UINT *pResult, inputFormat_t inputFormat, int num_args, SUBRESULT_UINT *args);
+int8_t calc_xor(SUBRESULT_UINT *pResult, inputFormat_t inputFormat, int num_args, SUBRESULT_UINT *args);
 
-int8_t calc_not(void *pResult, inputFormat_t inputFormat, int num_args, ...);
+int8_t calc_not(SUBRESULT_UINT *pResult, inputFormat_t inputFormat, int num_args, SUBRESULT_UINT *args);
 
-int test(uint8_t num_args, ...);
+
 
 /* -------------------------------------------
  * ------------ FUNCTION WRAPPERS ------------
