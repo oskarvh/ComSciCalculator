@@ -74,6 +74,22 @@ const operatorEntry_t operators[NUM_OPERATORS] = {
 
 /* ------ CALCULATOR OPERATOR FUNCTIONS ------ */
 
+// Calculator operator functions to be used in "operators" table
+/************************************************************
+ *  @brief Function to add two numbers together
+ * 
+ * This function is utilizing the default compiler addition
+ * to add two, and only two, arguments. 
+ * 
+ * @param   pResult     Pointer to the where the result of 
+ *                      addition should be placed. 
+ *                      Note that the type is generic, and 
+ *                      will be casted to the input format.
+ * @param   inputFormat Flag indicating integer, float or 
+ *                      fixed point format. See INPUT_FMT_<>
+ * @param   inputFormat Flag indicating integer, float or 
+ *                      fixed point format. See INPUT_FMT_<>
+ ***********************************************************/
 int8_t calc_add(SUBRESULT_UINT *pResult, inputFormat_t inputFormat, int num_args, SUBRESULT_UINT *args){
 
 	// Only expecting two variable arguments here
@@ -191,6 +207,9 @@ int8_t calc_divide(SUBRESULT_UINT *pResult, inputFormat_t inputFormat, int num_a
 
 	SUBRESULT_UINT a = args[0];
 	SUBRESULT_UINT b = args[1];
+	if(b == 0){
+		return error_args;
+	}
 	// Make calculation based on format
 	switch(inputFormat){
 		case INPUT_FMT_UINT:
@@ -272,7 +291,10 @@ int8_t calc_rightshift(SUBRESULT_UINT *pResult, inputFormat_t inputFormat, int n
 int8_t calc_sum(SUBRESULT_UINT *pResult, inputFormat_t inputFormat, int num_args, SUBRESULT_UINT *args){
 	
 	if(args == NULL){
-		return -1;
+		return incorrect_args;
+	}
+	if(num_args < 1){
+		return incorrect_args;
 	}
 	// Make calculation based on format
 	switch(inputFormat){

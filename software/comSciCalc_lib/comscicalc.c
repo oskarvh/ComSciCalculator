@@ -119,11 +119,11 @@
  * operators. 
  *
  * TODO list:
- * 0. Finish the basic implementaion of the solver. This requires extension later on. 
+ * 0. Finish the basic implementaion of the solver. This requires extension later on. (DONE)
  * 1. Enable entry of unsigned, signed, floating point and fixed point. 
  * 2. Extend calulation funciton to handle varialble arguments (DONE).
  * 3. Extend input conversion to handle signed, unsigned, float and fixed point. 
- * 4. Add support for comma sign in depth increasing functions. (input done)
+ * 4. Add support for comma sign in depth increasing functions. (DONE)
  * 
  * GENERAL FEATURES
  * Add C formatter to pre-commit.
@@ -145,8 +145,6 @@ List entries are a doubly linked list where each element consists of either:
   an operator or a string. 
 - An entry can only be empty with none of those, only if there is no input. 
 
-
-
 */
 
 /* ----------------- DEFINES ----------------- */
@@ -163,16 +161,18 @@ List entries are a doubly linked list where each element consists of either:
 
 /* ---- CALCULATOR CORE HELPER FUNCTIONS ----- */
 
-/* Function to check if character is numerical. 
-   Args: 
-   - base: which base is currently active. 
-   - c: incoming character. 
-   Returns:
-   - True if c is numerical input, false otherwise. 
-   - False if input base ins't defined as well. 
-   Note: should not be used to determine if input is operator, as 
-   it will return false for all non-numerical types in the active base
-*/
+/* --------------------------------------------------------------
+ * Function to check if character is numerical. 
+ * Args: 
+ * - base: which base is currently active. 
+ * - c: incoming character. 
+ * Returns:
+ * - True if c is numerical input, false otherwise. 
+ * - False if input base ins't defined as well. 
+ * Note: should not be used to determine if input is operator, 
+ * as it will return false for all non-numerical types in the 
+ * active base.
+ * --------------------------------------------------------------*/
 static bool charIsNumerical(inputBase_t base, char c){
 	switch(base){
 		case inputBase_DEC:
