@@ -18,107 +18,6 @@
  * - Signed or unsigned (bool outputSigned)
  * - IEEE 754 float (bool outputFloat)
  *
- *
- * ------------------- DEV LOGS -------------------
- * March 6, 2023
- * For preceding operators, such as NOT, have a single operand,
- * but can still have a long list of internal calculations.
- * This is kind of the same as brackets/parenthesis.
- * There are situations where these are stacked, e.g.
- * NOT(NOT(...)) or ((12+4)*2).
- * These situations require a lot of extra edge case handling
- * if handled in a single list entry.
- * After protoyping in Python, I found that if the brackets
- * spawn a new list entry with an increase in depth of 1 per new entry,
- * it becomes a lot easier to work with.
- * Since there are a lot of commonalities with preceding/single entry operators,
- * I think it makes sense to do the same. However, there is a point in keeping
- * the opThis (i.e. preceding operator) for printing purposes. Although, it's a
- * bit confusing having both preceding operator and normal operator in one
- * entry.
- *
- * Conclusion is that there shall only be one operator per entry.
- * so a NOT() operator shall always have a next list with one higher depth.
- * Same goes for parenthesis. Do this and all tests of getInputListEntry passes
- *
- * March 14(pi day):
- * I'm starting to think that the setup is a bit too advanced.
- * I don't remeber the reason why I had separated the string entry and
- * the operator. I think it was due to the solver (which hasn't been written
- * yet) but I'm starting to think that 400 lines of code just to add a char
- * to a list is a bit on the heavy side. Therefore, I think I'll re-structure
- * the list entry so that it either takes an operator, function, bracket or
- * char, and then just handle the solver later. One thing that is nice with
- * having a string per entry is that solving will probably be easier, but at
- * the same same time, that will most likely not be the main issue, as I would
- * have to convert everything to string after all.
- * Another nice thing with the entry containing an entire string is that
- * handling base changes (hex/dec/bin) is easier.
- * It's a tradeoff though. I'll try it out using linker switches first though.
- *
- * March 15:
- * I spent a whole lot of time thinking this through, and in the spirit of
- * keeping things simple, I decided to act on last nights decision.
- * Tests that the old code was failing is now passing. Although a first
- * pass didn't test cursor != 0, they are at least passing the random input
- * tests. I'm feeling happier with this solution, as it is simpler. I don't
- * think that the solver would have been a whole lot easier with the last
- * approach, but changing input base would. That being said, it is not
- * impossible to do. Come to think of it, the approach would be the same except
- * finding the start and end of the string is less efficient now, but not
- * harder.
- *
- * March 23:
- * I'm currently working on the solver, and I think I have a good enough idea
- * on how to handle that, but I have identified a few things that needs to be
- * addressed:
- * 1. It would be super nice with a pointer in the operator to a documentation
- *    string, so I added that.
- * 2. I'm not sure how I want to handle the bitwise operators. I was first
- *    planning to have them as OP(arg1, arg2), but I'm starting to think
- *    that it's cleaner to have it as arg1->OP->arg2. It should be enough
- *    to just change the operator to non-depth increasing for this.
- * 3. However, we do need to add a comma ',' for the special functions.
- *    This would be the argument separator. Should be easy enough to add
- *    as it would be handled almost the same as brackets.
- * 4. At some point, I need to add support for floating point and fixed
- *    point. I can't say that I'm looking forward to this though...
- * Other than that, it's progressing nicely. Since the last update,
- * most of my time had gone into moving from python to the C unity test
- * framework, with a quick pitstop at CFFI in python.
- * I have concluded that there isn't a nice way to integrate this code into
- * a python based test framework, so I have gone with a C based test
- * framwork instead.
- * At the moment, adding, removing and printing the buffer works fine,
- * those have static tests, so no randomized input yet.
- * But I was able to squash some bugs there. Moreover, the tests for
- * finding the deepest bracket, along with converting the list entries
- * from char to int is working nicely. The choice of having duplicate
- * lists for input buffer and solving buffer is needed so that we have
- * the input buffer to print.
- *
- * March 25:
- * The expression solver is working for basic stuff like 123+456 and
- * 123+456*789, and I'm working on depth increasing expressions.
- * I have thought at bit about how operators and functions are to be
- * handled, and I have set the normal bitwise operators to non-depth
- * increasing.
- * I think the expression solver will handle ignoring non-increasing
- * non-number types, such as a comma, but I have not tested that yet.
- * Moreover, I'm starting to think about what features makes sense.
- * I want to leave it as open to expansions with new functionality as I can
- * in that I want the have any type of function in there.
- * At the same time, I have been thinking about imaginary numbers and
- * variables, if that could be something that the calculator should support.
- * I think imaginary numbers would be awesome.
- * The difference in operators and custom functions are starting to
- * be very very small, so I might as well remove the custom function option
- * and just have operators. Really the only difference I can see is if
- * a custom function should be dynamically linked at runtime. But I cannot
- * see the need for that right now..
- * After some thought I removed the custom function, it's now merged into
- * operators.
- *
  * TODO list:
  * 0. Finish the basic implementaion of the solver. This requires extension
  * later on. (DONE)
@@ -130,6 +29,7 @@
  * GENERAL FEATURES
  * Add C formatter to pre-commit.
  * Add doxygen and clean up the source code because it looks like shit now.
+ *
  */
 
 /*
@@ -773,32 +673,6 @@ int8_t readOutArgs(SUBRESULT_UINT *pArgs, int8_t numArgs,
     }
 }
 
-/* --------------------------------------------------------------
- * Function to solve a single expression.
- * This function parses an expression in the format of:
- * [bracket/function/operator/none][expression][bracket/none]
- *
- * It also check that the expression is in a valid form.
- * It takes the start, end and pointer to results as input,
- * and return 0 if successful and -1 if expression is valid.
- *
- * The solving procedure is as follows:
- * 1. Solve for all multiplications
- * 2. Solve for all divisions
- * 3. Solve for any other operators that does not increase depth,
- *    e.g. '>>' or '<<'.
- * 3. Solve for all additions
- * 4. Solve for all subtractions
- * 5. Solve the outer function if any.
- * TBD: the current way this is handled is that
- * logic operators are on the form of OP(arg1, arg2).
- * This is nice if we want to extend to N arguments.
- *
- * WARNING! THIS WILL MESS WITH THE LIST!
- *
- * State: not complete, not tested.
- *        But the solver should now be able to figure out 123 and 123+456
- * -------------------------------------------------------------- */
 /**
  * @brief Function to solve a single expression.
  * @param pCalcCoreState Pointer to core state

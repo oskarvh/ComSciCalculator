@@ -11,3 +11,4 @@ workspace/empty_EK_TM4C123GXL_TI/Debug/
 workspace_msp432/
 workspace/uartecho_EK_TM4C123GXL_TI/
 software/unit_tests/test_suite.exe
+software/html/
