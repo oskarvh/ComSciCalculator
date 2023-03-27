@@ -84,6 +84,30 @@ enum calc_funStatus {
 };
 
 /**
+ * @brief Status of the solve expression function. 
+ */
+enum calc_solveStatus {
+	//! Success:Function returned with success.
+	calc_solveStatus_SUCCESS				= 0, 
+	//! Error: Pointer to list entry was NULL.
+	calc_solveStatus_INPUT_LIST_NULL		= -1, 
+	//! Error: Bracket mismatch.
+	calc_solveStatus_BRACKET_ERROR		 	= -2, 
+	//!  Error: Error with input list.
+	calc_solveStatus_INPUT_LIST_ERROR		= -3, 
+	//! Error: Operator pointer was NULL.
+	calc_solveStatus_OPERATOR_POINTER_ERROR	= -4, 
+	//! Error: Calculation could not be made. 
+	calc_solveStatus_CALC_NOT_SOLVABLE		= -5, 
+	//! Error: Invalid number of arguments. 
+	calc_solveStatus_INVALID_NUM_ARGS		= -6, 
+	//! Error: Malloc not possible.
+	calc_solveStatus_ALLOCATION_ERROR		= -7, 
+	//! Error: There was arguments, but no operator
+	calc_solveStatus_ARGS_BUT_NO_OPERATOR 	= -8, 
+};
+
+/**
  * @brief Status for input modification functions. 
  */
 enum inputModStatus {
