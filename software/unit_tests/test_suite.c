@@ -369,10 +369,9 @@ void test_solver(void){
     calcCoreState_t calcCore;
     int numTests = sizeof(solverParams)/sizeof(solverParams[0]);
     for(int i = 0 ; i < numTests ; i++){
-        //printf("Test %i\r\n", i);
         setupTestStruct(&calcCore, &solverParams[i]);
         calcCoreAddInput(&calcCore, &solverParams[i]);
-        calc_solver(&calcCore);
+        int8_t state = calc_solver(&calcCore);
         calcCoreGetBuffer(&calcCore, &solverParams[i]);
         if(verbose){
             printf("------------------------------------------------\r\n");
@@ -391,7 +390,13 @@ void test_solver(void){
         // Check that an equal amount of mallocs and free's happened
         // in the calculator core
         //printf("Allocation counter = %i\r\n", calcCore.allocCounter);
-        //TEST_ASSERT_EQUAL_INT(0, calcCore.allocCounter);
+        TEST_ASSERT_EQUAL_UINT_MESSAGE(solverParams[i].expectedResult, calcCore.result, "Result not right.");
+        TEST_ASSERT_EQUAL_UINT_MESSAGE(0, calcCore.allocCounter, "Leaky memory!");
+        if(calcCore.allocCounter != 0){
+            printf("************************************************\r\n\r\n");
+            printf("WARNING: leaky memory: %i!\r\n", calcCore.allocCounter);
+            printf("************************************************\r\n\r\n");
+        }
         if(verbose){
             printf("------------------------------------------------\r\n\r\n");
         }
@@ -406,7 +411,7 @@ int main(void)
     verbose = true;
     UNITY_BEGIN();
     RUN_TEST(test_addRemoveInput);
-    //RUN_TEST(test_findingDeepestPoint);
+    RUN_TEST(test_findingDeepestPoint);
     RUN_TEST(test_solver);
     return UNITY_END();
 }

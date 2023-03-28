@@ -471,7 +471,6 @@ int8_t calc_sum(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
         // Solve for N bit unsigned integer
         (*((SUBRESULT_UINT *)pResult)) = 0;
         for (int i = 0; i < num_args; i++) {
-            printf("Summing number %i\r\n", i);
             (*((SUBRESULT_UINT *)pResult)) += (SUBRESULT_UINT)args[i];
         }
         // TODO: add overflow detection
@@ -501,5 +500,12 @@ int8_t calc_sum(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
 }
 
 /* -------------------------------------------
- * ------------ FUNCTION WRAPPERS ------------
+ * ------------- DEBUG FUNCTIONS -------------
  * -------------------------------------------*/
+/**
+ * @brief Logger function to abstract away printf's
+ * @param msg Variable args to send to printf
+ * This is just a very simple logger that uses a define
+ * to either print or not.
+ */
+void logger(char *msg, ...);

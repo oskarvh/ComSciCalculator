@@ -25,6 +25,13 @@ compile and run the unit tests, run the following script:
 ```bash
 ./software/run_unit_tests.sh
 ```
+To run the script in verbose mode, add the -V flag. To not compile the source, 
+use flag -d. 
+Incorrext flags will prompt the usage message:
+```bash
+$ ./run_unit_tests.sh -h
+Usage: ./run_unit_tests.sh [-V verbose] [-d dont clean]
+```
 This will compile the comSciCalc_lib library and the unit test code (using Unity test framework) and run the tests. 
 
 This very same library is intended to work on an embedded system, along with (hopefully) a 

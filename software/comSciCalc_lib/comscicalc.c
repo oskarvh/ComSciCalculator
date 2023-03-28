@@ -62,6 +62,36 @@ function, an operator or a string.
 
 /* ---- CALCULATOR CORE HELPER FUNCTIONS ----- */
 
+void logger(char *msg, ...) {
+#if VERBOSE
+    va_list argp;
+    va_start(argp, msg);
+    vprintf(msg, argp);
+    va_end(argp);
+#endif
+}
+
+/**
+ * @brief Malloc wrapper to help debug memory leaks
+ * @param size Size of malloc
+ * @return Pointer that malloc allocates
+ */
+inputListEntry_t *overloaded_malloc(size_t size) {
+    void *ptr = malloc(size);
+    logger("[allocated] : 0x%08x\r\n", ptr);
+    return ptr;
+}
+
+/**
+ * @brief Free wrapper to help debug memory leaks
+ * @param ptr Pointer to memory being free'd
+ */
+void overloaded_free(inputListEntry_t *ptr) {
+    logger("[free] : 0x%08x\r\n", ptr);
+    free(ptr);
+    ptr = NULL;
+}
+
 /**
  * @brief Function to check if char is numerical
  * @param base Hex, dec or bin base.
@@ -253,7 +283,7 @@ calc_funStatus_t calc_coreBufferTeardown(calcCoreState_t *pCalcCoreState) {
         while (pListEntry != NULL) {
             // Free the list entry
             inputListEntry_t *pNext = (inputListEntry_t *)pListEntry->pNext;
-            free(pListEntry);
+            overloaded_free(pListEntry);
             pCalcCoreState->allocCounter--;
             pListEntry = pNext;
         }
@@ -283,7 +313,8 @@ calc_funStatus_t calc_addInput(calcCoreState_t *pCalcCoreState,
     }
 
     // Allocate a new entry
-    inputListEntry_t *pNewListEntry = malloc(sizeof(inputListEntry_t));
+    inputListEntry_t *pNewListEntry =
+        overloaded_malloc(sizeof(inputListEntry_t));
     if (pNewListEntry == NULL) {
         return calc_funStatus_ALLOCATE_ERROR;
     }
@@ -336,7 +367,7 @@ calc_funStatus_t calc_addInput(calcCoreState_t *pCalcCoreState,
     } else {
         // Unknown input. Free and return
         if (pNewListEntry != NULL) {
-            free(pNewListEntry);
+            overloaded_free(pNewListEntry);
             pCalcCoreState->allocCounter--;
         }
         return calc_funStatus_UNKNOWN_INPUT;
@@ -407,7 +438,7 @@ calc_funStatus_t calc_removeInput(calcCoreState_t *pCalcCoreState) {
         pCalcCoreState->pListEntrypoint = pCurrentListEntry->pNext;
     }
 
-    free(pCurrentListEntry);
+    overloaded_free(pCurrentListEntry);
     pCalcCoreState->allocCounter--;
 
     return calc_funStatus_SUCCESS;
@@ -522,7 +553,7 @@ calc_funStatus_t copyAndConvertList(calcCoreState_t *pCalcCoreState,
     while (pCurrentListEntry != NULL) {
 
         // Allocate a new entry
-        pNewListEntry = malloc(sizeof(inputListEntry_t));
+        pNewListEntry = overloaded_malloc(sizeof(inputListEntry_t));
         if (pNewListEntry == NULL) {
             return calc_funStatus_ALLOCATE_ERROR;
         }
@@ -576,7 +607,6 @@ calc_funStatus_t copyAndConvertList(calcCoreState_t *pCalcCoreState,
                     } else if ((inputFormat == INPUT_FMT_FIXED)) {
                         // TODO
                     }
-                    pNewListEntry->entry.subresult *= 16;
                 }
                 if (pCurrentListEntry->inputBase == inputBase_BIN) {
                     if ((inputFormat == INPUT_FMT_UINT)) {
@@ -595,8 +625,7 @@ calc_funStatus_t copyAndConvertList(calcCoreState_t *pCalcCoreState,
                 }
                 pNewListEntry->entry.subresult +=
                     charToInt(pCurrentListEntry->entry.c);
-                // printf("Input: %c, output: %i\r\n",
-                // pCurrentListEntry->entry.c, pNewListEntry->entry.subresult);
+                // logger("Input: %c, output: %i\r\n",
                 pCurrentListEntry = pCurrentListEntry->pNext;
 
                 if (pCurrentListEntry == NULL) {
@@ -665,7 +694,7 @@ int8_t readOutArgs(SUBRESULT_UINT *pArgs, int8_t numArgs,
         }
         if (GET_SUBRESULT_TYPE(pStart->entry.typeFlag) == SUBRESULT_TYPE_INT) {
             // Argument found.
-            printf("Argument[%i] = %i\r\n", readArgs, pStart->entry.subresult);
+            logger("Argument[%i] = %i\r\n", readArgs, pStart->entry.subresult);
             *pArgs++ = pStart->entry.subresult;
             readArgs++;
         }
@@ -691,30 +720,31 @@ int8_t readOutArgs(SUBRESULT_UINT *pArgs, int8_t numArgs,
 int solveExpression(calcCoreState_t *pCalcCoreState,
                     inputListEntry_t **ppResult, inputListEntry_t *pExprStart,
                     inputListEntry_t *pExprEnd) {
-    // Loop until there isn't anything between the start and end pointer.
 
     // Sanity check the input
     if (pExprStart == NULL) {
-        printf("ERROR! Input pointer is NULL\r\n");
+        logger("ERROR! Input pointer is NULL\r\n");
         return calc_solveStatus_INPUT_LIST_NULL;
     }
+
     inputListEntry_t *pStart = pExprStart;
     inputListEntry_t *pEnd = pExprEnd;
     bool outerExpression = false;
+    logger("Solve expression\r\n");
 
     // Check if there is an outer expression
     if (GET_INPUT_TYPE(pStart->entry.typeFlag) != INPUT_TYPE_NUMBER) {
-        printf("Expression starts with depth increase\r\n");
+        logger("Expression starts with depth increase\r\n");
         // If the first entry isn't a number, it's either a bracket,
         // a depth increasing operator or a custom function.
         // Double check that the last entry is the same type.
         if (GET_INPUT_TYPE(pEnd->entry.typeFlag) == INPUT_TYPE_NUMBER) {
-            printf("ERROR! Unmatched brackets\r\n");
+            logger("ERROR! Unmatched brackets\r\n");
             return calc_solveStatus_BRACKET_ERROR;
         }
         if (pStart->pNext == pEnd) {
             // Empty inside brackets, return error.
-            printf("ERROR! Empty expression within brackets\r\n");
+            logger("ERROR! Empty expression within brackets\r\n");
             return calc_solveStatus_BRACKET_ERROR;
         }
         // Move the start and end so that to remove the
@@ -723,7 +753,7 @@ int solveExpression(calcCoreState_t *pCalcCoreState,
         pStart = pExprStart->pNext;
         pEnd = pExprEnd->pPrevious;
         if (pStart == NULL) {
-            printf("ERROR. \r\n");
+            logger("ERROR. \r\n");
             return calc_solveStatus_BRACKET_ERROR;
         }
         outerExpression = true;
@@ -742,15 +772,13 @@ int solveExpression(calcCoreState_t *pCalcCoreState,
         pHigestOp = NULL;
         uint8_t highestPriority = 255;
         while ((pCurrentListEntry != pEnd) && (pCurrentListEntry != NULL)) {
-            printf("LOOKING FOR THE HIGHEST ORDER OPERATOR\r\n");
             if (GET_INPUT_TYPE(pCurrentListEntry->entry.typeFlag) ==
                 INPUT_TYPE_OPERATOR) {
                 // Get the operator solving priority
-                printf("CURRENT INPUT IS OPERATOR\r\n");
                 if (pCurrentListEntry->pFunEntry == NULL) {
                     // Thas been as error, the function pointer for an operator
                     // should always exist!
-                    printf("ERROR! Function pointer is NULL\r\n");
+                    logger("ERROR! Function pointer is NULL\r\n");
                     return calc_solveStatus_INPUT_LIST_ERROR;
                 }
                 uint8_t currentPriority =
@@ -760,22 +788,19 @@ int solveExpression(calcCoreState_t *pCalcCoreState,
                     pHigestOp = pCurrentListEntry;
                     highestPriority = currentPriority;
                 }
-            } else if (GET_INPUT_TYPE(pCurrentListEntry->entry.typeFlag) ==
-                       INPUT_TYPE_EMPTY) {
-                // TODO.
-                // This should for example be a comma sign.
             }
-            printf("Current list entry: %i\r\n", (uint32_t)pCurrentListEntry);
+            // logger("Current list entry: 0x%08x\r\n",
+            // (uint32_t)pCurrentListEntry);
             pCurrentListEntry = pCurrentListEntry->pNext;
         }
 
         // Sanity check the result of the search.
         if (pHigestOp == NULL) {
-            printf("Highest order operator not found!\n");
+            logger("Highest order operator not found!\n");
             operatorFound = false;
             break;
         }
-        printf("Highest operator: %s\r\n",
+        logger("Highest operator: %s\r\n",
                ((operatorEntry_t *)(pHigestOp->pFunEntry))->opString);
         // The operation that we should now perform is on
         // the current operator and the entries before and after.
@@ -783,12 +808,12 @@ int solveExpression(calcCoreState_t *pCalcCoreState,
         inputListEntry_t *pPrevEntry = pHigestOp->pPrevious;
         inputListEntry_t *pNextEntry = pHigestOp->pNext;
         if ((pNextEntry == NULL) || (pPrevEntry == NULL)) {
-            printf("ERROR: Pointer(s) before and after operators are NULL\n");
+            logger("ERROR: Pointer(s) before and after operators are NULL\n");
             return calc_solveStatus_OPERATOR_POINTER_ERROR;
         }
         if ((GET_INPUT_TYPE(pNextEntry->entry.typeFlag) != INPUT_TYPE_NUMBER) ||
             (GET_INPUT_TYPE(pPrevEntry->entry.typeFlag) != INPUT_TYPE_NUMBER)) {
-            printf("ERROR: %c and %c surrounding %c are not numbers!\n",
+            logger("ERROR: %c and %c surrounding %c are not numbers!\n",
                    pNextEntry->entry.c, pPrevEntry->entry.c,
                    pHigestOp->entry.c);
             return calc_solveStatus_OPERATOR_POINTER_ERROR;
@@ -797,7 +822,7 @@ int solveExpression(calcCoreState_t *pCalcCoreState,
              SUBRESULT_TYPE_INT) ||
             (GET_SUBRESULT_TYPE(pPrevEntry->entry.typeFlag) !=
              SUBRESULT_TYPE_INT)) {
-            printf("ERROR: %c and %c are not resolved integers!\n",
+            logger("ERROR: %c and %c are not resolved integers!\n",
                    pNextEntry->entry.c, pPrevEntry->entry.c);
             return calc_solveStatus_OPERATOR_POINTER_ERROR;
         }
@@ -806,7 +831,7 @@ int solveExpression(calcCoreState_t *pCalcCoreState,
         // This will write the subresult to the operators
         // subresult field, set the subresult type to int and the
         // input type to number.
-        printf("Solving %i %s %i\n", pPrevEntry->entry.subresult,
+        logger("Solving %i %s %i\n", pPrevEntry->entry.subresult,
                ((operatorEntry_t *)(pHigestOp->pFunEntry))->opString,
                pNextEntry->entry.subresult);
 
@@ -823,14 +848,14 @@ int solveExpression(calcCoreState_t *pCalcCoreState,
         int8_t calcStatus =
             (*pFun)(&(pHigestOp->entry.subresult), inputFormat, 2, pArgs);
         if (calcStatus < 0) {
-            printf("ERROR: Calculation not solvable");
+            logger("ERROR: Calculation not solvable");
             return calc_solveStatus_CALC_NOT_SOLVABLE;
         }
         if (calcStatus > 0) {
-            printf("Warning: calculation had some problems");
+            logger("Warning: calculation had some problems");
         }
 
-        printf("Subresult = %i \r\n", pHigestOp->entry.subresult);
+        logger("Subresult = %i \r\n", pHigestOp->entry.subresult);
         pHigestOp->entry.typeFlag =
             CONSTRUCT_TYPEFLAG(inputFormat, SUBRESULT_TYPE_INT,
                                DEPTH_CHANGE_KEEP, INPUT_TYPE_NUMBER);
@@ -847,8 +872,8 @@ int solveExpression(calcCoreState_t *pCalcCoreState,
             ((inputListEntry_t *)(pNextEntry->pNext))->pPrevious = pHigestOp;
         }
         // Free the previous and next entries
-        free(pPrevEntry);
-        free(pNextEntry);
+        overloaded_free(pPrevEntry);
+        overloaded_free(pNextEntry);
         // Start next round of looking on this entry.
         pStart = pHigestOp;
         pCalcCoreState->allocCounter -= 2;
@@ -856,9 +881,9 @@ int solveExpression(calcCoreState_t *pCalcCoreState,
     }
     // if applicable, solve the outer most operator as well.
     if (outerExpression) {
-        printf("Need to solve outer function as well!\n");
+        logger("Need to solve outer function as well!\n");
         uint8_t numArgsInBuffer = countArgs(pExprStart, pExprEnd);
-        printf("Number of args: %i\r\n", numArgsInBuffer);
+        logger("Number of args: %i\r\n", numArgsInBuffer);
 
         if (GET_INPUT_TYPE(pExprStart->entry.typeFlag) == INPUT_TYPE_OPERATOR) {
             // This is a depth increasing operator.
@@ -870,12 +895,12 @@ int solveExpression(calcCoreState_t *pCalcCoreState,
             if (operatorNumArgs == 0) {
                 // Variable amount of arguments.
                 // Reserved.
-                printf("Operator arguments is 0. Does not make sense\r\n");
+                logger("Operator arguments is 0. Does not make sense\r\n");
                 return calc_solveStatus_INVALID_NUM_ARGS;
             } else if (operatorNumArgs > 0) {
                 // Fixed amount of arguments.
                 if (numArgsInBuffer != operatorNumArgs) {
-                    printf("Operator accepts %i arguments, but %i arguments "
+                    logger("Operator accepts %i arguments, but %i arguments "
                            "was given.\r\n",
                            operatorNumArgs, numArgsInBuffer);
                     return calc_solveStatus_INVALID_NUM_ARGS;
@@ -885,7 +910,7 @@ int solveExpression(calcCoreState_t *pCalcCoreState,
             SUBRESULT_UINT *pArgs =
                 malloc(numArgsInBuffer * sizeof(SUBRESULT_UINT));
             if (pArgs == NULL) {
-                printf("Arguments could not be allocated!\r\n");
+                logger("Arguments could not be allocated!\r\n");
                 return calc_solveStatus_ALLOCATION_ERROR;
             }
             readOutArgs(pArgs, numArgsInBuffer, pExprStart);
@@ -918,18 +943,23 @@ int solveExpression(calcCoreState_t *pCalcCoreState,
         while (pStart->pNext != pExprEnd) {
             inputListEntry_t *pTmp = pStart->pNext;
             pStart->pNext = pTmp->pNext;
-            free(pTmp);
-            pCalcCoreState->allocCounter--;
+            if (pTmp != NULL) {
+                overloaded_free(pTmp);
+                pCalcCoreState->allocCounter--;
+            } else {
+                break;
+            }
         }
         // Free the end and repoint.
         pStart->pNext = pExprEnd->pNext;
         if (pExprEnd->pNext != NULL) {
             ((inputListEntry_t *)(pExprEnd->pNext))->pPrevious = pStart;
         }
-        free(pExprEnd);
+        overloaded_free(pExprEnd);
         pCalcCoreState->allocCounter--;
     }
     *ppResult = pStart;
+    // logger("pStart->entry.subres = %i\r\n", pStart->entry.subresult);
     return calc_solveStatus_SUCCESS;
 }
 
@@ -945,6 +975,7 @@ calc_funStatus_t calc_solver(calcCoreState_t *pCalcCoreState) {
 
     // Copy the list and convert the numbers from
     // chars into actual ints (or floats if that's the case)
+
     inputListEntry_t *pSolverListStart = NULL;
     copyAndConvertList(pCalcCoreState, &pSolverListStart);
 
@@ -955,18 +986,19 @@ calc_funStatus_t calc_solver(calcCoreState_t *pCalcCoreState) {
     // Do a NULL check on the start:
     if (pStart == NULL) {
         // No list to solve for. Simply return
-        printf("ERROR: No input list\r\n");
+        logger("ERROR: No input list\r\n");
         return calc_funStatus_INPUT_LIST_NULL;
     }
 
     // Loop until the pointers are back at start and end
+    calc_funStatus_t returnStatus = calc_funStatus_SUCCESS;
     while (!solved) {
-        printf("HERE\n");
         // Find the deepest calculation
         if (findDeepestPoint(&pStart, &pEnd) < 0) {
             // There was an error in finding the bracket.
-            printf("Could not find the deepest point. \r\n");
-            return calc_funStatus_SOLVE_INCOMPLETE;
+            logger("Could not find the deepest point. \r\n");
+            returnStatus = calc_funStatus_SOLVE_INCOMPLETE;
+            break;
         }
         // The deepest calculation is now between pStart and pEnd.
         // This is in the form of:
@@ -985,30 +1017,42 @@ calc_funStatus_t calc_solver(calcCoreState_t *pCalcCoreState) {
         // list isn't freed. Therefore the expression solver
         // needs to return the list entry where it put the result
         inputListEntry_t *pResult = NULL;
+
         if (solveExpression(pCalcCoreState, &pResult, pStart, pEnd) < 0) {
-            printf("ERROR: Could not solve expression\r\n");
-            return calc_funStatus_SOLVE_INCOMPLETE;
+            logger("ERROR: Could not solve expression\r\n");
+            returnStatus = calc_funStatus_SOLVE_INCOMPLETE;
+            break;
         }
         if (pResult == NULL) {
-            printf("No result written, but expression solver returned OK. \n");
-            return calc_funStatus_SOLVE_INCOMPLETE;
+            logger("No result written, but expression solver returned OK. \n");
+            returnStatus = calc_funStatus_SOLVE_INCOMPLETE;
+            break;
         }
         if ((pResult->pNext == NULL) && (pResult->pPrevious == NULL)) {
-            printf("SOLVED! Result is %i\r\n", pResult->entry.subresult);
+            logger("SOLVED! Result is %i\r\n", pResult->entry.subresult);
             pCalcCoreState->result = pResult->entry.subresult;
             solved = true;
+            // Free the result buffer as well.
+            overloaded_free(pResult);
+            pCalcCoreState->allocCounter--;
             break;
         }
     }
 
-    // Free the temporary list
-    while (pSolverListStart != NULL) {
-        inputListEntry_t *pNext = pSolverListStart->pNext;
-        free(pSolverListStart);
-        pSolverListStart = pNext;
-        pCalcCoreState->allocCounter--;
+    // Free the temporary list if calculation could not be done
+    if (!solved) {
+        while (pSolverListStart != NULL) {
+            inputListEntry_t *pNext = pSolverListStart->pNext;
+            if (pSolverListStart != NULL) {
+                overloaded_free(pSolverListStart);
+                pCalcCoreState->allocCounter--;
+            } else {
+                break;
+            }
+            pSolverListStart = pNext;
+        }
     }
-    return calc_funStatus_SUCCESS;
+    return returnStatus;
 }
 
 calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
