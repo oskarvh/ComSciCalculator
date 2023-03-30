@@ -57,6 +57,54 @@ cd software # Go to the software dir.
 doxygen doxygen_config
 ```
 And the docs can be found in software/html/index.html
+
+## Technical jargon
+The core functionality of the calculator is: 
+1. Handling input (valid checks, insertion)
+2. Printing input
+3. Converting from text to something that can be solved. 
+
+Going through the list above, the input handling is done using a doubly linked
+list, where the incoming char will be placed. Each entry has a pointer to 
+the previous and a pointer to the next entry, along with data and meta data 
+for that entry. The data is the actual input character, where the accepted chars
+are a union between numerical and non-numerical input [0-9,a-f,(,),','] and
+chars specific to the operators, found in comscicalc_operators.c. 
+
+The meta data consists of e.g. base (i.e. hex, dec, bin), type of entry, pointer
+to operator function (see below) and some more. See the docs for more info. 
+
+Each operator has a unique char associated with it, along with some meta data of
+its own, and a pointer to the function implementing the operator. 
+The function is linked via function pointer that are casted left and right, 
+but due to the way C let's a code handle pointer willy-nilly, this works out fine. 
+
+When an input list is solved, it will re-use the entry list type above, but 
+then each entry has a number associated with it, instead of a char. 
+The solver will then go through this list and solve based on the function 
+pointers and numbers entered. The next section will explain how to add 
+a new operator. 
+
+## Adding new operators
+A new operator is added in the comscicalc_operators.[c,h] files, by adding a 
+new entry to the ```operators``` table. The entry must consist of the following:
+```
+.inputChar = /* Associated operator character , e.g. '+'*/,
+.opString = /* Null terminated string to be displayed during printing.  "+\0"*/,
+.solvPrio = /* Solving priority, 0 is the highest. (see docs) */,
+.bIncDepth = /* Boolean indicating if operators increase depth (=should it invoke a bracket) */,
+.numArgs = /* Number of arguments. -1 if variable. Must be 2 if not depth increasing.  */,
+.pFun = /* Pointer to the function associated with the operator */
+```
+Moreover, the operator function needs to be added to the comscicalc_operators.c 
+and comscicalc_operators.h file as well. The operator function must follow this
+ format:
+ ```
+int8_t calc_<NAME>(SUBRESULT_UINT *pResult, inputFormat_t inputFormat, int num_args, SUBRESULT_UINT *args);
+ ```
+Ideally the operator should support fixed and floating point, along with signed
+and unsigned integer formats. But if for some reason this is impossible, then 
+the function must return ```format_not_supported```
 ## Developer log.
 **March 6, 2023**
 

@@ -280,6 +280,7 @@ int8_t calc_add(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
     case INPUT_FMT_FIXED:
         // TODO:Solve for fixed point.
         // TODO: add overflow detection
+        return format_not_supported;
         break;
     }
     return function_solved;
@@ -316,6 +317,7 @@ int8_t calc_subtract(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
     case INPUT_FMT_FIXED:
         // TODO:Solve for fixed point.
         // TODO: add overflow detection
+        return format_not_supported;
         break;
     }
     return function_solved;
@@ -352,6 +354,7 @@ int8_t calc_multiply(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
     case INPUT_FMT_FIXED:
         // TODO:Solve for fixed point.
         // TODO: add overflow detection
+        return format_not_supported;
         break;
     }
     return function_solved;
@@ -391,6 +394,7 @@ int8_t calc_divide(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
     case INPUT_FMT_FIXED:
         // TODO:Solve for fixed point.
         // TODO: add overflow detection
+        return format_not_supported;
         break;
     }
     return function_solved;
@@ -441,6 +445,7 @@ int8_t calc_not(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
     case INPUT_FMT_FIXED:
         // TODO:Solve for fixed point.
         // TODO: add overflow detection
+        return format_not_supported;
         break;
     }
     return function_solved;
@@ -494,6 +499,7 @@ int8_t calc_sum(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
     case INPUT_FMT_FIXED:
         // TODO:Solve for fixed point.
         // TODO: add overflow detection
+        return format_not_supported;
         break;
     }
     return function_solved;

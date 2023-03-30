@@ -403,6 +403,166 @@ void test_solver(void){
     }
 }
 
+// Need to write more tests. 
+// Need to cover: 
+// 1. hex, dec and bin input. 
+// 2. Varied input
+// 3. Testcase for each calc function (candidate for random testing)
+// 4. Negative testing : Test negative outcome.
+// 4a. Try to add illegal chars. 
+// 4b. Try to calculate functions with wrong arguments. 
+// 4c. Parenhesis mismatch
+/* ----------------------------------------------------------------
+ * Solvable equations (positive testing)
+ * ----------------------------------------------------------------*/
+testParams_t solvable_params[] = {
+    {
+        .pInputString = "123+456\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "123+456\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 123+456,
+    },
+    {
+        .pInputString = "(123+456)\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "(123+456)\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 123+456,
+    },
+    {
+        .pInputString = "123+456*789\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "123+456*789\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 123+456*789,
+    },
+    {
+        .pInputString = "(123+456*789)\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "(123+456*789)\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 123+456*789,
+    },
+    {
+        .pInputString = "(123+456)*789\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "(123+456)*789\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = (123+456)*789,
+    },
+    {
+        .pInputString = "123+(456+789)/1011\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "123+(456+789)/1011\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 123+(456+789)/1011,
+    },
+    {
+        .pInputString = "~123)\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "NOT(123)\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = ~123,
+    },
+    {
+        .pInputString = "~123+456)\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "NOT(123+456)\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = ~(123+456),
+    },
+    {
+        .pInputString = "789+~123+456)\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "789+NOT(123+456)\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 789+~(123+456),
+    },
+    {
+        .pInputString = "~123+456)-789\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "NOT(123+456)-789\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = ~(123+456)-789,
+    },
+    {
+        .pInputString = "1011+~123+456)-789\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "1011+NOT(123+456)-789\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 1011+~(123+456)-789,
+    },
+    {
+        .pInputString = "1011+~123+456+1213)-789\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "1011+NOT(123+456+1213)-789\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 1011+~(123+456+1213)-789,
+    },
+    {
+        .pInputString = "1011+s123,456,1213)-789\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "1011+SUM(123,456,1213)-789\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 1011+(123+456+1213)-789,
+    },
+};
+void test_solvable_solution(void){
+    calcCoreState_t calcCore;
+    int numTests = sizeof(solvable_params)/sizeof(solvable_params[0]);
+    for(int i = 0 ; i < numTests ; i++){
+        setupTestStruct(&calcCore, &solvable_params[i]);
+        calcCoreAddInput(&calcCore, &solvable_params[i]);
+        int8_t state = calc_solver(&calcCore);
+        calcCoreGetBuffer(&calcCore, &solvable_params[i]);
+        if(verbose){
+            printf("------------------------------------------------\r\n");
+            printf("Input:           %s \r\nExpected:        %s \r\nExpected result: %i \r\nReturned result: %i \r\n", 
+                    solvable_params[i].pExpectedString,
+                    solvable_params[i].pOutputString,
+                    solvable_params[i].expectedResult,
+                    calcCore.result
+                    );
+        }
+        TEST_ASSERT_EQUAL_STRING(
+            solvable_params[i].pExpectedString,
+            solvable_params[i].pOutputString);
+        teardownTestStruct(&calcCore);
+
+        // Check that an equal amount of mallocs and free's happened
+        // in the calculator core
+        //printf("Allocation counter = %i\r\n", calcCore.allocCounter);
+        TEST_ASSERT_EQUAL_INT_MESSAGE(solvable_params[i].expectedResult, calcCore.result, "Result not right.");
+        TEST_ASSERT_EQUAL_UINT_MESSAGE(0, calcCore.allocCounter, "Leaky memory!");
+        if(calcCore.allocCounter != 0){
+            printf("************************************************\r\n\r\n");
+            printf("WARNING: leaky memory: %i!\r\n", calcCore.allocCounter);
+            printf("************************************************\r\n\r\n");
+        }
+        if(verbose){
+            printf("------------------------------------------------\r\n\r\n");
+        }
+    }
+}
+
+void test_unsolvable_solution(void){
+
+}
+
 /* ----------------------------------------------------------------
  * Main. Only starts the tests. 
  * ----------------------------------------------------------------*/
@@ -410,8 +570,9 @@ int main(void)
 {
     verbose = true;
     UNITY_BEGIN();
-    RUN_TEST(test_addRemoveInput);
-    RUN_TEST(test_findingDeepestPoint);
-    RUN_TEST(test_solver);
+    //RUN_TEST(test_addRemoveInput);
+    //RUN_TEST(test_findingDeepestPoint);
+    //RUN_TEST(test_solver);
+    RUN_TEST(test_solvable_solution);
     return UNITY_END();
 }

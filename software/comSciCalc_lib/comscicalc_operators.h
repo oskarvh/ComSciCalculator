@@ -107,6 +107,8 @@ enum functionStatus {
     incorrect_args = -1,
     //! Issue with one of the args, e.g. divion by zero.
     error_args = -2,
+    //!
+    format_not_supported = -4,
 };
 
 /**
