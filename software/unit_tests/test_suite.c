@@ -559,8 +559,117 @@ void test_solvable_solution(void){
     }
 }
 
-void test_unsolvable_solution(void){
 
+testParams_t unsolvable_params[] = {
+    {
+        .pInputString = "123+\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "123+\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 0, // There shouldn't be a result
+    },
+    {
+        .pInputString = "~123+\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "NOT(123+\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 0, // There shouldn't be a result
+    },
+    {
+        .pInputString = "~)\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "NOT()\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 0, // There shouldn't be a result
+    },
+    {
+        .pInputString = "()\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "()\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 0, // There shouldn't be a result
+    },
+    {
+        .pInputString = "(\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "(\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 0, // There shouldn't be a result
+    },
+    {
+        .pInputString = ")\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = ")\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 0, // There shouldn't be a result
+    },
+    {
+        .pInputString = "s*,+)\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "SUM(*,+)\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 0, // There shouldn't be a result
+    },
+    {
+        .pInputString = "s,)\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "SUM(,)\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 0, // There shouldn't be a result
+    },
+    {
+        .pInputString = "s,1)\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "SUM(,1)\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 0, // There shouldn't be a result
+    },
+};
+void test_unsolvable_solution(void){
+    calcCoreState_t calcCore;
+    int numTests = sizeof(unsolvable_params)/sizeof(unsolvable_params[0]);
+    for(int i = 0 ; i < numTests ; i++){
+        setupTestStruct(&calcCore, &unsolvable_params[i]);
+        calcCoreAddInput(&calcCore, &unsolvable_params[i]);
+        int8_t state = calc_solver(&calcCore);
+        calcCoreGetBuffer(&calcCore, &unsolvable_params[i]);
+        if(verbose){
+            printf("------------------------------------------------\r\n");
+            printf("Input:           %s \r\nExpected:        %s \r\nExpected result: %i \r\nReturned result: %i \r\n", 
+                    unsolvable_params[i].pExpectedString,
+                    unsolvable_params[i].pOutputString,
+                    unsolvable_params[i].expectedResult,
+                    calcCore.result
+                    );
+        }
+        TEST_ASSERT_EQUAL_STRING(
+            unsolvable_params[i].pExpectedString,
+            unsolvable_params[i].pOutputString);
+        teardownTestStruct(&calcCore);
+
+        // Check that an equal amount of mallocs and free's happened
+        // in the calculator core
+        //printf("Allocation counter = %i\r\n", calcCore.allocCounter);
+        TEST_ASSERT_EQUAL_INT_MESSAGE(unsolvable_params[i].expectedResult, calcCore.result, "Result not right.");
+        TEST_ASSERT_EQUAL_UINT_MESSAGE(0, calcCore.allocCounter, "Leaky memory!");
+        if(calcCore.allocCounter != 0){
+            printf("************************************************\r\n\r\n");
+            printf("WARNING: leaky memory: %i!\r\n", calcCore.allocCounter);
+            printf("************************************************\r\n\r\n");
+        }
+        if(verbose){
+            printf("------------------------------------------------\r\n\r\n");
+        }
+    }
 }
 
 /* ----------------------------------------------------------------
@@ -574,5 +683,6 @@ int main(void)
     //RUN_TEST(test_findingDeepestPoint);
     //RUN_TEST(test_solver);
     RUN_TEST(test_solvable_solution);
+    RUN_TEST(test_unsolvable_solution);
     return UNITY_END();
 }

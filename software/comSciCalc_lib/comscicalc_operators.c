@@ -259,7 +259,6 @@ int8_t calc_add(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
 
     SUBRESULT_UINT a = args[0];
     SUBRESULT_UINT b = args[1];
-    printf("adding %i and %i\r\n", a, b);
     // Make calculation based on format
     switch (inputFormat) {
     case INPUT_FMT_UINT:
@@ -508,10 +507,3 @@ int8_t calc_sum(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
 /* -------------------------------------------
  * ------------- DEBUG FUNCTIONS -------------
  * -------------------------------------------*/
-/**
- * @brief Logger function to abstract away printf's
- * @param msg Variable args to send to printf
- * This is just a very simple logger that uses a define
- * to either print or not.
- */
-void logger(char *msg, ...);

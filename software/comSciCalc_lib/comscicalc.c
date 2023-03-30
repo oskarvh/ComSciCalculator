@@ -645,12 +645,24 @@ uint8_t countArgs(inputListEntry_t *pStart, inputListEntry_t *pEnd) {
     if (pStart == NULL) {
         return 0;
     }
+    // Check if the first entry is a number
+    if (GET_INPUT_TYPE(pStart->entry.typeFlag) != INPUT_TYPE_NUMBER) {
+        return 0;
+    }
     uint8_t count = 1;
     while ((pStart != pEnd) && (pStart != NULL)) {
         if (pStart->entry.c == ',') {
             count++;
         }
         pStart = pStart->pNext;
+        if (pStart != NULL) {
+            if (GET_INPUT_TYPE(pStart->entry.typeFlag) != INPUT_TYPE_NUMBER) {
+                return 0;
+            }
+            pStart = pStart->pNext;
+        } else {
+            return 0;
+        }
     }
     return count;
 }
@@ -732,13 +744,19 @@ int solveExpression(calcCoreState_t *pCalcCoreState,
             logger("Error: last entry expected to be closing bracket!\r\n");
             return calc_solveStatus_BRACKET_ERROR;
         }
+        if (pExprStart->pNext == pExprEnd) {
+            logger("No arguments in operator or brackets. \r\n");
+            return calc_solveStatus_INVALID_NUM_ARGS;
+        }
         // If the start and end is an operator, we must solve that last,
         // but if it's just brackets then we can free those and move on.
         if (GET_INPUT_TYPE(pExprStart->entry.typeFlag) == INPUT_TYPE_OPERATOR) {
+
             logger("There is an outer operator\r\n");
             solveOuterOperator = true;
             pStart = pExprStart->pNext;
             pEnd = pExprEnd->pPrevious;
+
         } else if (GET_INPUT_TYPE(pExprStart->entry.typeFlag) ==
                    INPUT_TYPE_EMPTY) {
             // This is a bracket, free the first and last entries and re-point.
@@ -877,10 +895,10 @@ int solveExpression(calcCoreState_t *pCalcCoreState,
                 ((inputListEntry_t *)(pPrevEntry->pPrevious))->pNext =
                     pHigestPrioOp;
             }
-            printf("pHigestOrderOp : 0x%08x\r\n", pHigestPrioOp);
-            printf("pHigestOrderOp->pPrev : 0x%08x\r\n",
+            logger("pHigestOrderOp : 0x%08x\r\n", pHigestPrioOp);
+            logger("pHigestOrderOp->pPrev : 0x%08x\r\n",
                    pHigestPrioOp->pPrevious);
-            printf("pHigestOrderOp->pNext : 0x%08x\r\n", pHigestPrioOp->pNext);
+            logger("pHigestOrderOp->pNext : 0x%08x\r\n", pHigestPrioOp->pNext);
             overloaded_free(pPrevEntry);
             overloaded_free(pNextEntry);
             pCalcCoreState->allocCounter -= 2;

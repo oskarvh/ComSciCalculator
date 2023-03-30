@@ -238,6 +238,13 @@ typedef struct calcCoreState {
  * ----------- FUNCTION PROTOTYPES -----------
  * -------------------------------------------*/
 /**
+ * @brief Logger function to abstract away printf's
+ * @param msg Variable args to send to printf
+ * This is just a very simple logger that uses a define
+ * to either print or not.
+ */
+void logger(char *msg, ...);
+/**
  * @brief Initalize calculator core
  * @param pCalcCoreState Pointer to an allocated core state variable.
  * @return Status of the initializaition.
