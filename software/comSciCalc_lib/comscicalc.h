@@ -105,6 +105,8 @@ enum calc_solveStatus {
     calc_solveStatus_ALLOCATION_ERROR = -7,
     //! Error: There was arguments, but no operator
     calc_solveStatus_ARGS_BUT_NO_OPERATOR = -8,
+    //! Error: Invalid arguements.
+    calc_solveStatus_INVALID_ARGS = -9,
 };
 
 /**

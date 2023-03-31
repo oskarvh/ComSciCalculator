@@ -645,24 +645,17 @@ uint8_t countArgs(inputListEntry_t *pStart, inputListEntry_t *pEnd) {
     if (pStart == NULL) {
         return 0;
     }
-    // Check if the first entry is a number
-    if (GET_INPUT_TYPE(pStart->entry.typeFlag) != INPUT_TYPE_NUMBER) {
-        return 0;
-    }
+    // Check if the first entry is a number.
+    // if (GET_INPUT_TYPE(pStart->entry.typeFlag) != INPUT_TYPE_NUMBER) {
+    //    logger("First entry is not a number! %i\r\n",
+    //    GET_INPUT_TYPE(pStart->entry.typeFlag)); return 0;
+    //}
     uint8_t count = 1;
     while ((pStart != pEnd) && (pStart != NULL)) {
         if (pStart->entry.c == ',') {
             count++;
         }
         pStart = pStart->pNext;
-        if (pStart != NULL) {
-            if (GET_INPUT_TYPE(pStart->entry.typeFlag) != INPUT_TYPE_NUMBER) {
-                return 0;
-            }
-            pStart = pStart->pNext;
-        } else {
-            return 0;
-        }
     }
     return count;
 }
@@ -675,7 +668,7 @@ uint8_t countArgs(inputListEntry_t *pStart, inputListEntry_t *pEnd) {
  * @return 0 if OK, otherwise -1
  */
 int8_t readOutArgs(SUBRESULT_UINT *pArgs, int8_t numArgs,
-                   inputListEntry_t *pStart) {
+                   inputListEntry_t *pStart, inputListEntry_t *pEnd) {
     // pArgs must have been allocated
     if (pStart == NULL) {
         return -1;
@@ -683,6 +676,9 @@ int8_t readOutArgs(SUBRESULT_UINT *pArgs, int8_t numArgs,
     // Read out numArgs arguments from the list.
     uint8_t readArgs = 0;
     while (readArgs < numArgs) {
+        if (pStart == pEnd) {
+            return -2;
+        }
         if (pStart == NULL) {
             return -1;
         }
@@ -694,6 +690,7 @@ int8_t readOutArgs(SUBRESULT_UINT *pArgs, int8_t numArgs,
         }
         pStart = pStart->pNext;
     }
+    return 0;
 }
 
 /**
@@ -964,7 +961,11 @@ int solveExpression(calcCoreState_t *pCalcCoreState,
                 logger("Arguments could not be allocated!\r\n");
                 return calc_solveStatus_ALLOCATION_ERROR;
             }
-            readOutArgs(pArgs, numArgsInBuffer, pExprStart);
+            if (readOutArgs(pArgs, numArgsInBuffer, pExprStart, pExprEnd) !=
+                0) {
+                logger("Error: Incorrect arguments.\r\n");
+                return calc_solveStatus_INVALID_ARGS;
+            }
             inputFormat_t inputFormat = pCalcCoreState->inputFormat;
             int8_t (*pFun)(SUBRESULT_UINT * pResult, inputFormat_t inputFormat,
                            int num_args, SUBRESULT_UINT *args) =

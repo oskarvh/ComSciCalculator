@@ -227,3 +227,18 @@ think that would be nice to bring back, and just have it run through heaps of ra
 input data and try to calculate the results. That requires some other parser though, which 
 will be tricky to build in C (it's more or less what I'm already doing). The 'eval' function 
 in python was perfect for this. 
+
+**March 29**
+I have re-written the solveExpression function, the first implementation just became too full of edge cases. 
+So I wrote one that has almost the same amount of edge cases XD. But it was easier to re-write it 
+into a stable state than to fix the old one. 
+There is a lot of pointer magic in there, which makes it hard to debug. 
+
+That being said, the test cases are now passing, and I have added negative tests as well. 
+There is still a lot of work to be done though, but I'm hoping that the solver is more or less complete. 
+
+I'll have to clean up my test parameters in a way that excercises every edge case though, 
+so that requires some thought. A part of me just want to write up a random expression generator, which could be
+good to have just for mass testing, but I think that the best way to get somewhat of a good test coverage
+is to just sit down and go through the code, and collect all of the edge cases. 
+There might be a tool for this, but I have not found a nice open source one. 
