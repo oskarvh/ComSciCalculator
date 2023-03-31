@@ -12,4 +12,4 @@ workspace_msp432/
 workspace/uartecho_EK_TM4C123GXL_TI/
 software/unit_tests/test_suite.exe
 software/html/
-software/unit_tests/test_coverage/
+software/test_coverage
