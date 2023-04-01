@@ -105,6 +105,25 @@ int8_t calc_<NAME>(SUBRESULT_UINT *pResult, inputFormat_t inputFormat, int num_a
 Ideally the operator should support fixed and floating point, along with signed
 and unsigned integer formats. But if for some reason this is impossible, then 
 the function must return ```format_not_supported```
+
+## Test coverage
+The ```software/test_coverage.sh``` script will run a gcov analysis of the two main
+library files: ```comscicalc.c``` and ```comscicalc_operators.c``` when running the test suite
+in order to see what the code coverage is during the tests. This should ideally 
+be close to 100% as it would indicate the code coverage is complete. 
+
+Running this script will make a temporary folder under software called 
+test_coverage, where the build files, gcov files and copies of the source files
+are stored. 
+
+Moreover, the script will print the code coverage for the two files being analyzed. 
+
+To check which lines are being covered, run the ```test_coverage.sh``` script, go into the test_coverage directory and take a look in the ```*.c.gcov``` files. 
+Each line with a ```#####``` mark has not been executed. 
+
+With that information, additional tests can be added to the test suite to
+ensure as good test coverage as possible. 
+
 ## Developer log.
 **March 6, 2023**
 
