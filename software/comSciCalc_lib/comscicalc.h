@@ -307,7 +307,5 @@ calc_funStatus_t calc_solver(calcCoreState_t *pCalcCoreState);
 /* -------------------------------------------
  * ------------ FUNCTION WRAPPERS ------------
  * -------------------------------------------*/
-//! Temporary wrapper for testing.
-int wrap_findDeepestPoint(inputListEntry_t **ppStart, inputListEntry_t **ppEnd);
 
 #endif

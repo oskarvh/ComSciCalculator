@@ -501,6 +501,14 @@ testParams_t unsolvable_params[] = {
         .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
         .expectedResult = 0, // There shouldn't be a result
     },
+    {
+        .pInputString = "(123,5)\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "(123,5)\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 0, // There shouldn't be a result
+    },
 };
 void test_unsolvable_solution(void){
     calcCoreState_t calcCore;

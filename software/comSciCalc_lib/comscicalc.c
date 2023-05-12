@@ -1237,13 +1237,3 @@ calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
 
     return calc_funStatus_SUCCESS;
 }
-
-/* --------------------------------------------
- * ------------- FUNCTION WRAPPERS ------------
- * ---These are exposed for testing purposes---
- * --------------------------------------------*/
-
-int wrap_findDeepestPoint(inputListEntry_t **ppStart,
-                          inputListEntry_t **ppEnd) {
-    return findDeepestPoint(ppStart, ppEnd);
-}

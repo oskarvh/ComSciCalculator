@@ -17522,8 +17522,6 @@
     )
   )
 
-  (gr_rect (start 47.7 110.3) (end 168.5 34.8) (layer "F.Cu") (width 0.2) (fill none) (tstamp 2e7074a9-8f71-4208-a054-057960b9fd5e))
-  (gr_rect (start 62.4 108.9) (end 167.9 41.7) (layer "F.Cu") (width 0.2) (fill none) (tstamp 9f0c4e08-aefa-45f8-b780-d3d3f61b6f32))
   (gr_circle locked (center 65.35 122.45) (end 66.05 122.45) (layer "Edge.Cuts") (width 0.2) (fill none) (tstamp 00515660-068e-4782-9829-570ee488b9ee))
   (gr_circle locked (center 178.15 54.85) (end 178.85 54.85) (layer "Edge.Cuts") (width 0.2) (fill none) (tstamp 00b3a219-4765-4d94-b4ef-c4468c5c5933))
   (gr_circle locked (center 218.3 118.6) (end 219.3 118.6) (layer "Edge.Cuts") (width 0.2) (fill none) (tstamp 038e4fbd-db69-44ff-9573-838293979112))
@@ -17720,12 +17718,6 @@
   (gr_circle locked (center 173.15 139.85) (end 173.85 139.85) (layer "Edge.Cuts") (width 0.2) (fill none) (tstamp fe33c67b-5956-4eac-aba5-566fe0de2c15))
   (gr_line locked (start 78.81 89.4) (end 100.86 89.4) (layer "Edge.Cuts") (width 0.2) (tstamp fef283ce-0a3e-4d9d-858a-615f3a2fc6cb))
   (gr_circle locked (center 207.2 136) (end 208.2 136) (layer "Edge.Cuts") (width 0.2) (fill none) (tstamp ff4b9822-5534-4c0a-a6bf-b9cfffe4649f))
-  (gr_text "4.3''" (at 72.8 50.5) (layer "F.Cu") (tstamp 5265b37f-07e3-467f-b19c-5eb6ca78b78c)
-    (effects (font (size 5 5) (thickness 1)))
-  )
-  (gr_text "5''" (at 56.6 42.35) (layer "F.Cu") (tstamp db5af982-772e-4d1b-85a9-7918ce199a17)
-    (effects (font (size 5 5) (thickness 1)))
-  )
 
   (group "" (id 36a0b721-c905-4320-b4bf-cef1c2531742)
     (members
@@ -17930,18 +17922,6 @@
       fe33c67b-5956-4eac-aba5-566fe0de2c15
       fef283ce-0a3e-4d9d-858a-615f3a2fc6cb
       ff4b9822-5534-4c0a-a6bf-b9cfffe4649f
-    )
-  )
-  (group "" (id 875a4b31-1c56-4e62-8e00-f4140add34df)
-    (members
-      2e7074a9-8f71-4208-a054-057960b9fd5e
-      db5af982-772e-4d1b-85a9-7918ce199a17
-    )
-  )
-  (group "" (id d0364e9f-4e64-4d3a-aa0a-40593faaf727)
-    (members
-      5265b37f-07e3-467f-b19c-5eb6ca78b78c
-      9f0c4e08-aefa-45f8-b780-d3d3f61b6f32
     )
   )
   (group "" (id d4fd9cb8-e578-4168-98d1-812fed334333)
