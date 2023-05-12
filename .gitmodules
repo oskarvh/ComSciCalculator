@@ -1,3 +1,6 @@
 [submodule "software/Unity"]
 	path = software/Unity
 	url = git@github.com:ThrowTheSwitch/Unity.git
+[submodule "software/FT800-FT813"]
+	path = software/FT800-FT813
+	url = git@github.com:oskarvh/FT800-FT813.git
