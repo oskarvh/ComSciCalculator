@@ -1148,7 +1148,7 @@ calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
 
     // Check the string entry
     if (pResString == NULL) {
-        calc_funStatus_STRING_BUFFER_ERROR;
+        return calc_funStatus_STRING_BUFFER_ERROR;
     }
 
     // Make a local variable of the string entry to interate on.
