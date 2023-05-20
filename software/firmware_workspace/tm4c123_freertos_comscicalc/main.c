@@ -34,6 +34,7 @@
 #include <stdint.h>
 #include "inc/hw_memmap.h"
 #include "inc/hw_types.h"
+#include "inc/hw_ints.h"
 #include "driverlib/gpio.h"
 #include "driverlib/pin_map.h"
 #include "driverlib/rom.h"
@@ -68,6 +69,8 @@
 //*****************************************************************************
 xSemaphoreHandle g_pUARTSemaphore;
 
+QueueHandle_t uartReceiveQueue;
+
 //*****************************************************************************
 //
 // The error routine that is called if the driver library encounters an error.
@@ -93,8 +96,32 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char * pcTaskName)
     // on entry to this function, so no processor interrupts will interrupt
     // this loop.
     //
+    UARTprintf("\n\n======================WARNING======================\n");
+    UARTprintf("Task %s had a stack overflow :(", pcTaskName);
+    UARTprintf("\n\n===================================================\n");
     while(1)
     {
+
+    }
+}
+
+//*****************************************************************************
+//
+// UART receive interrupt handler
+//
+//*****************************************************************************
+void uartRxIntHandler(void){
+    // Clear the interrupt
+    UARTIntClear(UART0_BASE, UART_INT_RX);
+    // Read the FIFO and put in a queue.
+    char uartRxChar = UARTCharGetNonBlocking(UART0_BASE);
+    if(uartRxChar != -1){
+        // hooray, there is a character in the rx buffer
+        // which is now read!
+        // Push that to the queue.
+        if(!xQueueSendToBackFromISR(uartReceiveQueue, (void*)&uartRxChar, (TickType_t)0)){
+            while(1);
+        }
     }
 }
 
@@ -103,71 +130,124 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char * pcTaskName)
 // Configure the UART and its pins.  This must be called before UARTprintf().
 //
 //*****************************************************************************
-void
-ConfigureUART(void)
+void ConfigureUART(void)
 {
-    //
     // Enable the GPIO Peripheral used by the UART.
-    //
     ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
 
-    //
     // Enable UART0
-    //
     ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0);
 
-    //
     // Configure GPIO Pins for UART mode.
-    //
     ROM_GPIOPinConfigure(GPIO_PA0_U0RX);
     ROM_GPIOPinConfigure(GPIO_PA1_U0TX);
     ROM_GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
 
-    //
     // Use the internal 16MHz oscillator as the UART clock source.
-    //
     UARTClockSourceSet(UART0_BASE, UART_CLOCK_PIOSC);
 
-    //
     // Initialize the UART for console I/O.
-    //
     UARTStdioConfig(0, 115200, 16000000);
+
+    // Disable the UART FIFO to get an interrupt on each
+    // char. Not recommended, but I couldn't find another way
+    // quickly to get an interrupt on each char.
+    UARTFIFODisable(UART0_BASE);
+
+    // Register an interrupt for the UART receive
+    UARTIntEnable(UART0_BASE, UART_INT_RX);
+#ifdef PART_TM4C123GH6PM
+    IntPrioritySet(INT_UART0_TM4C123, 200);
+#else if PART_TM4C129 //TODO
+
+#endif
+    UARTIntRegister(UART0_BASE, &uartRxIntHandler);
 }
 
+//*****************************************************************************
+//
+// Configure display and peripherals used by the display.
+//
+//*****************************************************************************
 void initDisplay(void){
+    // Enable the GPIO peripherals for PDN and software CSn
     ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
     GPIOPinTypeGPIOOutput(GPIO_PORTB_BASE, GPIO_PIN_0);
     GPIOPinTypeGPIOOutput(GPIO_PORTA_BASE, GPIO_PIN_6);
+
+    // Initialize the calculator core (Should be done elsewhere?)
     calc_coreInit(NULL);
+
+    // Initialize the SPI and subsequently the display
     EVE_SPI_Init();
     EVE_init();
-
     EVE_start_cmd_burst();
     EVE_cmd_dl_burst(CMD_DLSTART);
     EVE_cmd_dl_burst(DL_CLEAR_COLOR_RGB | 0);
     EVE_cmd_dl_burst(DL_CLEAR | CLR_COL | CLR_STN | CLR_TAG);
     EVE_color_rgb_burst(0xFFFFFF);
-    EVE_cmd_text_burst(5, 15, 28, 0, "Hello there!");
+    //EVE_cmd_text_burst(5, 15, 28, 0, rxBuf);
     EVE_cmd_dl_burst(DL_DISPLAY);
     EVE_cmd_dl_burst(CMD_SWAP);
     EVE_end_cmd_burst();
     while (EVE_busy());
 
-
-    while(1);
-
-}
-
-void vInitDisplay(void * pvParameters){
-    initDisplay();
-
-    // Assert as true to kill this task
-    configASSERT( true );
 }
 
 //*****************************************************************************
 //
-// Initialize FreeRTOS and start the initial set of tasks.
+// Task to print the UART buffer to the screen
+//
+//*****************************************************************************
+
+void displayUartOnScreenTask(void *p){
+    char rxBuf[100] = {0};
+    uint8_t charCounter = 0;
+    while(1){
+        // Check if data is available
+        if(uartReceiveQueue != 0){
+            char receiveChar = 0;
+            if(xQueueReceive(uartReceiveQueue, &receiveChar, (TickType_t)5)){
+                // Check if received byte is newline, in which case
+                // clear
+                if(receiveChar == 13){
+                    memset(rxBuf, 0, 100);
+                    charCounter = 0;
+                }
+                // If received byte is backspace, remove the last character
+                else if(receiveChar == 127){
+                    if(charCounter > 0){
+                        charCounter -= 1;
+                    }
+                    rxBuf[charCounter] = 0;
+                }
+                // Otherwise glue it on to the end, if there is room
+                else if(charCounter < 100){
+                    rxBuf[charCounter++] = receiveChar;
+                }
+            }
+            // Update the screen:
+            // Send an initial message here
+
+            EVE_start_cmd_burst();
+            EVE_cmd_dl_burst(CMD_DLSTART);
+            EVE_cmd_dl_burst(DL_CLEAR_COLOR_RGB | 0);
+            EVE_cmd_dl_burst(DL_CLEAR | CLR_COL | CLR_STN | CLR_TAG);
+            EVE_color_rgb_burst(0xFFFFFF);
+            EVE_cmd_text_burst(5, 15, 28, 0, rxBuf);
+            EVE_cmd_dl_burst(DL_DISPLAY);
+            EVE_cmd_dl_burst(CMD_SWAP);
+            EVE_end_cmd_burst();
+            while (EVE_busy());
+
+        }
+
+    }
+}
+
+//*****************************************************************************
+//
+// Initialize FreeRTOS, initialize the hardware and kick off all tasks
 //
 //*****************************************************************************
 int
@@ -187,45 +267,40 @@ main(void)
     //               SYSCTL_XTAL_16MHZ);
 
     // Set the clocking to run at 50 MHz from the PLL.
-    ROM_SysCtlClockSet(SYSCTL_SYSDIV_4 | SYSCTL_USE_PLL | SYSCTL_XTAL_16MHZ |
+    SysCtlClockSet(SYSCTL_SYSDIV_4 | SYSCTL_USE_PLL | SYSCTL_XTAL_16MHZ |
                        SYSCTL_OSC_MAIN);
 #endif
 
-    //
     // Initialize the UART and configure it for 115,200, 8-N-1 operation.
-    //
     ConfigureUART();
-
-    //
-    // Print demo introduction.
-    //
-    UARTprintf("\n\nWelcome to the EK-TM4C123GXL FreeRTOS Demo!\n");
-
-    //
-    // Create a mutex to guard the UART.
-    //
-    g_pUARTSemaphore = xSemaphoreCreateMutex();
     initDisplay();
 
-#if 0
+    // Print demo introduction.
+    UARTprintf("\n\nWelcome to the EK-TM4C123GXL FreeRTOS Demo!\n");
+
+    // Create a mutex to guard the UART.
+    g_pUARTSemaphore = xSemaphoreCreateMutex();
+
+    // Create the queue used by the display and UART
+    uartReceiveQueue = xQueueCreate(10, sizeof(char)); // Ten elements of chars
     BaseType_t xReturned;
     TaskHandle_t xHandle = NULL;
 
-    /* Create the task, storing the handle. */
+    // Create the task, storing the handle.
     xReturned = xTaskCreate(
-            vInitDisplay,     /* Function that implements the task. */
-                    "INIT",          /* Text name for the task. */
-                    1000,      /* Stack size in words, not bytes. */
-                    ( void * ) 1,    /* Parameter passed into the task. */
-                    tskIDLE_PRIORITY,/* Priority at which the task is created. */
-                    &xHandle );      /* Used to pass out the created task's handle. */
+            displayUartOnScreenTask,               // Function that implements the task.
+                    "DISPLAY",             // Text name for the task.
+                    1000,               // Stack size in words, not bytes.
+                    ( void * ) 1,       // Parameter passed into the task.
+                    tskIDLE_PRIORITY,   // Priority at which the task is created.
+                    &xHandle );         // Used to pass out the created task's handle.
 
     if( xReturned == pdPASS )
     {
-        /* The task was created.  Use the task's handle to delete the task. */
-        vTaskDelete( xHandle );
+        // The task was created.  Use the task's handle to delete the task.
+        //vTaskDelete( xHandle );
     }
-#endif
+
     UARTprintf("\n\nInit task complete!\n");
     //
     // Start the scheduler.  This should not return.
