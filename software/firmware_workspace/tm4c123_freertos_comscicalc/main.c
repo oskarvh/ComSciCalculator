@@ -45,41 +45,19 @@
 #include "queue.h"
 #include "semphr.h"
 
+#include "comscicalc.h"
+
+#include "EVE.h"
 //*****************************************************************************
-//
-//! \addtogroup example_list
-//! <h1>FreeRTOS Example (freertos_demo)</h1>
-//!
-//! This application demonstrates the use of FreeRTOS on Launchpad.
-//!
-//! The application blinks the user-selected LED at a user-selected frequency.
-//! To select the LED press the left button and to select the frequency press
-//! the right button.  The UART outputs the application status at 115,200 baud,
-//! 8-n-1 mode.
-//!
-//! This application utilizes FreeRTOS to perform the tasks in a concurrent
-//! fashion.  The following tasks are created:
-//!
-//! - An LED task, which blinks the user-selected on-board LED at a
-//!   user-selected rate (changed via the buttons).
-//!
-//! - A Switch task, which monitors the buttons pressed and passes the
-//!   information to LED task.
-//!
-//! In addition to the tasks, this application also uses the following FreeRTOS
-//! resources:
-//!
-//! - A Queue to enable information transfer between tasks.
-//!
-//! - A Semaphore to guard the resource, UART, from access by multiple tasks at
-//!   the same time.
-//!
-//! - A non-blocking FreeRTOS Delay to put the tasks in blocked state when they
-//!   have nothing to do.
-//!
-//! For additional details on FreeRTOS, refer to the FreeRTOS web page at:
-//! http://www.freertos.org/
-//
+// Pin allocation:
+// TM4C123GXL board:
+// PA2: SCK0
+// PA3: CS0 (Hardware CS)
+// PA4: MISO0
+// PA5: MOSI0
+// PA6: Software CS
+// PB0: PDN
+// TO ADD: TM4C129 calculator board.
 //*****************************************************************************
 
 
@@ -156,6 +134,37 @@ ConfigureUART(void)
     UARTStdioConfig(0, 115200, 16000000);
 }
 
+void initDisplay(void){
+    ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
+    GPIOPinTypeGPIOOutput(GPIO_PORTB_BASE, GPIO_PIN_0);
+    GPIOPinTypeGPIOOutput(GPIO_PORTA_BASE, GPIO_PIN_6);
+    calc_coreInit(NULL);
+    EVE_SPI_Init();
+    EVE_init();
+
+    EVE_start_cmd_burst();
+    EVE_cmd_dl_burst(CMD_DLSTART);
+    EVE_cmd_dl_burst(DL_CLEAR_COLOR_RGB | 0);
+    EVE_cmd_dl_burst(DL_CLEAR | CLR_COL | CLR_STN | CLR_TAG);
+    EVE_color_rgb_burst(0xFFFFFF);
+    EVE_cmd_text_burst(5, 15, 28, 0, "Hello there!");
+    EVE_cmd_dl_burst(DL_DISPLAY);
+    EVE_cmd_dl_burst(CMD_SWAP);
+    EVE_end_cmd_burst();
+    while (EVE_busy());
+
+
+    while(1);
+
+}
+
+void vInitDisplay(void * pvParameters){
+    initDisplay();
+
+    // Assert as true to kill this task
+    configASSERT( true );
+}
+
 //*****************************************************************************
 //
 // Initialize FreeRTOS and start the initial set of tasks.
@@ -164,11 +173,23 @@ ConfigureUART(void)
 int
 main(void)
 {
-    //
+    // Set the clocking to run directly from the external crystal/oscillator.
+    // NOTE: The SYSCTL_XTAL_ value must be changed to match the value of the
+    // crystal on your board.
+#if defined(TARGET_IS_TM4C129_RA0) ||                                         \
+    defined(TARGET_IS_TM4C129_RA1) ||                                         \
+    defined(TARGET_IS_TM4C129_RA2)
+    ui32SysClock = SysCtlClockFreqSet((SYSCTL_XTAL_25MHZ |
+                                       SYSCTL_OSC_MAIN |
+                                       SYSCTL_USE_OSC), 25000000);
+#else
+    //SysCtlClockSet(SYSCTL_SYSDIV_1 | SYSCTL_USE_OSC | SYSCTL_OSC_MAIN |
+    //               SYSCTL_XTAL_16MHZ);
+
     // Set the clocking to run at 50 MHz from the PLL.
-    //
     ROM_SysCtlClockSet(SYSCTL_SYSDIV_4 | SYSCTL_USE_PLL | SYSCTL_XTAL_16MHZ |
                        SYSCTL_OSC_MAIN);
+#endif
 
     //
     // Initialize the UART and configure it for 115,200, 8-N-1 operation.
@@ -184,8 +205,28 @@ main(void)
     // Create a mutex to guard the UART.
     //
     g_pUARTSemaphore = xSemaphoreCreateMutex();
+    initDisplay();
 
-    UARTprintf("\n\nSemaphore created!\n");
+#if 0
+    BaseType_t xReturned;
+    TaskHandle_t xHandle = NULL;
+
+    /* Create the task, storing the handle. */
+    xReturned = xTaskCreate(
+            vInitDisplay,     /* Function that implements the task. */
+                    "INIT",          /* Text name for the task. */
+                    1000,      /* Stack size in words, not bytes. */
+                    ( void * ) 1,    /* Parameter passed into the task. */
+                    tskIDLE_PRIORITY,/* Priority at which the task is created. */
+                    &xHandle );      /* Used to pass out the created task's handle. */
+
+    if( xReturned == pdPASS )
+    {
+        /* The task was created.  Use the task's handle to delete the task. */
+        vTaskDelete( xHandle );
+    }
+#endif
+    UARTprintf("\n\nInit task complete!\n");
     //
     // Start the scheduler.  This should not return.
     //

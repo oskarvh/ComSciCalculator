@@ -114,6 +114,20 @@ void initFxn(UArg arg0, UArg arg1){
 
     while(1);
 }
+
+/**
+ * @brief Sets up the screen interface and controls what is written to the screen
+ *
+ * This task waits on the screen to become initialized, sets up the
+ * boxes and parts of the screen to which stuff is displayed,
+ * and writes the results from the calculator core once ready.
+ */
+void screenController(UArg arg0, UArg arg1){
+    // Write the basic grid that the numbers are in
+    writeGrid();
+
+    // Update the numbers based on the comSciCalc output
+}
 // Main function
 // Starts the necessary HAL's,
 // constructs init task, and start BIOS.
