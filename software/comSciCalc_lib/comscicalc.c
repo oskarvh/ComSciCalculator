@@ -46,11 +46,19 @@
 /* ---- CALCULATOR CORE HELPER FUNCTIONS ----- */
 
 void logger(char *msg, ...) {
-#if VERBOSE
+#ifdef VERBOSE
+#ifdef TIVAWARE
+    // Print using UART instead
+    va_list vaArgP;
+    va_start(vaArgP, msg);
+    UARTvprintf(msg, vaArgP);
+    va_end(vaArgP);
+#else
     va_list argp;
     va_start(argp, msg);
     vprintf(msg, argp);
     va_end(argp);
+#endif
 #endif
 }
 
@@ -82,25 +90,20 @@ void overloaded_free(inputListEntry_t *ptr) {
  *
  */
 static bool charIsNumerical(inputBase_t base, char c) {
-    switch (base) {
-    case inputBase_DEC:
+    if (base == inputBase_DEC) {
         if (('0' <= c) && (c <= '9')) {
             return true;
         }
-        break;
-    case inputBase_HEX:
+    }
+    if (base == inputBase_HEX) {
         if ((('0' <= c) && (c <= '9')) || (('a' <= c) && (c <= 'f'))) {
             return true;
         }
-        break;
-    case inputBase_BIN:
+    }
+    if (base == inputBase_BIN) {
         if (('0' <= c) && (c <= '1')) {
             return true;
         }
-        break;
-    default:
-        // Return false if input base is set to None.
-        break;
     }
     return false;
 }
