@@ -217,10 +217,11 @@ void calcCoreTask(void *p){
                     calc_addInput(&calcState, receiveChar);
                 }
                 // Solve:
+                calcState.result = 0;
                 uint8_t solveState = calc_solver(&calcState);
                 // Print the output
                 char *pOutputString[MAX_CALC_CORE_INPUT_LEN] = {0};
-                calc_printBuffer(&calcState, pOutputString, MAX_CALC_CORE_INPUT_LEN);
+                calc_funStatus_t printStatus= calc_printBuffer(&calcState, pOutputString, MAX_CALC_CORE_INPUT_LEN);
                 if(!xQueueSendToBack(calcCoreInputTransformedQueue, (void*)&pOutputString, (TickType_t)0)){
                     while(1);
                 }
@@ -300,10 +301,39 @@ void displayOutline(void){
 
 // Function to print a number as binary, since
 // there is no printf function for this in C
+// Note, the 0 index is printed first.
 void printToBinary(char* pBuf, uint32_t num){
-    for(uint8_t i = 0 ; i < 32 ; i++){
-        pBuf[i] = ((num>>i)&0x01) + '0';
+    // First, reset the buffer
+    pBuf[0] = '0';
+    pBuf[1] = 'b';
+
+    // In order to print the buffer with non-leading zeros,
+    // the last index must be the least significant bit.
+    // The approach is to go through each bit, starting from
+    // the MSB, find the first non-zero bit and start printing
+    // that.
+    bool firstBitFound = false;
+    uint8_t index = 2;
+    if(num != 0){
+        for(int i = 31 ; i >= 0 ; i--){
+            // Get the bit at the current index.
+            uint8_t currentBit = (num & (1 << i)) >> i;
+            // If the current bit is 1, and the first bit
+            // hasn't been found, then set the firstBitFound
+            // as true, causing the string to start printing
+            if(!firstBitFound && currentBit == 1){
+                firstBitFound = true;
+            }
+            if(firstBitFound){
+                pBuf[index++] = currentBit + '0';
+            }
+        }
+    } else {
+        // If the result is 0, then print a 0
+        pBuf[index++] = '0';
     }
+    // Set the last index to a null terminator
+    pBuf[index] = '\0';
 }
 
 void displayUartOnScreenTask(void *p){

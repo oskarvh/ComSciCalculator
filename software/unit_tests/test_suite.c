@@ -261,12 +261,28 @@ void test_addInvalidInput(void){
  * ----------------------------------------------------------------*/
 testParams_t solvable_params[] = {
     {
+        .pInputString = "123\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "123\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 123,
+    },
+    {
         .pInputString = "123+456\0",
         .pCursor = {0,0,0},
         .pExpectedString = "123+456\0",
         .pOutputString = {0},
         .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
         .expectedResult = 123+456,
+    },
+    {
+        .pInputString = "123+456+789\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "123+456+789\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 123+456+789,
     },
     {
         .pInputString = "(123+456)\0",
@@ -417,6 +433,14 @@ testParams_t unsolvable_params[] = {
         .pInputString = "123+\0",
         .pCursor = {0,0,0},
         .pExpectedString = "123+\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 0, // There shouldn't be a result
+    },
+    {
+        .pInputString = "123+456+\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "123+456+\0",
         .pOutputString = {0},
         .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
         .expectedResult = 0, // There shouldn't be a result

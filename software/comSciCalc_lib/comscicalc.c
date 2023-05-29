@@ -44,7 +44,7 @@
 /* ------------- GLOBAL VARIABLES ------------ */
 
 /* ---- CALCULATOR CORE HELPER FUNCTIONS ----- */
-
+#define VERBOSE
 void logger(char *msg, ...) {
 #ifdef VERBOSE
 #ifdef TIVAWARE
@@ -62,6 +62,9 @@ void logger(char *msg, ...) {
 #endif
 }
 
+// Temporary list containing the allocated pointers
+uint32_t allocatedPointers[100] = {0};
+
 /**
  * @brief Malloc wrapper to help debug memory leaks
  * @param size Size of malloc
@@ -69,7 +72,17 @@ void logger(char *msg, ...) {
  */
 inputListEntry_t *overloaded_malloc(size_t size) {
     void *ptr = malloc(size);
+    if (ptr == NULL) {
+        while (1)
+            ;
+    }
     logger("[allocated] : 0x%08x\r\n", ptr);
+    // Loop through until an empty place is found
+    uint32_t i = 0;
+    while (allocatedPointers[i] != 0) {
+        i++;
+    }
+    allocatedPointers[i] = (uint32_t)ptr;
     return ptr;
 }
 
@@ -79,6 +92,19 @@ inputListEntry_t *overloaded_malloc(size_t size) {
  */
 void overloaded_free(inputListEntry_t *ptr) {
     logger("[free] : 0x%08x\r\n", ptr);
+    bool okToFree = false;
+    for (int i = 0; i < 100; i++) {
+        if (allocatedPointers[i] == (uint32_t)ptr) {
+            okToFree = true;
+            allocatedPointers[i] = 0;
+            break;
+        }
+    }
+    if (!okToFree) {
+        logger("Could not find that 0x%08x was allocated! \r\n", ptr);
+        while (1)
+            ;
+    }
     free(ptr);
 }
 
@@ -225,6 +251,9 @@ calc_funStatus_t calc_coreInit(calcCoreState_t *pCalcCoreState) {
     // Check the calc code pointer
     if (pCalcCoreState == NULL) {
         return calc_funStatus_CALC_CORE_STATE_NULL;
+    }
+    for (int i = 0; i < 100; i++) {
+        allocatedPointers[i] = 0;
     }
 
     // Initialize the cursor to 0
@@ -726,8 +755,8 @@ int solveExpression(calcCoreState_t *pCalcCoreState,
         return calc_solveStatus_INPUT_LIST_NULL;
     }
 
-    bool solveOuterOperator; // Boolean to indicate that outer operator needs
-                             // solving.
+    bool solveOuterOperator = false; // Boolean to indicate that outer operator
+                                     // needs solving.
     inputListEntry_t *pStart =
         pExprStart; // Temporary variable to hold the start pointer
     inputListEntry_t *pEnd =
@@ -793,7 +822,7 @@ int solveExpression(calcCoreState_t *pCalcCoreState,
     bool noOperatorsLeft = false;
     inputListEntry_t *pResult = NULL;
     while (!noOperatorsLeft) {
-        logger("pTmpStart = 0x%08x, pTmpEnd =  = 0x%08x\r\n", pStart, pEnd);
+        logger("pTmpStart = 0x%08x, pTmpEnd = 0x%08x\r\n", pStart, pEnd);
 
         // Find the highest priorty operator
         inputListEntry_t *pHigestPrioOp = NULL;
@@ -831,8 +860,7 @@ int solveExpression(calcCoreState_t *pCalcCoreState,
             inputListEntry_t *pPrevEntry = pHigestPrioOp->pPrevious;
             inputListEntry_t *pNextEntry = pHigestPrioOp->pNext;
             if ((pNextEntry == NULL) || (pPrevEntry == NULL)) {
-                logger(
-                    "ERROR: Pointer(s) before and after operators are NULL\n");
+                logger("ERROR: Pointer(s) before or after operator are NULL\n");
                 return calc_solveStatus_OPERATOR_POINTER_ERROR;
             }
             if ((GET_INPUT_TYPE(pNextEntry->entry.typeFlag) !=
@@ -917,7 +945,9 @@ int solveExpression(calcCoreState_t *pCalcCoreState,
             // Check if we just erased the starting point of expressions as
             // well:
             if (pPrevEntry == *ppExprStart) {
+                logger("Pointer to expression was also free'd. repoint.\r\n");
                 *ppExprStart = pHigestPrioOp;
+                logger("New start: 0x%x.\r\n", (uint32_t)pHigestPrioOp);
             }
 
             pResult = pHigestPrioOp;
@@ -926,6 +956,12 @@ int solveExpression(calcCoreState_t *pCalcCoreState,
             // expression, or something going into a multi-input depth
             // increasing outer operator
             noOperatorsLeft = true;
+            if (pStart->pNext == NULL && pStart->pPrevious == NULL) {
+                if ((GET_SUBRESULT_TYPE(pStart->entry.typeFlag) ==
+                     SUBRESULT_TYPE_INT)) {
+                    pResult = pStart;
+                }
+            }
             logger("Operator not found or none left. \r\n");
         }
     }
@@ -1086,12 +1122,12 @@ calc_funStatus_t calc_solver(calcCoreState_t *pCalcCoreState) {
 
         bool startOfExpressionSameAsStartOfList = false;
         if (pSolverListStart == pStart) {
+            logger("Start of the expression same as start of list\r\n");
             startOfExpressionSameAsStartOfList = true;
         }
         if (solveExpression(pCalcCoreState, &pResult, &pStart, pEnd) < 0) {
             logger("ERROR: Could not solve expression\r\n");
             returnStatus = calc_funStatus_SOLVE_INCOMPLETE;
-            break;
         }
         if (startOfExpressionSameAsStartOfList) {
             // The start of the list was free'd. Repoint.
@@ -1100,6 +1136,9 @@ calc_funStatus_t calc_solver(calcCoreState_t *pCalcCoreState) {
 
         if (pResult == NULL) {
             logger("No result written, but expression solver returned OK. \n");
+            // Check that there is exactly one expression,
+            // and if that is a numerical entry.
+            // If yes, then save that to the result
             returnStatus = calc_funStatus_SOLVE_INCOMPLETE;
             break;
         }
@@ -1119,6 +1158,7 @@ calc_funStatus_t calc_solver(calcCoreState_t *pCalcCoreState) {
     while (pSolverListStart != NULL) {
         logger("In free loop\r\n");
         inputListEntry_t *pNext = pSolverListStart->pNext;
+        logger("pNext = 0x%x\r\n", (uint32_t)pNext);
         if (pCalcCoreState->allocCounter == 0) {
             return -1;
         }
