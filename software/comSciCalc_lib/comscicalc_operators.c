@@ -401,6 +401,40 @@ int8_t calc_divide(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
 
 int8_t calc_and(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
                 int num_args, SUBRESULT_UINT *args) {
+    // Only expecting two variable arguments here
+    if (num_args != 2) {
+        return incorrect_args;
+    }
+
+    // Read out the args as uint32_t. Will be casted later on
+
+    SUBRESULT_UINT a = args[0];
+    SUBRESULT_UINT b = args[1];
+    if (b == 0) {
+        return error_args;
+    }
+    switch (inputFormat) {
+    case INPUT_FMT_UINT:
+        // Solve for 32bit unsigned integer
+        (*((SUBRESULT_UINT *)pResult)) = a & b;
+        // TODO: add overflow detection
+        break;
+    case INPUT_FMT_SINT:
+        // Solve for 32 bit signed integer
+        (*((SUBRESULT_INT *)pResult)) = a & b;
+        // TODO: add overflow detection
+        break;
+    case INPUT_FMT_FLOAT:
+        // TODO:Solve for fixed point.
+        // TODO: add overflow detection
+        return format_not_supported;
+        break;
+    case INPUT_FMT_FIXED:
+        // TODO:Solve for fixed point.
+        // TODO: add overflow detection
+        return format_not_supported;
+        break;
+    }
     return function_solved;
 }
 

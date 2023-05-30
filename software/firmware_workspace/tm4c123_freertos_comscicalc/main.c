@@ -70,12 +70,16 @@
 // The mutex that protects concurrent access of UART from multiple tasks.
 //
 //*****************************************************************************
-xSemaphoreHandle g_pUARTSemaphore;
+xSemaphoreHandle g_pCalcMetadataSemaphore;
+int16_t globalSyntaxIssueIndex;
 
 // Queue for handling UART input
 QueueHandle_t uartReceiveQueue;
 // Queue for handling the input going through the calculator core
 QueueHandle_t calcCoreInputTransformedQueue;
+// Queue for handling metadata between calc core and display.
+// For now only syntax issues are handled
+QueueHandle_t calcCoreInputSyntaxIssueQueue;
 // Queue for handling the result
 QueueHandle_t calcCoreOutputQueue;
 
@@ -219,9 +223,22 @@ void calcCoreTask(void *p){
                 // Solve:
                 calcState.result = 0;
                 uint8_t solveState = calc_solver(&calcState);
+                // TODO: The calc state should be stored so that
+                // it can be determined if the solution could be solved.
                 // Print the output
                 char *pOutputString[MAX_CALC_CORE_INPUT_LEN] = {0};
-                calc_funStatus_t printStatus= calc_printBuffer(&calcState, pOutputString, MAX_CALC_CORE_INPUT_LEN);
+                int16_t syntaxIssueIndex = -1;
+                calc_funStatus_t printStatus= calc_printBuffer(&calcState, pOutputString, MAX_CALC_CORE_INPUT_LEN, &syntaxIssueIndex);
+                if(syntaxIssueIndex >= 0){
+                    logger("SYNTAX ISSUE AT %i\r\n", syntaxIssueIndex);
+                }
+                if(g_pCalcMetadataSemaphore != NULL){
+                    if( xSemaphoreTake( g_pCalcMetadataSemaphore, ( TickType_t ) 10 ) == pdTRUE )
+                    {
+                        globalSyntaxIssueIndex = syntaxIssueIndex;
+                        xSemaphoreGive( g_pCalcMetadataSemaphore );
+                    }
+                }
                 if(!xQueueSendToBack(calcCoreInputTransformedQueue, (void*)&pOutputString, (TickType_t)0)){
                     while(1);
                 }
@@ -253,8 +270,29 @@ void calcCoreTask(void *p){
 
 #define INPUT_TEXT_OPTIONS EVE_OPT_RIGHTX
 #define FONT 18
+#define FONT_SIZE_X 8
 #define FONT_SIZE_OPTIONS 20
 
+#define COLORWHEEL_LEN 5
+#define RED     0xff0000
+#define ORANGE  0xffa500
+#define GREEN   0x00ff00
+#define BLUE    0x0000ff
+#define BLUE_1  0x5dade2
+#define BLUE_2  0x4c7efc
+#define YELLOW  0xffff00
+#define MAGENTA 0xff00ff
+#define PURPLE  0x800080
+#define WHITE   0xffffff
+#define BLACK   0x000000
+#define TURQOISE 0x00fff7
+const uint32_t colorWheel[COLORWHEEL_LEN] = {
+   WHITE,
+   GREEN,
+   TURQOISE,
+   BLUE_2,
+   MAGENTA
+};
 /*
  * --------------------------------------------------------
  *                                                  [input]
@@ -284,6 +322,8 @@ void calcCoreTask(void *p){
 #define VERT_LOW_OUTLINE_Y1 (EVE_VSIZE)
 
 void displayOutline(void){
+    // Outline shall be white
+    EVE_color_rgb_burst(0xFFFFFF);
     // Write the top line. This parts the options from the input
     EVE_cmd_dl_burst(DL_BEGIN | EVE_LINES);
     EVE_cmd_dl(VERTEX2F(TOP_OUTLINE_X0*16,TOP_OUTLINE_Y*16));
@@ -336,6 +376,44 @@ void printToBinary(char* pBuf, uint32_t num){
     pBuf[index] = '\0';
 }
 
+
+// Function to display the input text, to aid the printing of
+// the input buffer. The formatting is as follows
+// 1. Change color based on parentheses
+// 2. Issues shall be highlighted with red (at syntax error index and beyond)
+// 3. TBD.
+void displayInputText(char *pRxBuf, int16_t syntaxErrorIndex){
+    uint8_t colorWheelIndex = 0; // Maximum COLORWHEEL_LEN
+
+    // If syntaxIssueIndex = -1 then there are no syntax errors.
+    // Iterate through each char until null pointer
+    uint16_t charIter = 0;
+    while(pRxBuf[charIter] != '\0'){
+        // Increase color index if opening bracket
+        if(pRxBuf[charIter] == '('){
+            colorWheelIndex++;
+        }
+        uint32_t color = colorWheel[colorWheelIndex%COLORWHEEL_LEN];
+
+        if(charIter >= ((uint16_t)syntaxErrorIndex)){
+            color = RED;
+        }
+        // Print the current character
+        EVE_cmd_dl_burst(DL_COLOR_RGB | color);
+        char pTmpRxBuf[2] = {pRxBuf[charIter], '\0'};
+        EVE_cmd_text_burst(5+(charIter*FONT_SIZE_X), INPUT_TEXT_YC0, FONT, INPUT_TEXT_OPTIONS, pTmpRxBuf);
+
+
+        // Decrease color index if closing bracket.
+        if(pRxBuf[charIter] == ')'){
+            colorWheelIndex--;
+        }
+        charIter++;
+    }
+
+
+}
+
 void displayUartOnScreenTask(void *p){
     char pRxBuf[MAX_CALC_CORE_INPUT_LEN] = {0};
     char pBinRes[MAX_CALC_CORE_INPUT_LEN] = {0};
@@ -345,20 +423,30 @@ void displayUartOnScreenTask(void *p){
     // Write the outlines:
     EVE_start_cmd_burst();
     EVE_cmd_dl_burst(CMD_DLSTART);
-    EVE_cmd_dl_burst(DL_CLEAR_COLOR_RGB | 0);
+    EVE_cmd_dl_burst(DL_CLEAR_COLOR_RGB | WHITE);
     EVE_cmd_dl_burst(DL_CLEAR | CLR_COL | CLR_STN | CLR_TAG);
-    EVE_color_rgb_burst(0xFFFFFF);
+
     displayOutline();
     EVE_cmd_dl_burst(DL_DISPLAY);
     EVE_cmd_dl_burst(CMD_SWAP);
     EVE_end_cmd_burst();
     while (EVE_busy());
 
+    // Update the screen to begin with
+    bool updateScreen = true;
+    int16_t syntaxIssueIndex = -1;
     while(1){
-        // Check if data is available
-        bool updateScreen = false;
+        // Check if data is available.
+        // TODO: Use mutex for metadata instead
+        if(g_pCalcMetadataSemaphore != NULL){
+            if( xSemaphoreTake( g_pCalcMetadataSemaphore, ( TickType_t ) 10 ) == pdTRUE )
+            {
+                syntaxIssueIndex = globalSyntaxIssueIndex;
+                xSemaphoreGive( g_pCalcMetadataSemaphore );
+            }
+        }
         if(calcCoreInputTransformedQueue != 0){
-            if(xQueueReceive(calcCoreInputTransformedQueue, pRxBuf, (TickType_t)5)){
+            if(xQueueReceive(calcCoreInputTransformedQueue, pRxBuf, (TickType_t)20)){
                 updateScreen = true;
             }
         }
@@ -369,6 +457,17 @@ void displayUartOnScreenTask(void *p){
                 printToBinary(pBinRes, calcResult);
                 sprintf(pHexRes, "0x%1X", calcResult);
                 updateScreen = true;
+#ifdef PRINT_RESULT_TO_UART
+#ifdef VERBOSE
+#error Cannot print result to UART and have VERBOSE UART logging at the same time!
+#else
+                // Print the results to UART
+                UARTprintf("IN: [%s]\r\n", pRxBuf);
+                UARTprintf("DEC: [%s]\r\n", pDecRes);
+                UARTprintf("BIN: [%s]\r\n", pBinRes);
+                UARTprintf("HEX: [%s]\r\n", pHexRes);
+#endif
+#endif
             }
         }
         if(updateScreen){
@@ -377,11 +476,13 @@ void displayUartOnScreenTask(void *p){
             EVE_cmd_dl_burst(CMD_DLSTART);
             EVE_cmd_dl_burst(DL_CLEAR_COLOR_RGB | 0);
             EVE_cmd_dl_burst(DL_CLEAR | CLR_COL | CLR_STN | CLR_TAG);
-            EVE_color_rgb_burst(0xFFFFFF);
             displayOutline();
             // Write the input text
-            EVE_cmd_text_burst(INPUT_TEXT_XC0, INPUT_TEXT_YC0, FONT, INPUT_TEXT_OPTIONS, pRxBuf);
+            displayInputText(pRxBuf, syntaxIssueIndex);
+            //EVE_cmd_text_burst(INPUT_TEXT_XC0, INPUT_TEXT_YC0, FONT, INPUT_TEXT_OPTIONS, pRxBuf);
             // Write the results
+            // TODO: Let the color reflect if the operation was OK or not.
+            EVE_cmd_dl_burst(DL_COLOR_RGB | WHITE);
             EVE_cmd_text_burst(OUTPUT_DEC_XC0, OUTPUT_DEC_YC0, FONT, INPUT_TEXT_OPTIONS, pDecRes);
             EVE_cmd_text_burst(OUTPUT_BIN_XC0, OUTPUT_BIN_YC0, FONT, INPUT_TEXT_OPTIONS, pBinRes);
             EVE_cmd_text_burst(OUTPUT_HEX_XC0, OUTPUT_HEX_YC0, FONT, INPUT_TEXT_OPTIONS, pHexRes);
@@ -389,6 +490,8 @@ void displayUartOnScreenTask(void *p){
             EVE_cmd_dl_burst(CMD_SWAP);
             EVE_end_cmd_burst();
             while (EVE_busy());
+            // Screen has been updated, set update variable to false
+            updateScreen = false;
         }
     }
 }
@@ -423,11 +526,8 @@ main(void)
     ConfigureUART();
     initDisplay();
 
-    // Print demo introduction.
-    //UARTprintf("\n\nWelcome to the EK-TM4C123GXL FreeRTOS Demo!\n");
-
     // Create a mutex to guard the UART.
-    g_pUARTSemaphore = xSemaphoreCreateMutex();
+    g_pCalcMetadataSemaphore = xSemaphoreCreateMutex();
 
     // Create the queue used by the display and UART
     // Ten elements of chars. Should be enough to handle basic input
@@ -435,11 +535,13 @@ main(void)
 
     // Create queue for input buffer between calculator core and display task
     calcCoreInputTransformedQueue = xQueueCreate(2, sizeof(char)*MAX_CALC_CORE_INPUT_LEN);
+    // Create queue for the metadata buffer between the calculator core and the output.
+    // As of now only the syntax issues are displayed though.
+    calcCoreInputSyntaxIssueQueue = xQueueCreate(2, sizeof(int16_t));
 
     // Create queue for output between calculator core and display task
     calcCoreOutputQueue = xQueueCreate(2, sizeof(uint32_t));
 
-    BaseType_t xReturned;
     TaskHandle_t screenTaskHandle = NULL;
     TaskHandle_t calcCoreTaskHandle = NULL;
 
@@ -459,19 +561,10 @@ main(void)
             tskIDLE_PRIORITY,        // Priority at which the task is created.
             &calcCoreTaskHandle );              // Used to pass out the created task's handle.
 
-
-
-    //UARTprintf("\n\nInit task complete! Write in console to write something to the screen :) \n");
-    //
     // Start the scheduler.  This should not return.
-    //
     vTaskStartScheduler();
 
-    //
-    // In case the scheduler returns for some reason, print an error and loop
-    // forever.
-    //
-
+    // If the scheduler returns for some reason, just loop here.
     while(1)
     {
     }

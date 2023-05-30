@@ -286,10 +286,13 @@ calc_funStatus_t calc_removeInput(calcCoreState_t *pCalcCoreState);
  * @param pCalcCoreState Pointer to an allocated core state variable.
  * @param pResString Pointer to a location which to write the string.
  * @param stringLen Maximum length of the #pResString.
+ * @param pSyntaxIssuePos Pointer to a variable to collect where the
+ * first syntax issue is located. -1 if no syntax issues
  * @return Status of printing to buffer.
  */
 calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
-                                  char *pResString, uint16_t stringLen);
+                                  char *pResString, uint16_t stringLen,
+                                  int16_t *pSyntaxIssuePos);
 /**
  * @brief Tries to solve the current buffer.
  *

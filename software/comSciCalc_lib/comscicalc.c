@@ -44,7 +44,6 @@
 /* ------------- GLOBAL VARIABLES ------------ */
 
 /* ---- CALCULATOR CORE HELPER FUNCTIONS ----- */
-#define VERBOSE
 void logger(char *msg, ...) {
 #ifdef VERBOSE
 #ifdef TIVAWARE
@@ -742,6 +741,7 @@ int8_t readOutArgs(SUBRESULT_UINT *pArgs, int8_t numArgs,
  * TODO: The input format is currently decided by the pCalcCoreState,
  * which is incorrect. But this reveals a bigger issue: What to do
  * with conflicting formats? (e.g. one float and one int)
+ * TODO: Save the location of an error.
  */
 
 int solveExpression(calcCoreState_t *pCalcCoreState,
@@ -1176,7 +1176,8 @@ calc_funStatus_t calc_solver(calcCoreState_t *pCalcCoreState) {
 }
 
 calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
-                                  char *pResString, uint16_t stringLen) {
+                                  char *pResString, uint16_t stringLen,
+                                  int16_t *pSyntaxIssuePos) {
 
     // Check pointer to calculator core state
     if (pCalcCoreState == NULL) {
@@ -1194,13 +1195,16 @@ calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
         return calc_funStatus_STRING_BUFFER_ERROR;
     }
 
-    // Make a local variable of the string entry to interate on.
+    // Make a local variable of the string entry to iterate on.
     char *pString = pResString;
 
     // Variable to keep track of the number of chars written to string
     // Add one as as we need a null terminator at the end.
     uint16_t numCharsWritten = 1;
 
+    // A variable to keep track of the depth of the current entry based
+    // only on depth increasing functions
+    uint8_t depthDueToFunction = 0;
     // Loop through all buffers
     uint8_t previousInputType = INPUT_TYPE_EMPTY;
     while (pCurrentListEntry != NULL) {
@@ -1212,6 +1216,19 @@ calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
             // If the previous input type wasn't a number,
             // then print the precursor. For hex it's 0x, for bin it's 0b
             if (previousInputType != currentInputType) {
+                // Check if we are allowed to print a numerical
+                // entry if the previous one was not a number.
+                // The only operation not allowing a number after
+                // another entry, is the closing bracket.
+                if (pCurrentListEntry->pPrevious != NULL) {
+                    if (((inputListEntry_t *)(pCurrentListEntry->pPrevious))
+                            ->entry.c == ')') {
+                        // This is an "illegal" entry of a number. Mark it.
+                        if (*pSyntaxIssuePos == -1) {
+                            *pSyntaxIssuePos = numCharsWritten - 1;
+                        }
+                    }
+                }
                 if (pCurrentListEntry->inputBase == inputBase_HEX) {
                     // Print '0x' if there is room
                     if (numCharsWritten < (stringLen - 2)) {
@@ -1254,15 +1271,136 @@ calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
             // If the operator increase depth, then print an opening bracket too
             if (GET_DEPTH_FLAG(pCurrentListEntry->entry.typeFlag) ==
                 DEPTH_CHANGE_INCREASE) {
+                // Check if previous entry was allowed for a depth increasing
+                // operator.
+                // This is only the case for closing brackets or numbers
+                if (pCurrentListEntry->pPrevious != NULL) {
+                    if (((inputListEntry_t *)(pCurrentListEntry->pPrevious))
+                                ->entry.c == ')' ||
+                        previousInputType == INPUT_TYPE_NUMBER) {
+                        // This is an "illegal" entry of a number. Mark it.
+                        if (*pSyntaxIssuePos == -1) {
+                            *pSyntaxIssuePos = numCharsWritten - tmpStrLen - 1;
+                        }
+                    }
+                }
                 if (numCharsWritten < stringLen) {
-                    *pString++ = '(';
+                    *pString++ = OPENING_BRACKET;
                     numCharsWritten++;
                 } else {
                     return calc_funStatus_STRING_BUFFER_ERROR;
                 }
+            } else {
+                // Non depth increasing operator. Previous entry must have been
+                // either a closing bracket or a number
+                if (((inputListEntry_t *)(pCurrentListEntry->pPrevious))
+                            ->entry.c != ')' &&
+                    previousInputType != INPUT_TYPE_NUMBER) {
+                    // This is an "illegal" entry of a number. Mark it.
+                    if (*pSyntaxIssuePos == -1) {
+                        *pSyntaxIssuePos = numCharsWritten - tmpStrLen - 1;
+                    }
+                }
             }
         } else if (currentInputType == INPUT_TYPE_EMPTY) {
-            // This should only be brackets, but it's at least only one char.
+            // This is either bracket or punctuation.
+            // Depending on what it is, the syntax can differ.
+            if (pCurrentListEntry->entry.c == OPENING_BRACKET) {
+                // If it's an opening bracket, the previous
+                // entry must be either nothing, a comma, or an
+                // operator.
+                if (pCurrentListEntry->pPrevious != NULL) {
+                    if (previousInputType == INPUT_TYPE_NUMBER) {
+                        if (*pSyntaxIssuePos == -1) {
+                            *pSyntaxIssuePos = numCharsWritten - 1;
+                        }
+                    } else if (previousInputType == INPUT_TYPE_EMPTY) {
+                        if (((inputListEntry_t *)(pCurrentListEntry->pPrevious))
+                                ->entry.c != '(') {
+                            if (*pSyntaxIssuePos == -1) {
+                                *pSyntaxIssuePos = numCharsWritten - 1;
+                            }
+                        }
+                    }
+                }
+            } else if (pCurrentListEntry->entry.c == CLOSING_BRACKET) {
+                // For a closing bracket, the previous entry must have
+                // been a number, or another closing bracket.
+                if (pCurrentListEntry->pPrevious != NULL) {
+                    if (previousInputType != INPUT_TYPE_NUMBER &&
+                        ((inputListEntry_t *)(pCurrentListEntry->pPrevious))
+                                ->entry.c != CLOSING_BRACKET) {
+                        if (*pSyntaxIssuePos == -1) {
+                            *pSyntaxIssuePos = numCharsWritten - 1;
+                        }
+                    }
+                } else {
+                    if (*pSyntaxIssuePos == -1) {
+                        *pSyntaxIssuePos = numCharsWritten - 1;
+                    }
+                }
+            } else if (pCurrentListEntry->entry.c == '.') {
+                // For a dot, the previous entry must always be a number only.
+                if (pCurrentListEntry->pPrevious != NULL) {
+                    if (previousInputType != INPUT_TYPE_NUMBER) {
+                        if (*pSyntaxIssuePos == -1) {
+                            *pSyntaxIssuePos = numCharsWritten - 1;
+                        }
+                    }
+                } else {
+                    if (*pSyntaxIssuePos == -1) {
+                        *pSyntaxIssuePos = numCharsWritten - 1;
+                    }
+                }
+            } else if (pCurrentListEntry->entry.c == ',') {
+                // For a comma, the previous entry must have been a closing
+                // bracket or a number, and the depth must be at least larger
+                // than 0 due to a depth increasing function.
+                if (pCurrentListEntry->pPrevious != NULL) {
+                    // Go backwards in the list to check if the last opening
+                    // bracket was due to a depth increasing function, or an
+                    // opening bracket.
+                    bool inDepthIncreasingFunction = false;
+                    inputListEntry_t *pTmpListEntry =
+                        pCurrentListEntry->pPrevious;
+                    while (pTmpListEntry != NULL) {
+                        uint8_t tmpInputType =
+                            GET_INPUT_TYPE(pTmpListEntry->entry.typeFlag);
+                        // Check if entry is a depth increasing operator.
+                        // If we found one, then break the loop, and reflect in
+                        // variable
+                        if (tmpInputType == INPUT_TYPE_OPERATOR) {
+                            if (GET_DEPTH_FLAG(pTmpListEntry->entry.typeFlag) ==
+                                DEPTH_CHANGE_INCREASE) {
+                                inDepthIncreasingFunction = true;
+                                break;
+                            }
+                        }
+                        // Also check if the entry was a closing bracket, in
+                        // which case just break.
+                        if (tmpInputType == INPUT_TYPE_OTHER) {
+                            if (pTmpListEntry->entry.c == '(') {
+                                break;
+                            }
+                        }
+                        pTmpListEntry = pTmpListEntry->pPrevious;
+                    }
+                    if (previousInputType != INPUT_TYPE_NUMBER ||
+                        !inDepthIncreasingFunction) {
+                        if (*pSyntaxIssuePos == -1) {
+                            *pSyntaxIssuePos = numCharsWritten - 1;
+                        }
+                    }
+                } else {
+                    if (*pSyntaxIssuePos == -1) {
+                        *pSyntaxIssuePos = numCharsWritten - 1;
+                    }
+                }
+            } else {
+                logger("Unknown other char [%c] to be syntax checked\r\n",
+                       pCurrentListEntry->entry.c);
+            }
+            // Print the char to the buffer.
             if (numCharsWritten < stringLen) {
                 *pString++ = pCurrentListEntry->entry.c;
                 numCharsWritten++;
