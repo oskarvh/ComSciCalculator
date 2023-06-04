@@ -1,13 +1,26 @@
 /*
- * Copyright (c) 2023
- * Oskar von Heideken.
- *
- * Computer Scientist Calculator (comscicalc) header file
- *
- * This file contains function prototypes, type declarations and
- * more to be used by the comscicalc library.
- *
- */
+MIT License
+
+Copyright (c) 2023 Oskar von Heideken
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
 
 #ifndef COMSCICALC_H
 #define COMSCICALC_H
@@ -138,9 +151,11 @@ typedef struct inputType {
      * Call me old school but I try to avoid bitfields.
      * bit 0-1: 0 = empty, 1 = number, 3 = operator, 3 = custom function.
      * bit 2-3: 0 = keep depth, 1 = increase depth, 2 = decrease depth, 3 =
-     * reserved. bit 4: 0 = char input, 1 = subresult. Bit 5-6: Input is: 0 =
-     * unsigned int, 1 = signed int, 2 = floating point, 3 = fixed point. bit 7:
      * reserved.
+     * bit 4: 0 = char input, 1 = subresult.
+     * Bit 5-6: Input is: 0 = unsigned int, 1 = signed int,
+     * 2 = floating point, 3 = fixed point.
+     * bit 7:reserved.
      */
     typeFlag_t typeFlag;
 

@@ -13,3 +13,5 @@ workspace/uartecho_EK_TM4C123GXL_TI/
 software/unit_tests/test_suite.exe
 software/html/
 software/test_coverage
+utils/fontConverter/output_files/
+utils/fontConverter/input_files/

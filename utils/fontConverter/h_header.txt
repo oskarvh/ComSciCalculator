@@ -1,0 +1,17 @@
+/*
+ * <filename>.h
+ *
+ *  Created on: <DATE>
+ *  
+ * THIS IS AN AUTO GENERATED FILE.
+ * DO NOT MODIFY
+ */
+
+#ifndef <FILENAME>_H_
+#define <FILENAME>_H_
+
+// Standard library
+#include <stdint.h>
+#include "font.h"
+
+const uint8_t <filename> [<NUMBYTES>] = {

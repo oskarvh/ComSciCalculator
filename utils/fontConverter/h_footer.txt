@@ -1,0 +1,16 @@
+};
+
+font_t font_<filename> = {
+    .rom_font = false,
+    .ft81x_font_index = 0, // NOTE: This needs to be added
+    .font_name = "<filename>\0",
+    .font_format = <font_format>,
+    .font_size = <font_size>,
+    .font_baseline = <font_baseline>,
+    .font_caps_height = <font_caps_height>,
+    .font_x_width = <font_x_width>,
+    .pFontTable = <filename>,
+    .fontTableSize = <NUMBYTES>
+};
+
+#endif
