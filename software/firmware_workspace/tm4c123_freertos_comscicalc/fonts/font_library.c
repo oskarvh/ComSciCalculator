@@ -31,7 +31,9 @@ SOFTWARE.
 #include "font_library.h"
 
 // Included fonts. Add new fonts here.
-#include "Cascadia_12_L1.h"
+#include "Cascadia_38_L2.h"
+#include "Comic_Sans_MS_38_L2.h"
+
 
 font_t rom_font_0 = {
     .rom_font = true,
@@ -45,11 +47,23 @@ font_t rom_font_0 = {
     .pFontTable = NULL,
     .fontTableSize = 0
 };
+font_t rom_font_1 = {
+    .rom_font = true,
+    .ft81x_font_index = 31,
+    .font_name = "ROM24",
+    .font_format = 0,
+    .font_size = 8,
+    .font_baseline = 0,
+    .font_caps_height = 40,
+    .font_x_width = 24,
+    .pFontTable = NULL,
+    .fontTableSize = 0
+};
 
 font_t *pFontLibraryTable[MAX_LEN_FONT_LIBRARY_TABLE] = {
     [0] = &rom_font_0,
-    [1] = &font_Cascadia_12_L1,
-    [2] = NULL,
+    [1] = &font_Comic_Sans_MS_38_L2,//font_Cascadia_38_L2,
+    [2] = NULL,//&font_Comic_Sans_MS_38_L2,
     [3] = NULL,
     [4] = NULL,
     [5] = NULL,

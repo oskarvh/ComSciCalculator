@@ -122,7 +122,8 @@ void calcCoreAddInput(calcCoreState_t *pCoreState, testParams_t *pTestParams){
 void calcCoreGetBuffer(calcCoreState_t *pCoreState, testParams_t *pTestParams){
     // Get the output, using the comSciCalc library function
     char *pOutputString = pTestParams->pOutputString;
-    uint8_t status = calc_printBuffer(pCoreState, pOutputString, MAX_STR_LEN);
+    int16_t syntaxIssueLoc = -1;
+    uint8_t status = calc_printBuffer(pCoreState, pOutputString, MAX_STR_LEN, &syntaxIssueLoc);
     if(status != calc_funStatus_SUCCESS){
         printf("Could not print \r\n");
         printf("Status = %d\n", status);

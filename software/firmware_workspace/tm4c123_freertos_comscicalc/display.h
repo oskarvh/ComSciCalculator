@@ -84,22 +84,22 @@ SOFTWARE.
 //! Input text X start coordinate
 #define INPUT_TEXT_XC0 (EVE_HSIZE - 5)
 //! Input text Y coordinate. Will depend on font height
-#define INPUT_TEXT_YC0(font_height) (EVE_VSIZE/2 - font_height -  5)
+#define INPUT_TEXT_YC0(font_height) (EVE_VSIZE/2 - font_height -  font_height/2)
 
 //! Decimal output X start coordinate.
 #define OUTPUT_DEC_XC0 (EVE_HSIZE - 5)
 //! Decimal output Y coordinate, depends on fond height
-#define OUTPUT_DEC_YC0(font_height) (EVE_VSIZE - font_height - 5)
+#define OUTPUT_DEC_YC0(font_height) (EVE_VSIZE - font_height - font_height/2)
 
 //! Binary output X start coordinate
 #define OUTPUT_BIN_XC0 (EVE_HSIZE - 5)
 //! Binary Y coordinate, depends on font height
-#define OUTPUT_BIN_YC0(font_height) (EVE_VSIZE*3/4  - font_height - 5)
+#define OUTPUT_BIN_YC0(font_height) (EVE_VSIZE*3/4  - font_height - font_height/2)
 
 //! Hexadecimal X start coordinate
 #define OUTPUT_HEX_XC0 (EVE_HSIZE/2 - 5)
 //! Hexadecimal Y coordinate. Depends on font height
-#define OUTPUT_HEX_YC0(font_height) (EVE_VSIZE - font_height - 5)
+#define OUTPUT_HEX_YC0(font_height) (EVE_VSIZE - font_height - font_height/2)
 
 //! Display text options for input buffer
 #define INPUT_TEXT_OPTIONS EVE_OPT_RIGHTX

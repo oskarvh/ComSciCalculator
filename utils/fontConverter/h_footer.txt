@@ -1,4 +1,4 @@
-};
+
 
 font_t font_<filename> = {
     .rom_font = false,

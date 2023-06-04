@@ -62,12 +62,14 @@ SOFTWARE.
 #include "comscicalc.h"
 
 // Standard library
+#include "uart_logger.h"
 #include <stdio.h>
 #include <string.h>
 
 /* ------------- GLOBAL VARIABLES ------------ */
 
 /* ---- CALCULATOR CORE HELPER FUNCTIONS ----- */
+/*
 void logger(char *msg, ...) {
 #ifdef VERBOSE
 #ifdef TIVAWARE
@@ -84,7 +86,7 @@ void logger(char *msg, ...) {
 #endif
 #endif
 }
-
+*/
 // Temporary list containing the allocated pointers
 uint32_t allocatedPointers[100] = {0};
 

@@ -14,4 +14,4 @@
 #include <stdint.h>
 #include "font.h"
 
-const uint8_t <filename> [<NUMBYTES>] = {
+const uint8_t <filename> [<NUMBYTES>] = 

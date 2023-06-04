@@ -577,6 +577,7 @@ void test_null_pointers(void){
     calcCoreState_t calcCore;
     calcCoreState_t *pCalcCore = NULL;
     calc_funStatus_t funStatus = calc_coreInit(pCalcCore);
+    int16_t syntaxIssueLoc = -1;
     TEST_ASSERT_EQUAL_INT_MESSAGE(calc_funStatus_CALC_CORE_STATE_NULL,funStatus,"Unexpected return from core init");
     funStatus = calc_coreBufferTeardown(pCalcCore);
     TEST_ASSERT_EQUAL_INT_MESSAGE(calc_funStatus_CALC_CORE_STATE_NULL,funStatus,"Unexpected return from core teardown");
@@ -584,9 +585,11 @@ void test_null_pointers(void){
     TEST_ASSERT_EQUAL_INT_MESSAGE(calc_funStatus_CALC_CORE_STATE_NULL,funStatus,"Unexpected return from add input");
     funStatus = calc_removeInput(pCalcCore);
     TEST_ASSERT_EQUAL_INT_MESSAGE(calc_funStatus_CALC_CORE_STATE_NULL,funStatus,"Unexpected return from add input");
-    funStatus = calc_printBuffer(pCalcCore, NULL, 0);
+    syntaxIssueLoc = -1;
+    funStatus = calc_printBuffer(pCalcCore, NULL, 0, &syntaxIssueLoc);
     TEST_ASSERT_EQUAL_INT_MESSAGE(calc_funStatus_CALC_CORE_STATE_NULL,funStatus,"Unexpected return from print buffer");
-    funStatus = calc_printBuffer(&calcCore, NULL, 0);
+    syntaxIssueLoc = -1;
+    funStatus = calc_printBuffer(&calcCore, NULL, 0, &syntaxIssueLoc);
     TEST_ASSERT_EQUAL_INT_MESSAGE(calc_funStatus_STRING_BUFFER_ERROR,funStatus,"Unexpected return from print buffer");
 }
 /* ----------------------------------------------------------------

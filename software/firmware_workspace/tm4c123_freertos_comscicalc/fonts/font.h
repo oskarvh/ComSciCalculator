@@ -80,7 +80,7 @@ typedef struct font {
     /**
      * @param fontTableSize Size of the font table in bytes
      */
-    uint16_t fontTableSize;
+    uint32_t fontTableSize;
 }font_t;
 
 

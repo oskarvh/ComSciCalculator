@@ -157,7 +157,7 @@ void displayInputText(displayState_t *pDisplayState){
         // Get the current font
         font_t *pCurrentFont = pFontLibraryTable[pDisplayState->fontIdx];
         // Print one colored char
-        EVE_cmd_text_burst(5+(charIter*pCurrentFont->font_x_width),
+        EVE_cmd_text_burst(5+((charIter+1)*pCurrentFont->font_x_width),
                            INPUT_TEXT_YC0(pCurrentFont->font_caps_height),
                            pCurrentFont->ft81x_font_index,
                            INPUT_TEXT_OPTIONS,
@@ -172,14 +172,43 @@ void displayInputText(displayState_t *pDisplayState){
     }
 }
 
+//! Offset used when programming custom fonts into RAM_G
+static uint32_t ram_g_address_offset = 0;
 /**
  * @brief Program font to the FT81x
- * @param pFont Pointer to the font table
- * @param fontTableSize Size (bytes) of the font table
+ * @param pFont Pointer to the font struct
+ * @param fontIndex The index in FT81x this font will get
  * @return Nothing
+ * @warning This function assumes that the first char is a space.
+ * If this is not the case, the setfont2 functions last parameter
+ * must be changed.
  */
-void programFonts(uint8_t *pFont, uint16_t fontTableSize){
+void programFont(font_t *pFont, uint8_t fontIndex){
+    uint32_t thisFontsAddress = EVE_RAM_G + ram_g_address_offset;
+    // Null check the pointer
+    if(pFont == NULL){
+        return;
+    }
+    // If this is a ROM font, or of the pointer to the table is NULL, then return
+    if(pFont->rom_font == true || pFont->pFontTable == NULL){
+        return;
+    }
+    // Write the bitmap of the pFont to the graphics RAM if there is room.
+    if(ram_g_address_offset + pFont->fontTableSize < EVE_RAM_G_SIZE){
+        EVE_memWrite_sram_buffer(EVE_RAM_G + ram_g_address_offset,
+                                 pFont->pFontTable,
+                                 pFont->fontTableSize);
+        ram_g_address_offset += pFont->fontTableSize;
+    } else {
+        logger("\r\nERROR: Font not programmed!\r\n\r\n");
+        return;
+    }
+    // This must be in a display list to register the new font
+    startDisplaylist();
+    // CMD_SETBITMAP not mandatory if using setfont2
+    EVE_cmd_setfont2_burst(fontIndex, thisFontsAddress, 32);
 
+    endDisplayList();
 }
 
 void initDisplayState(displayState_t *pDisplayState){
@@ -187,7 +216,7 @@ void initDisplayState(displayState_t *pDisplayState){
     pDisplayState->inputOptions.currentInputBase = 0; // TBD
     pDisplayState->solveStatus = 0;
     pDisplayState->printStatus = 0;
-    pDisplayState->fontIdx = 0;
+    pDisplayState->fontIdx = 1; // Try the custom RAM font
     memset(pDisplayState->printedInputBuffer, '\0', MAX_PRINTED_BUFFER_LEN);
     pDisplayState->syntaxIssueIndex = -1;
 
@@ -199,6 +228,16 @@ void displayTask(void *p){
     displayOutline();
     endDisplayList();
 
+    // Loop through the custom fonts and program as many
+    // as fits.
+
+    for(uint8_t i = 0 ; i < MAX_LEN_FONT_LIBRARY_TABLE ; i++){
+
+        if(pFontLibraryTable[i] != NULL){
+            programFont(pFontLibraryTable[i], i);
+            pFontLibraryTable[i]->ft81x_font_index = i;
+        }
+    }
 
     // Update the screen to begin with
     bool updateScreen = true;

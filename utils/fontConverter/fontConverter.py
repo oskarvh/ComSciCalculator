@@ -7,6 +7,9 @@ import json
 import os
 import datetime
 
+# Set this if you want user readable .h files. 
+USE_RAWH = True
+
 with open('h_header.txt') as f: header = f.read()
 with open('h_footer.txt') as f: footer = f.read()
 
@@ -25,6 +28,9 @@ for f in jsonListTemp:
     filename = f.replace(".json", "")
     correlated_raw_filename = ""
     for l in listdir:
+        if "rawh" in l:
+            # Skip the rawh files
+            continue
         if filename in l:
             correlated_raw_filename = l
     if correlated_raw_filename == "":
@@ -33,7 +39,7 @@ for f in jsonListTemp:
         correlated_files.append(
             {
                 "json_file" : f,
-                "raw_file" :correlated_raw_filename
+                "raw_file" : correlated_raw_filename
             }
         )
 
@@ -42,6 +48,7 @@ for f in jsonListTemp:
 for correlated_file in correlated_files:
     jsonfile = correlated_file["json_file"]
     rawfile = correlated_file["raw_file"]
+    print(rawfile)
     print("Converting " + jsonfile)
 
     # Open and parse the json file
@@ -82,16 +89,23 @@ for correlated_file in correlated_files:
     h_header = h_header.replace("<NUMBYTES>", str(numbytes))
     h_footer = h_footer.replace("<NUMBYTES>", str(numbytes))
 
-    # Convert binary data to a list instead
-    bytedata =[]
-    for byte in data:
-        bytedata.append(byte)
+    if(USE_RAWH == True):
+        with open("input_files/" + rawfile + "h") as f: data = f.read()
+        h_header = h_header + data + "\n"
+    else:
+        h_header += "{\n"
+        # Convert binary data to a list instead
+        bytedata =[]
+        for byte in data:
+            bytedata.append(byte)
 
-    for byte in bytedata:
-        h_header = h_header + "    " +  str(byte) + ",\n"
+        for byte in bytedata:
+            h_header = h_header + "    " +  str(byte) + ",\n"
+        h_header += "}"
+    h_header += ";\n"
 
     # Remove the last comma
-    h_header = h_header[:-2]
+    #h_header = h_header[:-2]
 
     # Finally, append the footer and write to the new file
     h_header = h_header + "\n" + h_footer

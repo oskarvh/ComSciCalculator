@@ -52,6 +52,7 @@
 
 #include "EVE.h"
 #include "display.h"
+#include "uart_logger.h"
 
 //*****************************************************************************
 // Pin allocation:
@@ -77,18 +78,10 @@ EventGroupHandle_t displayTriggerEvent;
 // The mutex that protects concurrent access of UART from multiple tasks.
 //
 //*****************************************************************************
-xSemaphoreHandle g_pCalcMetadataSemaphore;
-int16_t globalSyntaxIssueIndex;
 
 // Queue for handling UART input
 QueueHandle_t uartReceiveQueue;
-// Queue for handling the input going through the calculator core
-QueueHandle_t calcCoreInputTransformedQueue;
-// Queue for handling metadata between calc core and display.
-// For now only syntax issues are handled
-QueueHandle_t calcCoreInputSyntaxIssueQueue;
-// Queue for handling the result
-QueueHandle_t calcCoreOutputQueue;
+
 
 //*****************************************************************************
 //
@@ -270,6 +263,7 @@ void calcCoreTask(void *p){
             // Here, all the results needed for the display task is available
             // Therefore, obtain the semaphore and start writing to the displayState struct
             if( xSemaphoreTake( displayStateSemaphore, portMAX_DELAY) == pdTRUE ){
+                displayState.syntaxIssueIndex = -1;
                 displayState.printStatus = calc_printBuffer(&calcState,
                                                             displayState.printedInputBuffer,
                                                             MAX_PRINTED_BUFFER_LEN,
