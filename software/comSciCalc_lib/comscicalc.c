@@ -1319,12 +1319,14 @@ calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
             } else {
                 // Non depth increasing operator. Previous entry must have been
                 // either a closing bracket or a number
-                if (((inputListEntry_t *)(pCurrentListEntry->pPrevious))
-                            ->entry.c != ')' &&
-                    previousInputType != INPUT_TYPE_NUMBER) {
-                    // This is an "illegal" entry of a number. Mark it.
-                    if (*pSyntaxIssuePos == -1) {
-                        *pSyntaxIssuePos = numCharsWritten - tmpStrLen - 1;
+                if (pCurrentListEntry->pPrevious != NULL) {
+                    if (((inputListEntry_t *)(pCurrentListEntry->pPrevious))
+                                ->entry.c != ')' &&
+                        previousInputType != INPUT_TYPE_NUMBER) {
+                        // This is an "illegal" entry of a number. Mark it.
+                        if (*pSyntaxIssuePos == -1) {
+                            *pSyntaxIssuePos = numCharsWritten - tmpStrLen - 1;
+                        }
                     }
                 }
             }
