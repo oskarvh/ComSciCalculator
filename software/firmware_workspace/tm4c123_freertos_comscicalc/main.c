@@ -212,7 +212,7 @@ void calcCoreTask(void *p){
 
     // TODO: Initialize based on what was saved in flash
     // For now though, just initialize to decimal base.
-    calcState.inputBase = inputBase_DEC;
+    calcState.numberFormat.inputBase = inputBase_DEC;
     while(1){
         // Wait for UART data to be available in the queue
         if(uartReceiveQueue != 0){

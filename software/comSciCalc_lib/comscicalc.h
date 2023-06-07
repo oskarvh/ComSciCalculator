@@ -48,8 +48,6 @@ SOFTWARE.
 /* -------------------------------------------
  * ------- ENUMS, TYPEDEFS AND STRUCTS -------
  * -------------------------------------------*/
-//! Typedef for the input base (dec, hex, bin, none)
-typedef uint8_t inputBase_t;
 //! Typedef for calculator function status
 typedef int8_t calc_funStatus_t;
 //! Typedef for input entry status
@@ -153,9 +151,9 @@ typedef struct inputType {
      * bit 2-3: 0 = keep depth, 1 = increase depth, 2 = decrease depth, 3 =
      * reserved.
      * bit 4: 0 = char input, 1 = subresult.
-     * Bit 5-6: Input is: 0 = unsigned int, 1 = signed int,
-     * 2 = floating point, 3 = fixed point.
-     * bit 7:reserved.
+     * Bit 5-6: Input is: 0 = int, 1 = floating point
+     * 2 = fixed point, 3 = reserved
+     * bit 7: 1 = signed, 0 = unsigned.
      */
     typeFlag_t typeFlag;
 
@@ -223,18 +221,6 @@ typedef struct calcCoreState {
     uint8_t cursorPosition;
 
     /**
-     * @param inputBase Base of incoming input.
-     * @note This shall be reflected in the entry as well.
-     */
-    inputBase_t inputBase;
-
-    /**
-     * @param inputFormat Format of incoming input.
-     * @note This shall be reflected in the entry as well.
-     */
-    inputFormat_t inputFormat;
-
-    /**
      * @param allocCounter Counter of malloc's and free's.
      */
     uint8_t allocCounter;
@@ -248,6 +234,11 @@ typedef struct calcCoreState {
      * @param result Result of current buffer if #solved is true
      */
     SUBRESULT_UINT result;
+
+    /**
+     * @param numberFormat The current number format.
+     */
+    numberFormat_t numberFormat;
 
 } calcCoreState_t;
 

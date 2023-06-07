@@ -97,7 +97,7 @@ void calcCoreAddInput(calcCoreState_t *pCoreState, testParams_t *pTestParams){
             pCoreState->cursorPosition = pCursor[i++];
         }
         // Set the input base
-        pCoreState->inputBase = pTestParams->inputBase[i];
+        pCoreState->numberFormat.inputBase = pTestParams->inputBase[i];
 
         if(*pInputString == '\b'){
             // This is the symbol for backspace. 

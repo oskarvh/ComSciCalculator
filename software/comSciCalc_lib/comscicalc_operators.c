@@ -261,12 +261,7 @@ int8_t calc_add(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
     SUBRESULT_UINT b = args[1];
     // Make calculation based on format
     switch (inputFormat) {
-    case INPUT_FMT_UINT:
-        // Solve for N bit unsigned integer
-        (*((SUBRESULT_UINT *)pResult)) = a + b;
-        // TODO: add overflow detection
-        break;
-    case INPUT_FMT_SINT:
+    case INPUT_FMT_INT:
         // Solve for N bit signed integer
         (*((SUBRESULT_INT *)pResult)) = a + b;
         // TODO: add overflow detection
@@ -298,12 +293,7 @@ int8_t calc_subtract(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
     SUBRESULT_UINT b = args[1];
     // Make calculation based on format
     switch (inputFormat) {
-    case INPUT_FMT_UINT:
-        // Solve for N bit unsigned integer
-        (*((SUBRESULT_UINT *)pResult)) = a - b;
-        // TODO: add overflow detection
-        break;
-    case INPUT_FMT_SINT:
+    case INPUT_FMT_INT:
         // Solve for N bit signed integer
         (*((SUBRESULT_INT *)pResult)) = a - b;
         // TODO: add overflow detection
@@ -335,12 +325,7 @@ int8_t calc_multiply(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
     SUBRESULT_UINT b = args[1];
     // Make calculation based on format
     switch (inputFormat) {
-    case INPUT_FMT_UINT:
-        // Solve for 32bit unsigned integer
-        (*((SUBRESULT_UINT *)pResult)) = a * b;
-        // TODO: add overflow detection
-        break;
-    case INPUT_FMT_SINT:
+    case INPUT_FMT_INT:
         // Solve for 32 bit signed integer
         (*((SUBRESULT_INT *)pResult)) = a * b;
         // TODO: add overflow detection
@@ -375,12 +360,7 @@ int8_t calc_divide(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
     }
     // Make calculation based on format
     switch (inputFormat) {
-    case INPUT_FMT_UINT:
-        // Solve for 32bit unsigned integer
-        (*((SUBRESULT_UINT *)pResult)) = a / b;
-        // TODO: add overflow detection
-        break;
-    case INPUT_FMT_SINT:
+    case INPUT_FMT_INT:
         // Solve for 32 bit signed integer
         (*((SUBRESULT_INT *)pResult)) = a / b;
         // TODO: add overflow detection
@@ -414,12 +394,7 @@ int8_t calc_and(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
         return error_args;
     }
     switch (inputFormat) {
-    case INPUT_FMT_UINT:
-        // Solve for 32bit unsigned integer
-        (*((SUBRESULT_UINT *)pResult)) = a & b;
-        // TODO: add overflow detection
-        break;
-    case INPUT_FMT_SINT:
+    case INPUT_FMT_INT:
         // Solve for 32 bit signed integer
         (*((SUBRESULT_INT *)pResult)) = a & b;
         // TODO: add overflow detection
@@ -465,8 +440,7 @@ int8_t calc_not(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
     SUBRESULT_UINT a = args[0];
     // Make calculation based on format
     switch (inputFormat) {
-    case INPUT_FMT_UINT:
-    case INPUT_FMT_SINT:
+    case INPUT_FMT_INT:
         // Solve for 32bit unsigned or signed integer
         (*((SUBRESULT_UINT *)pResult)) = ~a;
         // TODO: add overflow detection
@@ -505,15 +479,7 @@ int8_t calc_sum(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
     }
     // Make calculation based on format
     switch (inputFormat) {
-    case INPUT_FMT_UINT:
-        // Solve for N bit unsigned integer
-        (*((SUBRESULT_UINT *)pResult)) = 0;
-        for (int i = 0; i < num_args; i++) {
-            (*((SUBRESULT_UINT *)pResult)) += (SUBRESULT_UINT)args[i];
-        }
-        // TODO: add overflow detection
-        break;
-    case INPUT_FMT_SINT:
+    case INPUT_FMT_INT:
         // Solve for N bit signed integer
         (*((SUBRESULT_INT *)pResult)) = 0;
         for (int i = 0; i < num_args; i++) {

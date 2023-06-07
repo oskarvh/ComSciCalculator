@@ -285,7 +285,7 @@ calc_funStatus_t calc_coreInit(calcCoreState_t *pCalcCoreState) {
     pCalcCoreState->cursorPosition = 0;
 
     // Set the input base to NONE
-    pCalcCoreState->inputBase = inputBase_NONE;
+    pCalcCoreState->numberFormat.inputBase = inputBase_NONE;
 
     // Set the first pointer to NULL
     pCalcCoreState->pListEntrypoint = NULL;
@@ -296,7 +296,10 @@ calc_funStatus_t calc_coreInit(calcCoreState_t *pCalcCoreState) {
     // Set the result to 0 and solved to false
     pCalcCoreState->result = 0;
     pCalcCoreState->solved = false;
-    pCalcCoreState->inputFormat = INPUT_FMT_UINT;
+    pCalcCoreState->numberFormat.formatBase = INPUT_FMT_INT;
+    pCalcCoreState->numberFormat.sign = false;
+    pCalcCoreState->numberFormat.numBits = 32;
+    pCalcCoreState->numberFormat.fixedPointDecimalPlace = 0;
 
     return calc_funStatus_SUCCESS;
 }
@@ -362,23 +365,24 @@ calc_funStatus_t calc_addInput(calcCoreState_t *pCalcCoreState,
 
     // Add the input
     pNewListEntry->entry.c = inputChar;
-    inputFormat_t inputFormat = pCalcCoreState->inputFormat;
+    inputFormat_t inputFormat = pCalcCoreState->numberFormat.formatBase;
+    bool sign = pCalcCoreState->numberFormat.sign;
     // Set the input subresult to 0
     pNewListEntry->entry.subresult = 0;
-    if (charIsNumerical(pCalcCoreState->inputBase, inputChar)) {
+    if (charIsNumerical(pCalcCoreState->numberFormat.inputBase, inputChar)) {
         pNewListEntry->entry.typeFlag =
-            CONSTRUCT_TYPEFLAG(inputFormat, SUBRESULT_TYPE_CHAR,
+            CONSTRUCT_TYPEFLAG(sign, inputFormat, SUBRESULT_TYPE_CHAR,
                                DEPTH_CHANGE_KEEP, INPUT_TYPE_NUMBER);
     } else if (charIsOperator(inputChar)) {
         // Get the operator
         const operatorEntry_t *pOp = getOperator(inputChar);
         if (pOp->bIncDepth) {
             pNewListEntry->entry.typeFlag =
-                CONSTRUCT_TYPEFLAG(inputFormat, SUBRESULT_TYPE_CHAR,
+                CONSTRUCT_TYPEFLAG(sign, inputFormat, SUBRESULT_TYPE_CHAR,
                                    DEPTH_CHANGE_INCREASE, INPUT_TYPE_OPERATOR);
         } else {
             pNewListEntry->entry.typeFlag =
-                CONSTRUCT_TYPEFLAG(inputFormat, SUBRESULT_TYPE_CHAR,
+                CONSTRUCT_TYPEFLAG(sign, inputFormat, SUBRESULT_TYPE_CHAR,
                                    DEPTH_CHANGE_KEEP, INPUT_TYPE_OPERATOR);
         }
         pNewListEntry->pFunEntry = (void *)pOp;
@@ -386,21 +390,21 @@ calc_funStatus_t calc_addInput(calcCoreState_t *pCalcCoreState,
     } else if (charIsBracket(inputChar)) {
         if (inputChar == OPENING_BRACKET) {
             pNewListEntry->entry.typeFlag =
-                CONSTRUCT_TYPEFLAG(inputFormat, SUBRESULT_TYPE_CHAR,
+                CONSTRUCT_TYPEFLAG(sign, inputFormat, SUBRESULT_TYPE_CHAR,
                                    DEPTH_CHANGE_INCREASE, INPUT_TYPE_EMPTY);
         } else {
             pNewListEntry->entry.typeFlag =
-                CONSTRUCT_TYPEFLAG(inputFormat, SUBRESULT_TYPE_CHAR,
+                CONSTRUCT_TYPEFLAG(sign, inputFormat, SUBRESULT_TYPE_CHAR,
                                    DEPTH_CHANGE_DECREASE, INPUT_TYPE_EMPTY);
         }
     } else if (charIsOther(inputChar)) {
         if (inputChar == ',') {
             pNewListEntry->entry.typeFlag =
-                CONSTRUCT_TYPEFLAG(inputFormat, SUBRESULT_TYPE_CHAR,
+                CONSTRUCT_TYPEFLAG(sign, inputFormat, SUBRESULT_TYPE_CHAR,
                                    DEPTH_CHANGE_KEEP, INPUT_TYPE_EMPTY);
         } else {
             pNewListEntry->entry.typeFlag =
-                CONSTRUCT_TYPEFLAG(inputFormat, SUBRESULT_TYPE_CHAR,
+                CONSTRUCT_TYPEFLAG(sign, inputFormat, SUBRESULT_TYPE_CHAR,
                                    DEPTH_CHANGE_KEEP, INPUT_TYPE_EMPTY);
         }
     } else {
@@ -414,7 +418,7 @@ calc_funStatus_t calc_addInput(calcCoreState_t *pCalcCoreState,
 
     // Add the current input base. Note: base change and propagation not handled
     // here
-    pNewListEntry->inputBase = pCalcCoreState->inputBase;
+    pNewListEntry->inputBase = pCalcCoreState->numberFormat.inputBase;
 
     // Add the new list entry to the correct place in the list
     if (pCurrentListEntry == NULL) {
@@ -609,22 +613,19 @@ calc_funStatus_t copyAndConvertList(calcCoreState_t *pCalcCoreState,
             INPUT_TYPE_NUMBER) {
             // If the current entry is numerical, aggregate this
             // until the entry is either NULL or not numerical
-            inputFormat_t inputFormat = pCalcCoreState->inputFormat;
+            inputFormat_t inputFormat = pCalcCoreState->numberFormat.formatBase;
+            bool sign = pCalcCoreState->numberFormat.sign;
             pNewListEntry->entry.typeFlag =
-                CONSTRUCT_TYPEFLAG(inputFormat, SUBRESULT_TYPE_INT,
+                CONSTRUCT_TYPEFLAG(sign, inputFormat, SUBRESULT_TYPE_INT,
                                    DEPTH_CHANGE_KEEP, INPUT_TYPE_NUMBER);
             pNewListEntry->entry.subresult = 0;
             while (GET_INPUT_TYPE(pCurrentListEntry->entry.typeFlag) ==
                    INPUT_TYPE_NUMBER) {
                 // Aggregate the input based on the input base
                 if (pCurrentListEntry->inputBase == inputBase_DEC) {
-                    if ((inputFormat == INPUT_FMT_UINT)) {
+                    if ((inputFormat == INPUT_FMT_INT)) {
                         SUBRESULT_UINT *pRes =
                             (SUBRESULT_UINT *)&(pNewListEntry->entry.subresult);
-                        *pRes = (*pRes) * 10;
-                    } else if ((inputFormat == INPUT_FMT_SINT)) {
-                        SUBRESULT_INT *pRes =
-                            (SUBRESULT_INT *)&(pNewListEntry->entry.subresult);
                         *pRes = (*pRes) * 10;
                     } else if ((inputFormat == INPUT_FMT_FLOAT)) {
                         // TODO
@@ -633,13 +634,9 @@ calc_funStatus_t copyAndConvertList(calcCoreState_t *pCalcCoreState,
                     }
                 }
                 if (pCurrentListEntry->inputBase == inputBase_HEX) {
-                    if ((inputFormat == INPUT_FMT_UINT)) {
+                    if ((inputFormat == INPUT_FMT_INT)) {
                         SUBRESULT_UINT *pRes =
                             (SUBRESULT_UINT *)&(pNewListEntry->entry.subresult);
-                        *pRes = (*pRes) * 16;
-                    } else if ((inputFormat == INPUT_FMT_SINT)) {
-                        SUBRESULT_INT *pRes =
-                            (SUBRESULT_INT *)&(pNewListEntry->entry.subresult);
                         *pRes = (*pRes) * 16;
                     } else if ((inputFormat == INPUT_FMT_FLOAT)) {
                         // TODO
@@ -648,13 +645,9 @@ calc_funStatus_t copyAndConvertList(calcCoreState_t *pCalcCoreState,
                     }
                 }
                 if (pCurrentListEntry->inputBase == inputBase_BIN) {
-                    if ((inputFormat == INPUT_FMT_UINT)) {
+                    if ((inputFormat == INPUT_FMT_INT)) {
                         SUBRESULT_UINT *pRes =
                             (SUBRESULT_UINT *)&(pNewListEntry->entry.subresult);
-                        *pRes = (*pRes) * 2;
-                    } else if ((inputFormat == INPUT_FMT_SINT)) {
-                        SUBRESULT_INT *pRes =
-                            (SUBRESULT_INT *)&(pNewListEntry->entry.subresult);
                         *pRes = (*pRes) * 2;
                     } else if ((inputFormat == INPUT_FMT_FLOAT)) {
                         // TODO
@@ -912,9 +905,10 @@ int solveExpression(calcCoreState_t *pCalcCoreState,
             logger("Solving %i %s %i\n", pPrevEntry->entry.subresult,
                    ((operatorEntry_t *)(pHigestPrioOp->pFunEntry))->opString,
                    pNextEntry->entry.subresult);
+
+            inputFormat_t inputFormat = pCalcCoreState->numberFormat.formatBase;
+            bool sign = pCalcCoreState->numberFormat.sign;
             // Get the function pointer casted to the correct format.
-            // TODO: THIS IS NOT THE CORRECT WAY.
-            inputFormat_t inputFormat = pCalcCoreState->inputFormat;
             int8_t (*pFun)(SUBRESULT_UINT * pResult, inputFormat_t inputFormat,
                            int num_args, SUBRESULT_UINT *args) =
                 (function_operator
@@ -936,7 +930,7 @@ int solveExpression(calcCoreState_t *pCalcCoreState,
             logger("Solved. Result was calculated to %i\r\n",
                    pHigestPrioOp->entry.subresult);
             pHigestPrioOp->entry.typeFlag =
-                CONSTRUCT_TYPEFLAG(inputFormat, SUBRESULT_TYPE_INT,
+                CONSTRUCT_TYPEFLAG(sign, inputFormat, SUBRESULT_TYPE_INT,
                                    DEPTH_CHANGE_KEEP, INPUT_TYPE_NUMBER);
             // Now repoint and free the input to each side of this operator.
             pHigestPrioOp->pNext = pNextEntry->pNext;
@@ -1031,7 +1025,8 @@ int solveExpression(calcCoreState_t *pCalcCoreState,
                 logger("Error: Incorrect arguments.\r\n");
                 return calc_solveStatus_INVALID_ARGS;
             }
-            inputFormat_t inputFormat = pCalcCoreState->inputFormat;
+            inputFormat_t inputFormat = pCalcCoreState->numberFormat.formatBase;
+            bool sign = pCalcCoreState->numberFormat.sign;
             int8_t (*pFun)(SUBRESULT_UINT * pResult, inputFormat_t inputFormat,
                            int num_args, SUBRESULT_UINT *args) =
                 (function_operator
@@ -1069,7 +1064,7 @@ int solveExpression(calcCoreState_t *pCalcCoreState,
             }
             // Construct a new typeflag for the result.
             pExprStart->entry.typeFlag =
-                CONSTRUCT_TYPEFLAG(inputFormat, SUBRESULT_TYPE_INT,
+                CONSTRUCT_TYPEFLAG(sign, inputFormat, SUBRESULT_TYPE_INT,
                                    DEPTH_CHANGE_KEEP, INPUT_TYPE_NUMBER);
             pResult = pExprStart;
             logger("pResult = 0x%08x, pResult->pNext = 0x%08x", pResult,

@@ -41,10 +41,10 @@
 #define DEPTH_CHANGE_RESERVED 3
 #define SUBRESULT_TYPE_CHAR 0
 #define SUBRESULT_TYPE_INT 1
-#define INPUT_FMT_UINT 0
-#define INPUT_FMT_SINT 1
-#define INPUT_FMT_FLOAT 2
-#define INPUT_FMT_FIXED 3
+#define INPUT_FMT_INT 0
+#define INPUT_FMT_FLOAT 1
+#define INPUT_FMT_FIXED 2
+#define INPUT_FMT_RESERVED 3
 /**@}*/
 /* -------------------------------------------
  * ----------------- MACROS ------------------
@@ -53,8 +53,10 @@
  * @defgroup entryFlagMacros Macros for entry flags
  * @{
  */
-#define CONSTRUCT_TYPEFLAG(inputFormat, subResType, depthFlag, inputType)      \
-    (inputFormat << 5 | subResType << 4 | depthFlag << 2 | inputType)
+#define CONSTRUCT_TYPEFLAG(sign, inputFormat, subResType, depthFlag,           \
+                           inputType)                                          \
+    (sign << 7 | inputFormat << 5 | subResType << 4 | depthFlag << 2 |         \
+     inputType)
 #define GET_DEPTH_FLAG(typeFlag) ((typeFlag >> 2) & 0x3)
 #define GET_INPUT_TYPE(typeFlag) ((typeFlag)&0x3)
 #define GET_SUBRESULT_TYPE(typeFlag) ((typeFlag >> 4) & 0x1)
@@ -74,7 +76,7 @@ typedef uint8_t inputFormat_t;
  * @defgroup subresTypedefs Typedefs for sub results.
  * @note These define the type for which the result and
  *   subresults are calculated and displayed with.
- * @warning All of these must have the same bit length!
+ * @warning These shall be removed and replaced with numberFormat
  * @{
  */
 typedef uint32_t SUBRESULT_UINT;
@@ -82,6 +84,9 @@ typedef int32_t SUBRESULT_INT;
 typedef double SUBRESULT_FLOAT;
 typedef uint32_t SUBRESULT_FIXED;
 /**@}*/
+
+//! Typedef for the input base (dec, hex, bin, none)
+typedef uint8_t inputBase_t;
 
 /**
  * @brief Typedef for the operator funtion
@@ -183,6 +188,59 @@ typedef struct operatorEntry {
      */
     int8_t numArgs;
 } operatorEntry_t;
+
+/**
+ * @brief Struct holding the number format for the current entry
+ *
+ * @note Some of these might change throughout an expression,
+ * such as the base such as  mixing binary and decimal numbers in
+ * an expression, e.g., 0b101+0xff.
+ * Some might not however, such as the number of bytes,
+ * fixed point decimal place and so on.
+ */
+typedef struct numberFormat {
+    /**
+     * @param numBits Number of bits used in calculations
+     * @note Maximum is 128 bits, and the output will be
+     * truncated to 128 bits as well.
+     * @warning Fixed to 32/single or 64/double precision
+     * for floating point.
+     */
+    uint8_t numBits;
+
+    /**
+     * @param formatBase Base of the format
+     * 0 = integer base
+     * 1 = fixed point
+     * 2 = floating point
+     * others = Not valid
+     */
+    uint8_t formatBase;
+
+    /**
+     * @param sign True if using signed, false if unsigned
+     */
+    bool sign;
+
+    /**
+     * @param inputBase Base of incoming input.
+     * @note This can be changed throughout an entry,
+     * and if it's changed within a number, that number
+     * shall be converted to the new base. E.g.
+     * input = 0b10+0b10| ->/change base/->0b10+0x2
+     * @warning Fixed to decimal or binary for floating point.
+     */
+    inputBase_t inputBase;
+
+    /**
+     * @param fixedPointDecimalPlace Decimal place for fixed point
+     * @note Parameter only valid for fixed point. Denotes
+     * how many entires to the left of the decimal place, i.e.
+     * 123.4 is 3, 0b0002.29 is 4 etc.
+     */
+    uint16_t fixedPointDecimalPlace;
+
+} numberFormat_t;
 
 /* -------------------------------------------
  * ---------------- VARIABLES ----------------
