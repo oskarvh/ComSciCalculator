@@ -624,8 +624,8 @@ calc_funStatus_t copyAndConvertList(calcCoreState_t *pCalcCoreState,
                 // Aggregate the input based on the input base
                 if (pCurrentListEntry->inputBase == inputBase_DEC) {
                     if ((inputFormat == INPUT_FMT_INT)) {
-                        SUBRESULT_UINT *pRes =
-                            (SUBRESULT_UINT *)&(pNewListEntry->entry.subresult);
+                        SUBRESULT_INT *pRes =
+                            (SUBRESULT_INT *)&(pNewListEntry->entry.subresult);
                         *pRes = (*pRes) * 10;
                     } else if ((inputFormat == INPUT_FMT_FLOAT)) {
                         // TODO
@@ -635,8 +635,8 @@ calc_funStatus_t copyAndConvertList(calcCoreState_t *pCalcCoreState,
                 }
                 if (pCurrentListEntry->inputBase == inputBase_HEX) {
                     if ((inputFormat == INPUT_FMT_INT)) {
-                        SUBRESULT_UINT *pRes =
-                            (SUBRESULT_UINT *)&(pNewListEntry->entry.subresult);
+                        SUBRESULT_INT *pRes =
+                            (SUBRESULT_INT *)&(pNewListEntry->entry.subresult);
                         *pRes = (*pRes) * 16;
                     } else if ((inputFormat == INPUT_FMT_FLOAT)) {
                         // TODO
@@ -646,8 +646,8 @@ calc_funStatus_t copyAndConvertList(calcCoreState_t *pCalcCoreState,
                 }
                 if (pCurrentListEntry->inputBase == inputBase_BIN) {
                     if ((inputFormat == INPUT_FMT_INT)) {
-                        SUBRESULT_UINT *pRes =
-                            (SUBRESULT_UINT *)&(pNewListEntry->entry.subresult);
+                        SUBRESULT_INT *pRes =
+                            (SUBRESULT_INT *)&(pNewListEntry->entry.subresult);
                         *pRes = (*pRes) * 2;
                     } else if ((inputFormat == INPUT_FMT_FLOAT)) {
                         // TODO
@@ -717,7 +717,7 @@ uint8_t countArgs(inputListEntry_t *pStart, inputListEntry_t *pEnd) {
  * @param pStart Pointer to start of list
  * @return 0 if OK, otherwise -1
  */
-int8_t readOutArgs(SUBRESULT_UINT *pArgs, int8_t numArgs,
+int8_t readOutArgs(SUBRESULT_INT *pArgs, int8_t numArgs,
                    inputListEntry_t *pStart, inputListEntry_t *pEnd) {
     // pArgs must have been allocated
     if (pStart == NULL) {
@@ -909,17 +909,17 @@ int solveExpression(calcCoreState_t *pCalcCoreState,
             inputFormat_t inputFormat = pCalcCoreState->numberFormat.formatBase;
             bool sign = pCalcCoreState->numberFormat.sign;
             // Get the function pointer casted to the correct format.
-            int8_t (*pFun)(SUBRESULT_UINT * pResult, inputFormat_t inputFormat,
-                           int num_args, SUBRESULT_UINT *args) =
+            int8_t (*pFun)(SUBRESULT_INT * pResult, numberFormat_t numberFormat,
+                           int num_args, SUBRESULT_INT *args) =
                 (function_operator
                      *)(((operatorEntry_t *)(pHigestPrioOp->pFunEntry))->pFun);
-            SUBRESULT_UINT pArgs[2];
-            pArgs[0] = (SUBRESULT_UINT)(pPrevEntry->entry.subresult);
-            pArgs[1] = (SUBRESULT_UINT)(pNextEntry->entry.subresult);
+            SUBRESULT_INT pArgs[2];
+            pArgs[0] = (SUBRESULT_INT)(pPrevEntry->entry.subresult);
+            pArgs[1] = (SUBRESULT_INT)(pNextEntry->entry.subresult);
             // Solve the operation and save the results to the operator
             // subresults.
             int8_t calcStatus = (*pFun)(&(pHigestPrioOp->entry.subresult),
-                                        inputFormat, 2, pArgs);
+                                        pCalcCoreState->numberFormat, 2, pArgs);
             if (calcStatus < 0) {
                 logger("ERROR: Calculation not solvable");
                 return calc_solveStatus_CALC_NOT_SOLVABLE;
@@ -1014,8 +1014,8 @@ int solveExpression(calcCoreState_t *pCalcCoreState,
                 }
             }
             // Allocate a temporary buffer to hold all arguments and calculate
-            SUBRESULT_UINT *pArgs =
-                malloc(numArgsInBuffer * sizeof(SUBRESULT_UINT));
+            SUBRESULT_INT *pArgs =
+                malloc(numArgsInBuffer * sizeof(SUBRESULT_INT));
             if (pArgs == NULL) {
                 logger("Arguments could not be allocated!\r\n");
                 return calc_solveStatus_ALLOCATION_ERROR;
@@ -1027,13 +1027,14 @@ int solveExpression(calcCoreState_t *pCalcCoreState,
             }
             inputFormat_t inputFormat = pCalcCoreState->numberFormat.formatBase;
             bool sign = pCalcCoreState->numberFormat.sign;
-            int8_t (*pFun)(SUBRESULT_UINT * pResult, inputFormat_t inputFormat,
-                           int num_args, SUBRESULT_UINT *args) =
+            int8_t (*pFun)(SUBRESULT_INT * pResult, numberFormat_t numberFormat,
+                           int num_args, SUBRESULT_INT *args) =
                 (function_operator
                      *)(((operatorEntry_t *)(pExprStart->pFunEntry))->pFun);
 
-            int8_t calcStatus = (*pFun)(&(pExprStart->entry.subresult),
-                                        inputFormat, numArgsInBuffer, pArgs);
+            int8_t calcStatus =
+                (*pFun)(&(pExprStart->entry.subresult),
+                        pCalcCoreState->numberFormat, numArgsInBuffer, pArgs);
             logger("Result of outer expression = %i\r\n",
                    pExprStart->entry.subresult);
 
@@ -1086,7 +1087,7 @@ calc_funStatus_t calc_solver(calcCoreState_t *pCalcCoreState) {
 
     // Local variables to keep track while the solver is
     // at work. Should be copied to core state when done.
-    SUBRESULT_UINT result = 0;
+    SUBRESULT_INT result = 0;
     bool solved = false;
     int depth = 0;
     bool overflow = false;

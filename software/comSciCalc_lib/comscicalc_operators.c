@@ -232,23 +232,8 @@ const operatorEntry_t operators[NUM_OPERATORS] = {
 /* ------ CALCULATOR OPERATOR FUNCTIONS ------ */
 
 // Calculator operator functions to be used in "operators" table
-/************************************************************
- *  @brief Function to add two numbers together
- *
- * This function is utilizing the default compiler addition
- * to add two, and only two, arguments.
- *
- * @param   pResult     Pointer to the where the result of
- *                      addition should be placed.
- *                      Note that the type is generic, and
- *                      will be casted to the input format.
- * @param   inputFormat Flag indicating integer, float or
- *                      fixed point format. See INPUT_FMT_<>
- * @param   inputFormat Flag indicating integer, float or
- *                      fixed point format. See INPUT_FMT_<>
- ***********************************************************/
-int8_t calc_add(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
-                int num_args, SUBRESULT_UINT *args) {
+int8_t calc_add(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
+                int num_args, SUBRESULT_INT *args) {
 
     // Only expecting two variable arguments here
     if (num_args != 2) {
@@ -257,10 +242,10 @@ int8_t calc_add(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
 
     // Read out the args as uint32_t. Will be casted later on
 
-    SUBRESULT_UINT a = args[0];
-    SUBRESULT_UINT b = args[1];
+    SUBRESULT_INT a = args[0];
+    SUBRESULT_INT b = args[1];
     // Make calculation based on format
-    switch (inputFormat) {
+    switch (numberFormat.formatBase) {
     case INPUT_FMT_INT:
         // Solve for N bit signed integer
         (*((SUBRESULT_INT *)pResult)) = a + b;
@@ -268,7 +253,7 @@ int8_t calc_add(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
         break;
     case INPUT_FMT_FLOAT:
         // Solve for 32bit floats
-        (*((SUBRESULT_FLOAT *)pResult)) = a + b;
+        (*((SUBRESULT_INT *)pResult)) = a + b;
         // TODO: add overflow detection
         break;
     case INPUT_FMT_FIXED:
@@ -280,8 +265,8 @@ int8_t calc_add(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
     return function_solved;
 }
 
-int8_t calc_subtract(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
-                     int num_args, SUBRESULT_UINT *args) {
+int8_t calc_subtract(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
+                     int num_args, SUBRESULT_INT *args) {
     // Only expecting two variable arguments here
     if (num_args != 2) {
         return incorrect_args;
@@ -289,10 +274,10 @@ int8_t calc_subtract(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
 
     // Read out the args as uint32_t. Will be casted later on
 
-    SUBRESULT_UINT a = args[0];
-    SUBRESULT_UINT b = args[1];
+    SUBRESULT_INT a = args[0];
+    SUBRESULT_INT b = args[1];
     // Make calculation based on format
-    switch (inputFormat) {
+    switch (numberFormat.formatBase) {
     case INPUT_FMT_INT:
         // Solve for N bit signed integer
         (*((SUBRESULT_INT *)pResult)) = a - b;
@@ -300,7 +285,7 @@ int8_t calc_subtract(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
         break;
     case INPUT_FMT_FLOAT:
         // Solve for 32bit float
-        (*((SUBRESULT_FLOAT *)pResult)) = a - b;
+        (*((SUBRESULT_INT *)pResult)) = a - b;
         // TODO: add overflow detection
         break;
     case INPUT_FMT_FIXED:
@@ -312,8 +297,8 @@ int8_t calc_subtract(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
     return function_solved;
 }
 
-int8_t calc_multiply(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
-                     int num_args, SUBRESULT_UINT *args) {
+int8_t calc_multiply(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
+                     int num_args, SUBRESULT_INT *args) {
     // Only expecting two variable arguments here
     if (num_args != 2) {
         return incorrect_args;
@@ -321,10 +306,10 @@ int8_t calc_multiply(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
 
     // Read out the args as uint32_t. Will be casted later on
 
-    SUBRESULT_UINT a = args[0];
-    SUBRESULT_UINT b = args[1];
+    SUBRESULT_INT a = args[0];
+    SUBRESULT_INT b = args[1];
     // Make calculation based on format
-    switch (inputFormat) {
+    switch (numberFormat.formatBase) {
     case INPUT_FMT_INT:
         // Solve for 32 bit signed integer
         (*((SUBRESULT_INT *)pResult)) = a * b;
@@ -332,7 +317,7 @@ int8_t calc_multiply(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
         break;
     case INPUT_FMT_FLOAT:
         // Solve for 32bit float
-        (*((SUBRESULT_FLOAT *)pResult)) = a * b;
+        (*((SUBRESULT_INT *)pResult)) = a * b;
         // TODO: add overflow detection
         break;
     case INPUT_FMT_FIXED:
@@ -344,8 +329,8 @@ int8_t calc_multiply(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
     return function_solved;
 }
 
-int8_t calc_divide(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
-                   int num_args, SUBRESULT_UINT *args) {
+int8_t calc_divide(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
+                   int num_args, SUBRESULT_INT *args) {
     // Only expecting two variable arguments here
     if (num_args != 2) {
         return incorrect_args;
@@ -353,13 +338,13 @@ int8_t calc_divide(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
 
     // Read out the args as uint32_t. Will be casted later on
 
-    SUBRESULT_UINT a = args[0];
-    SUBRESULT_UINT b = args[1];
+    SUBRESULT_INT a = args[0];
+    SUBRESULT_INT b = args[1];
     if (b == 0) {
         return error_args;
     }
     // Make calculation based on format
-    switch (inputFormat) {
+    switch (numberFormat.formatBase) {
     case INPUT_FMT_INT:
         // Solve for 32 bit signed integer
         (*((SUBRESULT_INT *)pResult)) = a / b;
@@ -367,7 +352,7 @@ int8_t calc_divide(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
         break;
     case INPUT_FMT_FLOAT:
         // Solve for 32bit float
-        (*((SUBRESULT_FLOAT *)pResult)) = a / b;
+        (*((SUBRESULT_INT *)pResult)) = a / b;
         // TODO: add overflow detection
         break;
     case INPUT_FMT_FIXED:
@@ -379,8 +364,8 @@ int8_t calc_divide(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
     return function_solved;
 }
 
-int8_t calc_and(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
-                int num_args, SUBRESULT_UINT *args) {
+int8_t calc_and(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
+                int num_args, SUBRESULT_INT *args) {
     // Only expecting two variable arguments here
     if (num_args != 2) {
         return incorrect_args;
@@ -388,12 +373,12 @@ int8_t calc_and(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
 
     // Read out the args as uint32_t. Will be casted later on
 
-    SUBRESULT_UINT a = args[0];
-    SUBRESULT_UINT b = args[1];
+    SUBRESULT_INT a = args[0];
+    SUBRESULT_INT b = args[1];
     if (b == 0) {
         return error_args;
     }
-    switch (inputFormat) {
+    switch (numberFormat.formatBase) {
     case INPUT_FMT_INT:
         // Solve for 32 bit signed integer
         (*((SUBRESULT_INT *)pResult)) = a & b;
@@ -413,23 +398,23 @@ int8_t calc_and(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
     return function_solved;
 }
 
-int8_t calc_nand(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
-                 int num_args, SUBRESULT_UINT *args) {
+int8_t calc_nand(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
+                 int num_args, SUBRESULT_INT *args) {
     return function_solved;
 }
 
-int8_t calc_or(SUBRESULT_UINT *pResult, inputFormat_t inputFormat, int num_args,
-               SUBRESULT_UINT *args) {
+int8_t calc_or(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
+               int num_args, SUBRESULT_INT *args) {
     return function_solved;
 }
 
-int8_t calc_xor(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
-                int num_args, SUBRESULT_UINT *args) {
+int8_t calc_xor(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
+                int num_args, SUBRESULT_INT *args) {
     return function_solved;
 }
 
-int8_t calc_not(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
-                int num_args, SUBRESULT_UINT *args) {
+int8_t calc_not(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
+                int num_args, SUBRESULT_INT *args) {
     // Only expecting one variable arguments here
     if (num_args != 1) {
         return incorrect_args;
@@ -437,17 +422,17 @@ int8_t calc_not(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
 
     // Read out the args as uint32_t. Will be casted later on
 
-    SUBRESULT_UINT a = args[0];
+    SUBRESULT_INT a = args[0];
     // Make calculation based on format
-    switch (inputFormat) {
+    switch (numberFormat.formatBase) {
     case INPUT_FMT_INT:
         // Solve for 32bit unsigned or signed integer
-        (*((SUBRESULT_UINT *)pResult)) = ~a;
+        (*((SUBRESULT_INT *)pResult)) = ~a;
         // TODO: add overflow detection
         break;
     case INPUT_FMT_FLOAT:
         // Does not make sense for float. But I'll allow it.
-        (*((SUBRESULT_FLOAT *)pResult)) = ~a;
+        (*((SUBRESULT_INT *)pResult)) = ~a;
         break;
     case INPUT_FMT_FIXED:
         // TODO:Solve for fixed point.
@@ -458,18 +443,18 @@ int8_t calc_not(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
     return function_solved;
 }
 
-int8_t calc_leftshift(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
-                      int num_args, SUBRESULT_UINT *args) {
+int8_t calc_leftshift(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
+                      int num_args, SUBRESULT_INT *args) {
     return function_solved;
 }
 
-int8_t calc_rightshift(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
-                       int num_args, SUBRESULT_UINT *args) {
+int8_t calc_rightshift(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
+                       int num_args, SUBRESULT_INT *args) {
     return function_solved;
 }
 
-int8_t calc_sum(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
-                int num_args, SUBRESULT_UINT *args) {
+int8_t calc_sum(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
+                int num_args, SUBRESULT_INT *args) {
 
     if (args == NULL) {
         return incorrect_args;
@@ -478,7 +463,7 @@ int8_t calc_sum(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
         return incorrect_args;
     }
     // Make calculation based on format
-    switch (inputFormat) {
+    switch (numberFormat.formatBase) {
     case INPUT_FMT_INT:
         // Solve for N bit signed integer
         (*((SUBRESULT_INT *)pResult)) = 0;
@@ -489,9 +474,9 @@ int8_t calc_sum(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
         break;
     case INPUT_FMT_FLOAT:
         // Solve for 32bit floats
-        (*((SUBRESULT_FLOAT *)pResult)) = 0;
+        (*((SUBRESULT_INT *)pResult)) = 0;
         for (int i = 0; i < num_args; i++) {
-            (*((SUBRESULT_FLOAT *)pResult)) += (SUBRESULT_FLOAT)args[i];
+            (*((SUBRESULT_INT *)pResult)) += (SUBRESULT_INT)args[i];
         }
         // TODO: add overflow detection
         break;

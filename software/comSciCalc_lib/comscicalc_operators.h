@@ -79,25 +79,11 @@ typedef uint8_t inputFormat_t;
  * @warning These shall be removed and replaced with numberFormat
  * @{
  */
-typedef uint32_t SUBRESULT_UINT;
-typedef int32_t SUBRESULT_INT;
-typedef double SUBRESULT_FLOAT;
-typedef uint32_t SUBRESULT_FIXED;
+typedef int64_t SUBRESULT_INT;
 /**@}*/
 
 //! Typedef for the input base (dec, hex, bin, none)
 typedef uint8_t inputBase_t;
-
-/**
- * @brief Typedef for the operator funtion
- *
- * This typedef is used to typecast the function pointer
- * to the operator to the correct form.
- * @warning Must have the same format for all operator functions.
- */
-typedef int8_t function_operator(SUBRESULT_UINT *pResult,
-                                 inputFormat_t inputFormat, int num_args,
-                                 SUBRESULT_UINT *args);
 
 /**
  * @brief Enumeration for operator status
@@ -201,8 +187,9 @@ typedef struct operatorEntry {
 typedef struct numberFormat {
     /**
      * @param numBits Number of bits used in calculations
-     * @note Maximum is 128 bits, and the output will be
-     * truncated to 128 bits as well.
+     * @note Maximum is 64 bits, and the output will be
+     * truncated to 64 bits as well. Might support
+     * custom 128 bits in the future.
      * @warning Fixed to 32/single or 64/double precision
      * for floating point.
      */
@@ -253,6 +240,17 @@ const operatorEntry_t operators[NUM_OPERATORS];
  * -------------------------------------------*/
 
 /**
+ * @brief Typedef for the operator funtion
+ *
+ * This typedef is used to typecast the function pointer
+ * to the operator to the correct form.
+ * @warning Must have the same format for all operator functions.
+ */
+typedef int8_t function_operator(SUBRESULT_INT *pResult,
+                                 numberFormat_t numberFormat, int num_args,
+                                 SUBRESULT_INT *args);
+
+/**
  * @defgroup calc_functions Calculation functions.
  * @param pResult Pointer to where the result shall be written
  * @param inputFormat Flag to indicate the format.
@@ -266,41 +264,41 @@ const operatorEntry_t operators[NUM_OPERATORS];
  * @{
  */
 //! Function for handling addition.
-int8_t calc_add(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
-                int num_args, SUBRESULT_UINT *args);
+int8_t calc_add(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
+                int num_args, SUBRESULT_INT *args);
 //! Function for handling subtraction.
-int8_t calc_subtract(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
-                     int num_args, SUBRESULT_UINT *args);
+int8_t calc_subtract(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
+                     int num_args, SUBRESULT_INT *args);
 //! Function for handling normal multiplication.
-int8_t calc_multiply(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
-                     int num_args, SUBRESULT_UINT *args);
+int8_t calc_multiply(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
+                     int num_args, SUBRESULT_INT *args);
 //! Function for handling normal division.
-int8_t calc_divide(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
-                   int num_args, SUBRESULT_UINT *args);
+int8_t calc_divide(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
+                   int num_args, SUBRESULT_INT *args);
 //! Function for handling bitwise leftshift. Adds zeros
-int8_t calc_leftshift(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
-                      int num_args, SUBRESULT_UINT *args);
+int8_t calc_leftshift(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
+                      int num_args, SUBRESULT_INT *args);
 //! Function for handling bitwise rightshift. Adds zeros
-int8_t calc_rightshift(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
-                       int num_args, SUBRESULT_UINT *args);
+int8_t calc_rightshift(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
+                       int num_args, SUBRESULT_INT *args);
 //! Function for calculating the sum of a variable amount of arguments.
-int8_t calc_sum(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
-                int num_args, SUBRESULT_UINT *args);
+int8_t calc_sum(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
+                int num_args, SUBRESULT_INT *args);
 //! Function for calculating bitwise AND
-int8_t calc_and(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
-                int num_args, SUBRESULT_UINT *args);
+int8_t calc_and(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
+                int num_args, SUBRESULT_INT *args);
 //! Function for calculating bitwise NAND
-int8_t calc_nand(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
-                 int num_args, SUBRESULT_UINT *args);
+int8_t calc_nand(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
+                 int num_args, SUBRESULT_INT *args);
 //! Function for calculating bitwise OR
-int8_t calc_or(SUBRESULT_UINT *pResult, inputFormat_t inputFormat, int num_args,
-               SUBRESULT_UINT *args);
+int8_t calc_or(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
+               int num_args, SUBRESULT_INT *args);
 //! Function for calculating bitwise XOR
-int8_t calc_xor(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
-                int num_args, SUBRESULT_UINT *args);
+int8_t calc_xor(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
+                int num_args, SUBRESULT_INT *args);
 //! Function for calculating bitwise NOT
-int8_t calc_not(SUBRESULT_UINT *pResult, inputFormat_t inputFormat,
-                int num_args, SUBRESULT_UINT *args);
+int8_t calc_not(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
+                int num_args, SUBRESULT_INT *args);
 /**@}*/
 
 #endif

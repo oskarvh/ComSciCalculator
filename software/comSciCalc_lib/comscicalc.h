@@ -158,7 +158,7 @@ typedef struct inputType {
     typeFlag_t typeFlag;
 
     //! Partial restult. Only used for when solving.
-    SUBRESULT_UINT subresult;
+    SUBRESULT_INT subresult;
 } inputType_t;
 
 /**
@@ -233,7 +233,7 @@ typedef struct calcCoreState {
     /**
      * @param result Result of current buffer if #solved is true
      */
-    SUBRESULT_UINT result;
+    SUBRESULT_INT result;
 
     /**
      * @param numberFormat The current number format.
