@@ -57,6 +57,9 @@ SOFTWARE.
  *              [Hex output] |             [Decimal output]
  * */
 
+#define DISPLAY_EVENT_NEW_DATA 1
+#define DISPLAY_EVENT_CURSOR (1 << 1)
+
 //! Top line which parts the options from the input
 #define OUTLINE_WIDTH 2*16
 /**
@@ -123,6 +126,7 @@ SOFTWARE.
 #define PURPLE  0x800080
 #define WHITE   0xffffff
 #define BLACK   0x000000
+#define GRAY    0x969696
 #define TURQOISE 0x00fff7
  /**@}*/
 
@@ -181,14 +185,19 @@ typedef struct displayState {
      */
     uint8_t fontIdx;
     /**
-     * @param printedInputBuffer Input buffer printed by calc core.
-     */
-    char printedInputBuffer[MAX_PRINTED_BUFFER_LEN];
-    /**
      * @param syntaxIssueIndex Index to the first char in the input
      * string that has a syntax issue
      */
     int16_t syntaxIssueIndex;
+    /**
+     * @param cursorLoc Cursor location, copied from the corestate
+     */
+    uint8_t cursorLoc;
+    /**
+     * @param printedInputBuffer Input buffer printed by calc core.
+     */
+    char printedInputBuffer[MAX_PRINTED_BUFFER_LEN];
+
 } displayState_t;
 
 /* -------------------------------------------

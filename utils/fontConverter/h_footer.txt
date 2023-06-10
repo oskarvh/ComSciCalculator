@@ -2,7 +2,7 @@
 
 font_t font_<filename> = {
     .rom_font = false,
-    .ft81x_font_index = 0, // NOTE: This needs to be added
+    .ft81x_font_index = 0, // NOTE: This needs to be added at runtime
     .font_name = "<filename>\0",
     .font_format = <font_format>,
     .font_size = <font_size>,

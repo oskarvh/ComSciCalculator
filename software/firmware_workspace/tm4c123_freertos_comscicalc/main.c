@@ -41,6 +41,7 @@
 #include "driverlib/rom.h"
 #include "driverlib/sysctl.h"
 #include "driverlib/uart.h"
+#include "driverlib/timer.h"
 #include "utils/uartstdio.h"
 #include "FreeRTOS.h"
 #include "task.h"
@@ -137,6 +138,13 @@ void uartRxIntHandler(void){
     }
 }
 
+void Timer0IntHandler(void)
+{
+    ROM_TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);  // Clear the timer interrupt
+    // Set the cursor event.
+    xEventGroupSetBitsFromISR(displayTriggerEvent, DISPLAY_EVENT_CURSOR, NULL);
+}
+
 //*****************************************************************************
 //
 // Configure the UART and its pins.  This must be called before UARTprintf().
@@ -169,12 +177,30 @@ void ConfigureUART(void)
     // Register an interrupt for the UART receive
     UARTIntEnable(UART0_BASE, UART_INT_RX);
 #ifdef PART_TM4C123GH6PM
-    IntPrioritySet(INT_UART0_TM4C123, configMAX_SYSCALL_INTERRUPT_PRIORITY+2);
+    IntPrioritySet(INT_UART0_TM4C123, configMAX_SYSCALL_INTERRUPT_PRIORITY+3);
 #elif PART_TM4C129 //TODO
 
 #endif
     UARTIntRegister(UART0_BASE, &uartRxIntHandler);
 }
+
+void initTimer()
+{
+    ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER0);
+    ROM_TimerConfigure(TIMER0_BASE, TIMER_CFG_PERIODIC);   // 32 bits Timer
+    IntPrioritySet(INT_TIMER0A_TM4C123, configMAX_SYSCALL_INTERRUPT_PRIORITY+2);
+    TimerIntRegister(TIMER0_BASE, TIMER_A, Timer0IntHandler);    // Registering  isr
+    ROM_TimerEnable(TIMER0_BASE, TIMER_A);
+    ROM_IntEnable(INT_TIMER0A);
+    ROM_TimerIntEnable(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
+
+    uint8_t freqHz = 1;   // frequency in Hz
+    uint32_t period = (SysCtlClockGet() / freqHz)/ 2;
+    ROM_TimerLoadSet(TIMER0_BASE, TIMER_A, period -1);
+
+}
+
+
 
 //*****************************************************************************
 //
@@ -252,7 +278,7 @@ void calcCoreTask(void *p){
 
             // All input has been read, ready to solve the current state of the input buffer.
             // Reset the result to 0 to have a clean slate.
-            calcState.result = 0;
+            //calcState.result = 0;
 
             // Set the output buffer to all null terminators.
             memset(displayState.printedInputBuffer, 0, MAX_PRINTED_BUFFER_LEN);
@@ -269,11 +295,14 @@ void calcCoreTask(void *p){
                                                             MAX_PRINTED_BUFFER_LEN,
                                                             &displayState.syntaxIssueIndex);
                 displayState.solveStatus = solveStatus;
-                displayState.result = calcState.result;
+                if(solveStatus == calc_solveStatus_SUCCESS){
+                    displayState.result = calcState.result;
+                }
+                displayState.cursorLoc = calcState.cursorPosition;
                 // Give the semaphore back
                 xSemaphoreGive(displayStateSemaphore);
             }
-            xEventGroupSetBits(displayTriggerEvent, 1);
+            xEventGroupSetBits(displayTriggerEvent, DISPLAY_EVENT_NEW_DATA);
         }
     }
 }
@@ -347,6 +376,10 @@ main(void)
 
     // Start by giving the semaphore, as the semaphore needs to initialize once
     xSemaphoreGive(displayStateSemaphore);
+
+    // Initialize the timer after the tasks have been created to minimize the
+    // risk of setting the off the timer before the task are run.
+    initTimer();
 
     // Start the scheduler.  This should not return.
     vTaskStartScheduler();

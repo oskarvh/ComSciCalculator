@@ -14,7 +14,7 @@
 #include <stdint.h>
 #include "font.h"
 
-const uint8_t Comic_Sans_MS_38_L2 [40998] = 
+const uint8_t Comic_Sans_MS_38_L2 [40998] =
 /*Command Line: fnt_cvt.exe -f legacy -C FT81X -i C:/Users/oskar/Downloads/comic sans/Comic_Sans_MS.ttf -s 38 -d 0 -c setfont2 -l 32 -g -r U+0020-U+007E -o C:/Users/oskar/Downloads/comic sans/generated -O 2*/ 
 
 /*95 characters have been converted */

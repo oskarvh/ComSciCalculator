@@ -14,7 +14,7 @@
 #include <stdint.h>
 #include "font.h"
 
-const uint8_t Cascadia_38_L2 [24340] = 
+const uint8_t Cascadia_38_L2 [24340] =
 /*Command Line: fnt_cvt.exe -f legacy -C FT81X -i C:/Users/oskar/Downloads/cascadia-code/Cascadia.ttf -s 38 -d 0 -c setfont2 -l 32 -g -r U+0020-U+007E; U+2200-U+22FF -o C:/Users/oskar/Downloads/cascadia-code/converted_eve/test -O 2*/ 
 
 /*96 characters have been converted */

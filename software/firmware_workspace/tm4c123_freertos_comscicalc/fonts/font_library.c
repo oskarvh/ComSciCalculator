@@ -62,8 +62,8 @@ font_t rom_font_1 = {
 
 font_t *pFontLibraryTable[MAX_LEN_FONT_LIBRARY_TABLE] = {
     [0] = &rom_font_0,
-    [1] = &font_Comic_Sans_MS_38_L2,//font_Cascadia_38_L2,
-    [2] = NULL,//&font_Comic_Sans_MS_38_L2,
+    [1] = &font_Cascadia_38_L2,
+    [2] = &font_Comic_Sans_MS_38_L2,
     [3] = NULL,
     [4] = NULL,
     [5] = NULL,
