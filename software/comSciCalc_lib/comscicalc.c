@@ -1439,6 +1439,78 @@ calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
         previousInputType = currentInputType;
         pCurrentListEntry = pCurrentListEntry->pNext;
     }
-
     return calc_funStatus_SUCCESS;
+}
+
+uint8_t calc_getCursorLocation(calcCoreState_t *pCalcCoreState) {
+    // Check pointer to calculator core state
+    if (pCalcCoreState == NULL) {
+        return calc_funStatus_CALC_CORE_STATE_NULL;
+    }
+    inputListEntry_t *pCurrentListEntry = pCalcCoreState->pListEntrypoint;
+
+    // Check pointer to input list
+    if (pCurrentListEntry == NULL) {
+        return calc_funStatus_INPUT_LIST_NULL;
+    }
+
+    // Get the end of the list
+    while (pCurrentListEntry->pNext != NULL) {
+        pCurrentListEntry = pCurrentListEntry->pNext;
+    }
+
+    // Start going backwards for the length of the cursor, and
+    // save the number of chars in the entry.
+    uint8_t numChars = 0;
+    uint8_t cursorCounter = 0;
+    while (pCurrentListEntry != NULL) {
+        if (cursorCounter >= pCalcCoreState->cursorPosition) {
+            return numChars;
+        }
+        // Get the input type
+        uint8_t currentInputType =
+            GET_INPUT_TYPE(pCurrentListEntry->entry.typeFlag);
+        if (currentInputType == INPUT_TYPE_NUMBER) {
+            numChars += 1;
+            // This entry is always 1 char wide, unless the
+            // entry base is not decimal, then the
+            // first entry has 1+2 chars to account for.
+            if ((pCurrentListEntry->inputBase == inputBase_HEX) ||
+                (pCurrentListEntry->inputBase == inputBase_BIN)) {
+                if (pCurrentListEntry->pPrevious != NULL) {
+                    // Check if the previous entry has a different type than
+                    // number
+                    if (GET_INPUT_TYPE(
+                            ((inputListEntry_t *)(pCurrentListEntry->pPrevious))
+                                ->entry.typeFlag) != INPUT_TYPE_NUMBER) {
+                        numChars += 2;
+                    }
+                } else {
+                    // This is the first entry, hence there are always
+                    // either a 0x or a 0b entry here.
+                    numChars += 2;
+                }
+            }
+        } else if (currentInputType == INPUT_TYPE_OPERATOR) {
+            // Get the operator, and add the length of the string
+            const operatorEntry_t *pOperator =
+                (operatorEntry_t *)pCurrentListEntry->pFunEntry;
+            numChars += strlen(pOperator->opString);
+            // If the operator is depth increasing, this is always printed with
+            // an opening bracket automatically, so include that as well
+            if (pOperator->bIncDepth) {
+                numChars += 1;
+            }
+        } else {
+            // Other inputs always have width 1.
+            numChars += 1;
+        }
+        pCurrentListEntry = pCurrentListEntry->pPrevious;
+        if (pCurrentListEntry == NULL) {
+            // Cap the cursor position here
+            // pCalcCoreState->cursorPosition = cursorCounter;
+        }
+        cursorCounter++;
+    }
+    return numChars;
 }

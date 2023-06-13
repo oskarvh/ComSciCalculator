@@ -247,7 +247,6 @@
 								<option id="com.ti.ccstudio.buildDefinitions.TMS470_GNU_9.0.compilerID.DATA_SECTIONS.1781040859" name="Place data items into their own section (-fdata-sections)" superClass="com.ti.ccstudio.buildDefinitions.TMS470_GNU_9.0.compilerID.DATA_SECTIONS" value="true" valueType="boolean"/>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="false" id="com.ti.ccstudio.buildDefinitions.TMS470_GNU_9.0.compilerID.DEFINE.66972509" name="Define symbols (-D)" superClass="com.ti.ccstudio.buildDefinitions.TMS470_GNU_9.0.compilerID.DEFINE" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="PART_TM4C123GH6PM"/>
-									<listOptionValue builtIn="false" value="VERBOSE"/>
 									<listOptionValue builtIn="false" value="EVE_FT810CB_ADAFRUIT_1680"/>
 									<listOptionValue builtIn="false" value="__TI_ARM__"/>
 									<listOptionValue builtIn="false" value="TIVAWARE"/>

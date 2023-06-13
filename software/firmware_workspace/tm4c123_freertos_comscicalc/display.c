@@ -252,7 +252,14 @@ void displayInputText(displayState_t *pDisplayState, bool writeCursor){
         charIter++;
     }
     if(writeCursor){
-        EVE_cmd_text_burst(5+widthWrittenChars + getFontCharWidth(pCurrentFont, ' ')/2,
+        // Get the width of the chars until the current cursor
+        uint32_t widthWrittenCharsUntilCursor = 0;
+        for(int i = 0 ; i < charIter - pDisplayState->cursorLoc ; i++){
+            widthWrittenCharsUntilCursor += getFontCharWidth(pCurrentFont, pDisplayState->printedInputBuffer[i]);
+        }
+        // Cursor is always white
+        EVE_cmd_dl_burst(DL_COLOR_RGB | WHITE);
+        EVE_cmd_text_burst(5+ widthWrittenCharsUntilCursor + getFontCharWidth(pCurrentFont, ' ')/2,
                            INPUT_TEXT_YC0(pCurrentFont->font_caps_height),
                            pCurrentFont->ft81x_font_index,
                            INPUT_TEXT_OPTIONS,
@@ -264,7 +271,7 @@ void displayInputText(displayState_t *pDisplayState, bool writeCursor){
 void initDisplayState(displayState_t *pDisplayState){
     pDisplayState->inputOptions.currentInputArith = 0; // TBD
     pDisplayState->inputOptions.currentInputBase = 0; // TBD
-    pDisplayState->solveStatus = 0;
+    pDisplayState->solveStatus = calc_solveStatus_INPUT_LIST_NULL;
     pDisplayState->printStatus = 0;
     pDisplayState->fontIdx = 1; // Try the custom RAM font
     memset(pDisplayState->printedInputBuffer, '\0', MAX_PRINTED_BUFFER_LEN);
@@ -281,7 +288,8 @@ void initDisplayState(displayState_t *pDisplayState){
 // 3. Support multiple fonts. DONE
 // 3. Support blinking cursor.
 //      Blinking done but I need the font spacing to be completed before I can
-//      set this as done.
+//      set this as done.DONE
+// 4. For non-monospaced operators (e.g. SUM), the cursor is at the incorrect location.
 void displayTask(void *p){
     // Write the outlines:
     startDisplaylist();
@@ -303,6 +311,7 @@ void displayTask(void *p){
     bool updateScreen = true;
     bool writeCursor = true;
     displayState_t localDisplayState;
+    initDisplayState(&localDisplayState);
 
     while(1){
         // Wait for the trigger event from the calculator task to tell this task
@@ -313,6 +322,10 @@ void displayTask(void *p){
             // Invert the cursor to blink it.
             writeCursor = !writeCursor;
         }
+        if(eventbits & DISPLAY_EVENT_NEW_DATA){
+            // If new data is available, then set the cursor to true
+            writeCursor = true;
+        }
 
         // Wait (forever) for the semaphore to be available.
         if( xSemaphoreTake( displayStateSemaphore, portMAX_DELAY) ){
@@ -321,45 +334,45 @@ void displayTask(void *p){
             // Release the semaphore, since we're done with the display state global variable
             xSemaphoreGive(displayStateSemaphore);
             // Trigger a screen update
-            updateScreen = true;
+            //updateScreen = true;
         }
-        if(updateScreen){
+        //if(updateScreen){
 #ifdef PRINT_RESULT_TO_UART
 #ifdef VERBOSE
 #error Cannot print result to UART and have VERBOSE UART logging at the same time!
 #else
-                // Print the results to UART
-                UARTprintf("IN: [%s]\r\n", pRxBuf);
-                UARTprintf("DEC: [%s]\r\n", pDecRes);
-                UARTprintf("BIN: [%s]\r\n", pBinRes);
-                UARTprintf("HEX: [%s]\r\n", pHexRes);
+        // Print the results to UART
+        UARTprintf("IN: [%s]\r\n", pRxBuf);
+        UARTprintf("DEC: [%s]\r\n", pDecRes);
+        UARTprintf("BIN: [%s]\r\n", pBinRes);
+        UARTprintf("HEX: [%s]\r\n", pHexRes);
 #endif
 #endif
-            // The result is now in calcResult, print to the different types
-            sprintf(pDecRes, "%1i", localDisplayState.result);
-            printToBinary(pBinRes, localDisplayState.result);
-            sprintf(pHexRes, "0x%1X", localDisplayState.result);
-            // Update the screen:
-            startDisplaylist();
-            displayOutline();
-            // Write the input text
-            displayInputText(&localDisplayState, writeCursor);
-            //EVE_cmd_text_burst(INPUT_TEXT_XC0, INPUT_TEXT_YC0, FONT, INPUT_TEXT_OPTIONS, pRxBuf);
+        // The result is now in calcResult, print to the different types
+        sprintf(pDecRes, "%1i", localDisplayState.result);
+        printToBinary(pBinRes, localDisplayState.result);
+        sprintf(pHexRes, "0x%1X", localDisplayState.result);
+        // Update the screen:
+        startDisplaylist();
+        displayOutline();
+        // Write the input text
+        displayInputText(&localDisplayState, writeCursor);
+        //EVE_cmd_text_burst(INPUT_TEXT_XC0, INPUT_TEXT_YC0, FONT, INPUT_TEXT_OPTIONS, pRxBuf);
 
-            // Let the color reflect if the operation was OK or not.
-            if(localDisplayState.solveStatus == calc_solveStatus_SUCCESS){
-                EVE_cmd_dl_burst(DL_COLOR_RGB | WHITE);
-            } else {
-                EVE_cmd_dl_burst(DL_COLOR_RGB | GRAY);
-            }
-            font_t *pCurrentFont = pFontLibraryTable[localDisplayState.fontIdx];
-            EVE_cmd_text_burst(OUTPUT_DEC_XC0, OUTPUT_DEC_YC0(pCurrentFont->font_caps_height), pCurrentFont->ft81x_font_index, INPUT_TEXT_OPTIONS, pDecRes);
-            EVE_cmd_text_burst(OUTPUT_BIN_XC0, OUTPUT_BIN_YC0(pCurrentFont->font_caps_height), pCurrentFont->ft81x_font_index, INPUT_TEXT_OPTIONS, pBinRes);
-            EVE_cmd_text_burst(OUTPUT_HEX_XC0, OUTPUT_HEX_YC0(pCurrentFont->font_caps_height), pCurrentFont->ft81x_font_index, INPUT_TEXT_OPTIONS, pHexRes);
-            endDisplayList();
-            // Screen has been updated, set update variable to false
-            updateScreen = false;
+        // Let the color reflect if the operation was OK or not.
+        if(localDisplayState.solveStatus == calc_solveStatus_SUCCESS){
+            EVE_cmd_dl_burst(DL_COLOR_RGB | WHITE);
+        } else {
+            EVE_cmd_dl_burst(DL_COLOR_RGB | GRAY);
         }
+        font_t *pCurrentFont = pFontLibraryTable[localDisplayState.fontIdx];
+        EVE_cmd_text_burst(OUTPUT_DEC_XC0, OUTPUT_DEC_YC0(pCurrentFont->font_caps_height), pCurrentFont->ft81x_font_index, INPUT_TEXT_OPTIONS, pDecRes);
+        EVE_cmd_text_burst(OUTPUT_BIN_XC0, OUTPUT_BIN_YC0(pCurrentFont->font_caps_height), pCurrentFont->ft81x_font_index, INPUT_TEXT_OPTIONS, pBinRes);
+        EVE_cmd_text_burst(OUTPUT_HEX_XC0, OUTPUT_HEX_YC0(pCurrentFont->font_caps_height), pCurrentFont->ft81x_font_index, INPUT_TEXT_OPTIONS, pHexRes);
+        endDisplayList();
+        // Screen has been updated, set update variable to false
+        //updateScreen = false;
+        //}
     }
 }
 

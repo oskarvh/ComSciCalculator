@@ -67,6 +67,18 @@
 // TO ADD: TM4C129 calculator board.
 //*****************************************************************************
 
+// TODO:
+// There is an issue with the buffer being cleared when multiple
+// UART inputs are being made
+// Therefore, a timer shall trigger the display update, and
+// the calculator core shall only be triggered on
+// input. Thereby, the update event is not used, instead
+// the current state shall be updated on the screen, no matter what.
+
+// Moreover, a timer checks the UART input. I think it's probably better to
+// limit this to not support escape sequences for now.
+
+
 //! Display state - holding shared variables between calc core thread and display thread
 displayState_t displayState;
 //! Semaphore protecting the display state
@@ -123,12 +135,33 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char * pcTaskName)
 // UART receive interrupt handler
 //
 //*****************************************************************************
+/**
+ * @brief Struct holding one UART entry, to enable fast
+ * reception of UART data.
+ */
+typedef struct uartListEntry{
+    /*
+     * @param pNext Pointer to the next entry
+     */
+    void *pNext;
+    /*
+     * @param pPrev Pointer to the previous entry
+     */
+    void *pPrev;
+    /*
+     * @param c Char for this entry
+     */
+    char c;
+}uartListEntry_t;
 void uartRxIntHandler(void){
     // Clear the interrupt
     UARTIntClear(UART0_BASE, UART_INT_RX);
     // Read the FIFO and put in a queue.
     char uartRxChar = UARTCharGetNonBlocking(UART0_BASE);
-    if(uartRxChar != -1){
+    // Handle escape char sequence.
+    // Ideally, this should be handled by something else than the ISR,
+    // since we don't want to wait in the ISR.yy
+    if(uartRxChar != 255 && uartRxChar != 27){
         // hooray, there is a character in the rx buffer
         // which is now read!
         // Push that to the queue.
@@ -138,7 +171,76 @@ void uartRxIntHandler(void){
     }
 }
 
-void Timer0IntHandler(void)
+// reset the cursor timer
+void resetCursorTimer(void){
+    //ROM_TimerDisable(TIMER0_BASE, TIMER_A);
+    //HWREG(TIMER0_BASE+0x50)=0;
+    //ROM_TimerEnable(TIMER0_BASE, TIMER_A);
+}
+
+// Timer to check if there are any messages in the UART buffer.
+void Timer0BIntHandler(void){
+    TimerIntClear(TIMER1_BASE, TIMER_TIMA_TIMEOUT);  // Clear the timer interrupt
+    if(UARTCharsAvail(UART0_BASE)){
+        char uartRxChar = UARTCharGetNonBlocking(UART0_BASE);
+        // Check if start of the escape sequence
+        if(uartRxChar == 27){
+            // Check if another char is available, max wait until next timer event
+            while(!UARTCharsAvail(UART0_BASE)){
+                if(TimerIntStatus(TIMER1_BASE, TIMER_A)){
+                    break;
+                }
+            }
+            uartRxChar = UARTCharGetNonBlocking(UART0_BASE);
+
+            if(uartRxChar == 91){
+                // Not the correct espace sequence, break and continue to process
+                while(!UARTCharsAvail(UART0_BASE)){
+                    if(TimerIntStatus(TIMER1_BASE, TIMER_A)){
+                        break;
+                    }
+                }
+                uartRxChar = UARTCharGetNonBlocking(UART0_BASE);
+                // This is an escaped sequence, i.e. we're dealing with the
+                // arrow keys.
+                switch(uartRxChar){
+                case 65:
+                    // Up, replace with U
+                    uartRxChar = 'U';
+                    break;
+                case 66:
+                    // dOwn, replace with O
+                    uartRxChar = 'O';
+                    break;
+                case 67:
+                    // Right, replace with R
+                    uartRxChar = 'R';
+                    break;
+                case 68:
+                    // Left, replace with L
+                    uartRxChar = 'L';
+                    break;
+                default:
+                    //uartRxChar = 255; // Ignore this
+                    break;
+                }
+            }
+
+        }
+        if(uartRxChar != 255 && uartRxChar != 27){
+            // hooray, there is a character in the rx buffer
+            // which is now read!
+            // Push that to the queue.
+            if(!xQueueSendToBackFromISR(uartReceiveQueue, (void*)&uartRxChar, (TickType_t)0)){
+                while(1);
+            }
+            resetCursorTimer();
+        }
+    }
+}
+
+//
+void Timer0AIntHandler(void)
 {
     ROM_TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);  // Clear the timer interrupt
     // Set the cursor event.
@@ -169,6 +271,7 @@ void ConfigureUART(void)
     // Initialize the UART for console I/O.
     UARTStdioConfig(0, 115200, 16000000);
 
+#ifdef RX_ISR
     // Disable the UART FIFO to get an interrupt on each
     // char. Not recommended, but I couldn't find another way
     // quickly to get an interrupt on each char.
@@ -182,14 +285,15 @@ void ConfigureUART(void)
 
 #endif
     UARTIntRegister(UART0_BASE, &uartRxIntHandler);
+#endif
 }
 
 void initTimer()
 {
     ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER0);
     ROM_TimerConfigure(TIMER0_BASE, TIMER_CFG_PERIODIC);   // 32 bits Timer
-    IntPrioritySet(INT_TIMER0A_TM4C123, configMAX_SYSCALL_INTERRUPT_PRIORITY+2);
-    TimerIntRegister(TIMER0_BASE, TIMER_A, Timer0IntHandler);    // Registering  isr
+    IntPrioritySet(INT_TIMER0A_TM4C123, configMAX_SYSCALL_INTERRUPT_PRIORITY+4);
+    TimerIntRegister(TIMER0_BASE, TIMER_A, Timer0AIntHandler);    // Registering  isr
     ROM_TimerEnable(TIMER0_BASE, TIMER_A);
     ROM_IntEnable(INT_TIMER0A);
     ROM_TimerIntEnable(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
@@ -197,6 +301,19 @@ void initTimer()
     uint8_t freqHz = 1;   // frequency in Hz
     uint32_t period = (SysCtlClockGet() / freqHz)/ 2;
     ROM_TimerLoadSet(TIMER0_BASE, TIMER_A, period -1);
+
+    ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER1);
+    ROM_TimerConfigure(TIMER1_BASE, TIMER_CFG_PERIODIC);   // 32 bits Timer
+    // Set timer 0B to 30 Hz to check if there is any UART chars in the FIFO
+    IntPrioritySet(INT_TIMER1A_TM4C123, configMAX_SYSCALL_INTERRUPT_PRIORITY+3);
+    TimerIntRegister(TIMER1_BASE, TIMER_A, Timer0BIntHandler);    // Registering  isr
+    ROM_TimerEnable(TIMER1_BASE, TIMER_A);
+    ROM_IntEnable(INT_TIMER1A);
+    ROM_TimerIntEnable(TIMER1_BASE, TIMER_TIMA_TIMEOUT);
+
+    freqHz = 60;   // frequency in Hz
+    period = (SysCtlClockGet() / freqHz)/ 2;
+    ROM_TimerLoadSet(TIMER1_BASE, TIMER_A, period -1);
 
 }
 
@@ -225,7 +342,6 @@ void initDisplay(void){
 // Task that handles the calculator core
 //
 //*****************************************************************************
-
 void calcCoreTask(void *p){
     // Create the calculator state variable
     calcCoreState_t calcState;
@@ -240,6 +356,7 @@ void calcCoreTask(void *p){
     // For now though, just initialize to decimal base.
     calcState.numberFormat.inputBase = inputBase_DEC;
     while(1){
+        int8_t moveCursor = 0;
         // Wait for UART data to be available in the queue
         if(uartReceiveQueue != 0){
 
@@ -253,15 +370,24 @@ void calcCoreTask(void *p){
                     // TODO: Check that we're in a state to add chars to the
                     // calc core. The option here could be if we're in
                     // the menu for example.
-
-                    // Check if char is backspace, in which case delete.
                     if(receiveChar == 127){
                         addRemoveStatus = calc_removeInput(&calcState);
-                    }
-                    else{
+                    } else {
+                        if(receiveChar == 'U'){
+                            // TODO
+                        }
+                        if(receiveChar == 'D'){
+                            // TODO
+                        }
+                        if(receiveChar == 'L'){
+                            moveCursor = 1;
+                        }
+                        if(receiveChar == 'R'){
+                            moveCursor = -1;
+                        }
+                        // The add input contains valuable checks.
                         addRemoveStatus = calc_addInput(&calcState, receiveChar);
                     }
-
                     // Check if the input wasn't accepted
                     if(addRemoveStatus == calc_funStatus_UNKNOWN_INPUT){
                         // For now, do nothing here. Might trigger something later on
@@ -279,16 +405,23 @@ void calcCoreTask(void *p){
             // All input has been read, ready to solve the current state of the input buffer.
             // Reset the result to 0 to have a clean slate.
             //calcState.result = 0;
-
-            // Set the output buffer to all null terminators.
-            memset(displayState.printedInputBuffer, 0, MAX_PRINTED_BUFFER_LEN);
-
-            // Call the solver
-            calc_funStatus_t solveStatus = calc_solver(&calcState);
-
-            // Here, all the results needed for the display task is available
-            // Therefore, obtain the semaphore and start writing to the displayState struct
             if( xSemaphoreTake( displayStateSemaphore, portMAX_DELAY) == pdTRUE ){
+                // Set the output buffer to all null terminators.
+                memset(displayState.printedInputBuffer, 0, MAX_PRINTED_BUFFER_LEN);
+
+                // Call the solver
+                calc_funStatus_t solveStatus = calc_solver(&calcState);
+
+                // Here, all the results needed for the display task is available
+                // Therefore, obtain the semaphore and start writing to the displayState struct
+
+                if(moveCursor > 0){
+                    calcState.cursorPosition += 1;
+                } else if(moveCursor < 0){
+                    if(calcState.cursorPosition > 0){
+                        calcState.cursorPosition -= 1;
+                    }
+                }
                 displayState.syntaxIssueIndex = -1;
                 displayState.printStatus = calc_printBuffer(&calcState,
                                                             displayState.printedInputBuffer,
@@ -298,7 +431,7 @@ void calcCoreTask(void *p){
                 if(solveStatus == calc_solveStatus_SUCCESS){
                     displayState.result = calcState.result;
                 }
-                displayState.cursorLoc = calcState.cursorPosition;
+                displayState.cursorLoc = calc_getCursorLocation(&calcState);
                 // Give the semaphore back
                 xSemaphoreGive(displayStateSemaphore);
             }
@@ -362,14 +495,14 @@ main(void)
     xTaskCreate(
             displayTask, // Function that implements the task.
             "DISPLAY",               // Text name for the task.
-            500,                    // Stack size in words, not bytes.
+            700,                    // Stack size in words, not bytes.
             ( void * ) 1,            // Parameter passed into the task.
             tskIDLE_PRIORITY,        // Priority at which the task is created.
             &screenTaskHandle );              // Used to pass out the created task's handle.
     xTaskCreate(
             calcCoreTask, // Function that implements the task.
             "CALCCORE",               // Text name for the task.
-            500,                    // Stack size in words, not bytes.
+            700,                    // Stack size in words, not bytes.
             ( void * ) 1,            // Parameter passed into the task.
             tskIDLE_PRIORITY,        // Slightly higher priority than display task
             &calcCoreTaskHandle );              // Used to pass out the created task's handle.

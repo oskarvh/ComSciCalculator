@@ -309,6 +309,19 @@ calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
  */
 calc_funStatus_t calc_solver(calcCoreState_t *pCalcCoreState);
 
+/**
+ * @brief Get the offset from the end of the buffer.
+ *
+ * This function returns the number of characters between the cursor
+ * location and the end of the input text, i.e. cursor = 0.
+ * This is not the same as counting the number of inputs, as some
+ * inputs such as SUM has more chars than 1 representing the
+ * operator.
+ * @param pCalcCoreState Pointer to an allocated core state variable.
+ * @return Number of chars from the end the cursor is at.
+ */
+uint8_t calc_getCursorLocation(calcCoreState_t *pCalcCoreState);
+
 /* -------------------------------------------
  * ---------------- VARIABLES ----------------
  * -------------------------------------------*/
