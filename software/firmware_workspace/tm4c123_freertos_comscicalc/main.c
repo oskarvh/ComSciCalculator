@@ -356,7 +356,6 @@ void calcCoreTask(void *p){
     // For now though, just initialize to decimal base.
     calcState.numberFormat.inputBase = inputBase_DEC;
     while(1){
-        int8_t moveCursor = 0;
         // Wait for UART data to be available in the queue
         if(uartReceiveQueue != 0){
 
@@ -380,10 +379,16 @@ void calcCoreTask(void *p){
                             // TODO
                         }
                         if(receiveChar == 'L'){
-                            moveCursor = 1;
+                            calcState.cursorPosition += 1;
                         }
                         if(receiveChar == 'R'){
-                            moveCursor = -1;
+                            if(calcState.cursorPosition > 0){
+                                calcState.cursorPosition -= 1;
+                            }
+                        }
+                        if(receiveChar == 'i' || receiveChar == 'I'){
+                            // Update the input base.
+                            calc_updateBase(&calcState);
                         }
                         // The add input contains valuable checks.
                         addRemoveStatus = calc_addInput(&calcState, receiveChar);
@@ -402,6 +407,12 @@ void calcCoreTask(void *p){
                 }
             } while(uxQueueMessagesWaiting(uartReceiveQueue) > 0);
 
+            // Call the solver
+            calc_funStatus_t solveStatus = calc_solver(&calcState);
+
+            // Here, all the results needed for the display task is available
+            // Therefore, obtain the semaphore and start writing to the displayState struct
+
             // All input has been read, ready to solve the current state of the input buffer.
             // Reset the result to 0 to have a clean slate.
             //calcState.result = 0;
@@ -409,19 +420,7 @@ void calcCoreTask(void *p){
                 // Set the output buffer to all null terminators.
                 memset(displayState.printedInputBuffer, 0, MAX_PRINTED_BUFFER_LEN);
 
-                // Call the solver
-                calc_funStatus_t solveStatus = calc_solver(&calcState);
 
-                // Here, all the results needed for the display task is available
-                // Therefore, obtain the semaphore and start writing to the displayState struct
-
-                if(moveCursor > 0){
-                    calcState.cursorPosition += 1;
-                } else if(moveCursor < 0){
-                    if(calcState.cursorPosition > 0){
-                        calcState.cursorPosition -= 1;
-                    }
-                }
                 displayState.syntaxIssueIndex = -1;
                 displayState.printStatus = calc_printBuffer(&calcState,
                                                             displayState.printedInputBuffer,

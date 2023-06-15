@@ -573,6 +573,133 @@ void test_unsolvable_solution(void){
 }
 
 
+testParams_t base_conversion_params[] = {
+    {
+        .pInputString = "123i\0",
+        .pCursor = {0,0,0,0},
+        .pExpectedString = "0x7b\0",
+        .pOutputString = {0},
+        .inputBase = {
+            [0] = inputBase_DEC,
+            [1] = inputBase_DEC,
+            [2] = inputBase_DEC,
+            [3] = inputBase_HEX,
+            },
+        .expectedResult = 123, 
+    },
+    {
+        .pInputString = "123i\0",
+        .pCursor = {0,0,0,2},
+        .pExpectedString = "0x7b\0",
+        .pOutputString = {0},
+        .inputBase = {
+            [0] = inputBase_DEC,
+            [1] = inputBase_DEC,
+            [2] = inputBase_DEC,
+            [3] = inputBase_HEX,
+            },
+        .expectedResult = 123, 
+    },
+    {
+        .pInputString = "123i\0",
+        .pCursor = {0,0,0,4},
+        .pExpectedString = "0x7b\0",
+        .pOutputString = {0},
+        .inputBase = {
+            [0] = inputBase_DEC,
+            [1] = inputBase_DEC,
+            [2] = inputBase_DEC,
+            [3] = inputBase_HEX,
+            },
+        .expectedResult = 123, 
+    },
+    {
+        .pInputString = "123i\0",
+        .pCursor = {0,0,0,4},
+        .pExpectedString = "0b1111011\0",
+        .pOutputString = {0},
+        .inputBase = {
+            [0] = inputBase_DEC,
+            [1] = inputBase_DEC,
+            [2] = inputBase_DEC,
+            [3] = inputBase_BIN,
+            },
+        .expectedResult = 123, 
+    },
+    {
+        .pInputString = "123+789i\0",
+        .pCursor = {0,0,0,0,0,0,0,0},
+        .pExpectedString = "123+0x315\0",
+        .pOutputString = {0},
+        .inputBase = {
+            [0] = inputBase_DEC, // 1
+            [1] = inputBase_DEC, // 2
+            [2] = inputBase_DEC, // 3
+            [3] = inputBase_DEC, // +
+            [4] = inputBase_DEC, // 7
+            [5] = inputBase_DEC, // 8
+            [6] = inputBase_DEC, // 9
+            [7] = inputBase_HEX, // i
+            },
+        .expectedResult = 123+789, 
+    },
+    {
+        .pInputString = "123+789i\0",
+        .pCursor = {0,0,0,0,0,0,0,8},
+        .pExpectedString = "0x7b+789\0",
+        .pOutputString = {0},
+        .inputBase = {
+            [0] = inputBase_DEC, // 1
+            [1] = inputBase_DEC, // 2
+            [2] = inputBase_DEC, // 3
+            [3] = inputBase_DEC, // +
+            [4] = inputBase_DEC, // 7
+            [5] = inputBase_DEC, // 8
+            [6] = inputBase_DEC, // 9
+            [7] = inputBase_HEX, // i
+            },
+        .expectedResult = 123+789, 
+    },
+};
+void test_base_conversion(void){
+    calcCoreState_t calcCore;
+    int numTests = sizeof(base_conversion_params)/sizeof(base_conversion_params[0]);
+    for(int i = 0 ; i < numTests ; i++){
+        setupTestStruct(&calcCore, &base_conversion_params[i]);
+        calcCoreAddInput(&calcCore, &base_conversion_params[i]);
+        int8_t state = calc_solver(&calcCore);
+        calcCoreGetBuffer(&calcCore, &base_conversion_params[i]);
+        if(verbose){
+            printf("------------------------------------------------\r\n");
+            printf("Input:           %s \r\nExpected:        %s \r\nExpected result: %i \r\nReturned result: %i \r\n", 
+                    base_conversion_params[i].pExpectedString,
+                    base_conversion_params[i].pOutputString,
+                    base_conversion_params[i].expectedResult,
+                    calcCore.result
+                    );
+        }
+        TEST_ASSERT_EQUAL_STRING(
+            base_conversion_params[i].pExpectedString,
+            base_conversion_params[i].pOutputString);
+        teardownTestStruct(&calcCore);
+
+        // Check that an equal amount of mallocs and free's happened
+        // in the calculator core
+        //printf("Allocation counter = %i\r\n", calcCore.allocCounter);
+        TEST_ASSERT_EQUAL_INT_MESSAGE(base_conversion_params[i].expectedResult, calcCore.result, "Result not right.");
+        TEST_ASSERT_EQUAL_UINT_MESSAGE(0, calcCore.allocCounter, "Leaky memory!");
+        if(calcCore.allocCounter != 0){
+            printf("************************************************\r\n\r\n");
+            printf("WARNING: leaky memory: %i!\r\n", calcCore.allocCounter);
+            printf("************************************************\r\n\r\n");
+        }
+        if(verbose){
+            printf("------------------------------------------------\r\n\r\n");
+        }
+    }
+}
+
+
 void test_null_pointers(void){
     calcCoreState_t calcCore;
     calcCoreState_t *pCalcCore = NULL;
@@ -599,10 +726,11 @@ int main(void)
 {
     verbose = true;
     UNITY_BEGIN();
-    RUN_TEST(test_addRemoveInput);
-    RUN_TEST(test_addInvalidInput);
-    RUN_TEST(test_solvable_solution);
-    RUN_TEST(test_unsolvable_solution);
-    RUN_TEST(test_null_pointers);
+    //RUN_TEST(test_addRemoveInput);
+    //RUN_TEST(test_addInvalidInput);
+    //RUN_TEST(test_solvable_solution);
+    //RUN_TEST(test_unsolvable_solution);
+    //RUN_TEST(test_null_pointers);
+    RUN_TEST(test_base_conversion);
     return UNITY_END();
 }

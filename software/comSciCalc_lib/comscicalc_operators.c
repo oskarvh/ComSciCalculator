@@ -241,7 +241,6 @@ int8_t calc_add(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
     }
 
     // Read out the args as uint32_t. Will be casted later on
-
     SUBRESULT_INT a = args[0];
     SUBRESULT_INT b = args[1];
     // Make calculation based on format
@@ -252,6 +251,14 @@ int8_t calc_add(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
         // TODO: add overflow detection
         break;
     case INPUT_FMT_FLOAT:
+        if (numberFormat.numBits == 32) {
+            // Solve for float
+        } else if (numberFormat.numBits == 64) {
+            // Solve for double
+        } else {
+            // Format is not supporteds
+            return format_not_supported;
+        }
         // Solve for 32bit floats
         (*((SUBRESULT_INT *)pResult)) = a + b;
         // TODO: add overflow detection

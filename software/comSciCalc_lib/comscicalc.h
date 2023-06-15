@@ -239,19 +239,11 @@ typedef struct calcCoreState {
      * @param numberFormat The current number format.
      */
     numberFormat_t numberFormat;
-
 } calcCoreState_t;
 
 /* -------------------------------------------
  * ----------- FUNCTION PROTOTYPES -----------
  * -------------------------------------------*/
-/**
- * @brief Logger function to abstract away printf's
- * @param msg Variable args to send to printf
- * This is just a very simple logger that uses a define
- * to either print or not.
- */
-void logger(char *msg, ...);
 /**
  * @brief Initalize calculator core
  * @param pCalcCoreState Pointer to an allocated core state variable.
@@ -322,6 +314,27 @@ calc_funStatus_t calc_solver(calcCoreState_t *pCalcCoreState);
  */
 uint8_t calc_getCursorLocation(calcCoreState_t *pCalcCoreState);
 
+/**
+ * @brief Update the base of the current entry.
+ *
+ * This function updates the base of the of the current entry.
+ * If the cursor is currently at a number entry, it'll update
+ * that entry to the new base. However, since the number of
+ * chars that the entry has, it should send the cursor to the back
+ * of that entry, so that the cursor stays with that entry.
+ * @param pCalcCoreState Pointer to an allocated core state variable.
+ * @return Nothing
+ */
+void calc_updateBase(calcCoreState_t *pCalcCoreState);
+
+/**
+ * @brief Convert an integer to a binary string
+ *
+ * @param pBuf Pointer to a string buffer of size of #i number of bits
+ * @param number The integer to be converted
+ * @return Nothing
+ */
+void intToBin(char *pBuf, SUBRESULT_INT number);
 /* -------------------------------------------
  * ---------------- VARIABLES ----------------
  * -------------------------------------------*/

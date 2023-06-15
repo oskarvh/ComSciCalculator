@@ -28,7 +28,8 @@ SOFTWARE.
 /**
  * @brief Prints logger statements to stdout, or UART if TIVAWARE is defined.
  *
- * Note, the UART printing uses a FreeRTOS critical section protection.
+ * @note The UART printing uses a FreeRTOS critical section protection.
+ *
  * @param pCalcCoreState Pointer to an allocated core state variable.
  * @return None.
  * @warning This uses critical section to protect the shared resources,

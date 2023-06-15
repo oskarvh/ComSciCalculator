@@ -69,24 +69,7 @@ SOFTWARE.
 /* ------------- GLOBAL VARIABLES ------------ */
 
 /* ---- CALCULATOR CORE HELPER FUNCTIONS ----- */
-/*
-void logger(char *msg, ...) {
-#ifdef VERBOSE
-#ifdef TIVAWARE
-    // Print using UART instead
-    va_list vaArgP;
-    va_start(vaArgP, msg);
-    UARTvprintf(msg, vaArgP);
-    va_end(vaArgP);
-#else
-    va_list argp;
-    va_start(argp, msg);
-    vprintf(msg, argp);
-    va_end(argp);
-#endif
-#endif
-}
-*/
+
 // Temporary list containing the allocated pointers
 uint32_t allocatedPointers[100] = {0};
 
@@ -373,6 +356,7 @@ calc_funStatus_t calc_addInput(calcCoreState_t *pCalcCoreState,
         pNewListEntry->entry.typeFlag =
             CONSTRUCT_TYPEFLAG(sign, inputFormat, SUBRESULT_TYPE_CHAR,
                                DEPTH_CHANGE_KEEP, INPUT_TYPE_NUMBER);
+
     } else if (charIsOperator(inputChar)) {
         // Get the operator
         const operatorEntry_t *pOp = getOperator(inputChar);
@@ -419,7 +403,8 @@ calc_funStatus_t calc_addInput(calcCoreState_t *pCalcCoreState,
     // Add the current input base. Note: base change and propagation not handled
     // here
     pNewListEntry->inputBase = pCalcCoreState->numberFormat.inputBase;
-
+    logger("Adding %c with input base %i \r\n", pNewListEntry->entry.c,
+           pNewListEntry->inputBase);
     // Add the new list entry to the correct place in the list
     if (pCurrentListEntry == NULL) {
         // Top of the list. Add new entry before, and change the list entry
@@ -657,7 +642,9 @@ calc_funStatus_t copyAndConvertList(calcCoreState_t *pCalcCoreState,
                 }
                 pNewListEntry->entry.subresult +=
                     charToInt(pCurrentListEntry->entry.c);
-                // logger("Input: %c, output: %i\r\n",
+                logger("Input: %c, output: %i\r\n", pCurrentListEntry->entry.c,
+                       pNewListEntry->entry.subresult);
+                logger("Inputbase = %i\r\n", pCurrentListEntry->inputBase);
                 pCurrentListEntry = pCurrentListEntry->pNext;
 
                 if (pCurrentListEntry == NULL) {
@@ -763,9 +750,10 @@ int8_t readOutArgs(SUBRESULT_INT *pArgs, int8_t numArgs,
  * TODO: Save the location of an error.
  */
 
-int solveExpression(calcCoreState_t *pCalcCoreState,
-                    inputListEntry_t **ppResult, inputListEntry_t **ppExprStart,
-                    inputListEntry_t *pExprEnd) {
+static int solveExpression(calcCoreState_t *pCalcCoreState,
+                           inputListEntry_t **ppResult,
+                           inputListEntry_t **ppExprStart,
+                           inputListEntry_t *pExprEnd) {
 
     // Quick sanity check so that the start of the expression isn't NULL
     inputListEntry_t *pExprStart = *ppExprStart;
@@ -902,9 +890,10 @@ int solveExpression(calcCoreState_t *pCalcCoreState,
             }
             // Now that the operator is surrounded by valid input, solve the
             // expression
-            logger("Solving %i %s %i\n", pPrevEntry->entry.subresult,
-                   ((operatorEntry_t *)(pHigestPrioOp->pFunEntry))->opString,
-                   pNextEntry->entry.subresult);
+            logger("Solving %i", pPrevEntry->entry.subresult);
+            logger(" %s ",
+                   ((operatorEntry_t *)(pHigestPrioOp->pFunEntry))->opString);
+            logger("%i\r\n", pNextEntry->entry.subresult);
 
             inputFormat_t inputFormat = pCalcCoreState->numberFormat.formatBase;
             bool sign = pCalcCoreState->numberFormat.sign;
@@ -1513,4 +1502,207 @@ uint8_t calc_getCursorLocation(calcCoreState_t *pCalcCoreState) {
         cursorCounter++;
     }
     return numChars;
+}
+
+void intToBin(char *pBuf, SUBRESULT_INT number) {
+    const uint8_t numBits = sizeof(SUBRESULT_INT) * 8;
+    // Since we want the most significant bit at the start of
+    // the buffer, e.g. number 10 = 0b1010 should be printed
+    // with the 1 representing the 8th place/bit 4 at the top
+    // of the buffer, start by decrementing a mask from the MSB
+    // until the first 1 is detected.
+
+    SUBRESULT_INT i = numBits - 1;
+    while (((number >> i) == 0) && (i != 0)) {
+        i--;
+    }
+
+    uint8_t strCount = 0;
+    for (i; i >= 0; i--) {
+        SUBRESULT_INT tmpNumber = (number >> i) & 0x01;
+        pBuf[strCount++] = ((number >> i) & 0x01) + '0';
+    }
+}
+
+void calc_updateBase(calcCoreState_t *pCalcCoreState) {
+    // Null check the calc state
+    if (pCalcCoreState == NULL) {
+        return;
+    }
+
+    if (pCalcCoreState->pListEntrypoint == NULL) {
+        // No entries in the list, just return.
+        return;
+    }
+
+    // Get the entry for where the cursor is
+    inputListEntry_t *pCurrentEntry = NULL;
+    inputListEntry_t *pEntryAtCursor = NULL;
+    getInputListEntry(pCalcCoreState, &pEntryAtCursor);
+
+    // If this returned as NULL, we're either at the start of the
+    // list. Hence we check the first entry.
+    if (pEntryAtCursor == NULL) {
+        // This is the first entry to the list.
+        // Check if the entry is numeric
+        if (GET_INPUT_TYPE(pCalcCoreState->pListEntrypoint->entry.typeFlag) !=
+            INPUT_TYPE_NUMBER) {
+            // Nothing to do, the first entry is not a number, so just exit
+            logger("CONVERT:First entry is not a number\r\n");
+            return;
+        }
+        // We only need to look "forward" to change the current entry
+        // Set the current entry to the first entry of the list, to iterate
+        // forward on
+        pCurrentEntry = pCalcCoreState->pListEntrypoint;
+
+    } else {
+        if (GET_INPUT_TYPE(pEntryAtCursor->entry.typeFlag) !=
+            INPUT_TYPE_NUMBER) {
+            // TBD! Do we also need to check the previous here? If we're
+            // just in between an operator and a number, e.g. 123|+,
+            // will that return as an operator or a number?
+            // Nothing to do, this entry is not a number, so just exit
+            logger("CONVERT:Char at location not a number\r\n");
+            return;
+        }
+        // This is not the first entry. Look "backwards" to find the start of
+        // the current input.
+        pCurrentEntry = pEntryAtCursor;
+        while (pCurrentEntry->pPrevious != NULL) {
+            // Check if the previous entry was a number.
+            if (GET_INPUT_TYPE(((inputListEntry_t *)(pCurrentEntry->pPrevious))
+                                   ->entry.typeFlag) == INPUT_TYPE_NUMBER) {
+                // The previous entry was a number, set the current entry
+                // to previous entry to go backwards
+                pCurrentEntry = pCurrentEntry->pPrevious;
+            } else {
+                // If the previous entry wasn't a number, then break here.
+                break;
+            }
+        }
+    }
+    // Given that we are currently pointing at the start of a number,
+    // that number needs to be converted to a number, which in turn needs to be
+    // converted back to the new base.
+
+    // Allocate a temporary buffer to store the converted string to int.
+    // Size is the maximum size of binary input, i.e. 64 bits
+    char pTempCharBuffer[64] = {'\0'};
+
+    inputBase_t newEntryInputBase = pCalcCoreState->numberFormat.inputBase;
+    inputListEntry_t *pTempInputEntry = pCurrentEntry;
+    uint8_t inputFormat = GET_FMT_TYPE(pTempInputEntry->entry.typeFlag);
+    bool sign = pCalcCoreState->numberFormat.sign;
+    if (inputFormat == INPUT_FMT_INT) {
+        SUBRESULT_INT stringInInt = 0;
+        uint8_t multiplier = 10;
+        if (pTempInputEntry->inputBase == inputBase_HEX) {
+            multiplier = 16;
+        } else if (pTempInputEntry->inputBase == inputBase_BIN) {
+            multiplier = 2;
+        }
+        while (GET_INPUT_TYPE(pTempInputEntry->entry.typeFlag) ==
+               INPUT_TYPE_NUMBER) {
+            // Convert the char into an int in the current input base.
+            // This will result in an integer, but needs to be handled based on
+            // the base it's in.
+            stringInInt =
+                stringInInt * multiplier + charToInt(pTempInputEntry->entry.c);
+            // Move on to the next entry
+            pTempInputEntry = pTempInputEntry->pNext;
+            if (pTempInputEntry == NULL) {
+                break;
+            }
+        }
+        // All the entries have now been accounted for.
+        // Therefore, make new entries with the new base,
+        // repoint, and free the old entries.
+        if (newEntryInputBase == inputBase_HEX) {
+            // TBD: Do these support 64 bit?
+            sprintf(pTempCharBuffer, "%x", stringInInt);
+        } else if (newEntryInputBase == inputBase_BIN) {
+            intToBin(pTempCharBuffer, stringInInt);
+        } else if (newEntryInputBase == inputBase_DEC) {
+            sprintf(pTempCharBuffer, "%i\r\n", stringInInt);
+        }
+    } else if (inputFormat == INPUT_FMT_FLOAT) {
+        // TODO
+    } else if (inputFormat == INPUT_FMT_FIXED) {
+        // TODO
+    } else {
+        // THIS SHOULD NOT HAPPEN
+        logger("ERROR! Unknown input format! %i\r\n", inputFormat);
+        while (1)
+            ;
+    }
+    inputListEntry_t *pNextNonCharEntry = pTempInputEntry;
+    // NOTE: IMPORTANT! Need to reallocate the entries here, given that the new
+    // base will have different amount of characters associated with the entry.
+
+    // Loop through the string until a NULL char is reached
+    uint8_t charCounter = 0;
+    inputListEntry_t *pPreviousEntry = pCurrentEntry->pPrevious;
+    inputListEntry_t *pStartOfNewList = NULL;
+    inputListEntry_t *pNewListEntry = NULL;
+    while (pTempCharBuffer[charCounter] != '\0') {
+        pNewListEntry = overloaded_malloc(sizeof(inputListEntry_t));
+        pCalcCoreState->allocCounter++;
+        if (pStartOfNewList == NULL) {
+            // Save the first new list entry that we allocate
+            pStartOfNewList = pNewListEntry;
+        }
+
+        // Initialize the fields of the new entry, as for a regular number.
+        pNewListEntry->pPrevious = pPreviousEntry;
+
+        pNewListEntry->entry.c = pTempCharBuffer[charCounter];
+        pNewListEntry->entry.subresult = 0;
+        pNewListEntry->entry.typeFlag =
+            CONSTRUCT_TYPEFLAG(sign, inputFormat, SUBRESULT_TYPE_CHAR,
+                               DEPTH_CHANGE_KEEP, INPUT_TYPE_NUMBER);
+        pNewListEntry->inputBase = pCalcCoreState->numberFormat.inputBase;
+        pNewListEntry->pFunEntry = NULL;
+
+        // Set the previous entries next entry to this one
+        if (pPreviousEntry != NULL) {
+            pPreviousEntry->pNext = pNewListEntry;
+        }
+
+        // Set the previous entry to this entry now
+        pPreviousEntry = pNewListEntry;
+        charCounter++;
+    }
+    if (pNewListEntry == NULL) {
+        logger("ERROR: CONVERT New list entry is NULL\r\n");
+        return;
+    }
+    // If the old entries previous entry was NULL, that means it was the start
+    // of the list.
+    if (pCurrentEntry->pPrevious == NULL) {
+        // Override the entry of the list to the first newly allocated one.
+        pCalcCoreState->pListEntrypoint = pStartOfNewList;
+    }
+    // Set the next non-character entries previous entry to
+    // point to the end of the new list that we just made,
+    // along with setting the last new entires next entry
+    // to point to the next non-character entry.
+    pNewListEntry->pNext = pNextNonCharEntry;
+    if (pNextNonCharEntry != NULL) {
+        pNextNonCharEntry->pPrevious = pNewListEntry;
+    }
+
+    // Free the entries from pCurrentEntry to the last char entry.
+    while (GET_INPUT_TYPE(pCurrentEntry->entry.typeFlag) == INPUT_TYPE_NUMBER) {
+        // Make a temporary copy to free
+        inputListEntry_t *pTmpListEntry = pCurrentEntry;
+        // Move pointer to the next entry
+        pCurrentEntry = pCurrentEntry->pNext;
+        overloaded_free(pTmpListEntry);
+        pCalcCoreState->allocCounter--;
+        // If the new current entry is NULL, then break
+        if (pCurrentEntry == NULL) {
+            break;
+        }
+    }
 }
