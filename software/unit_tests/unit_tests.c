@@ -110,7 +110,7 @@ void calcCoreAddInput(calcCoreState_t *pCoreState, testParams_t *pTestParams){
             calc_updateBase(pCoreState);
         }
         else{
-            printf("Adding %c with base %i", pInputChar, pTestParams->inputBase[i]);
+            //printf("Adding %c with base %i\r\n", *pInputChar, pTestParams->inputBase[i]);
             status = calc_addInput(pCoreState, *pInputChar);
         }
         if(status != calc_funStatus_SUCCESS){

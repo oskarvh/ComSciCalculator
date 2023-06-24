@@ -726,11 +726,11 @@ int main(void)
 {
     verbose = true;
     UNITY_BEGIN();
-    //RUN_TEST(test_addRemoveInput);
-    //RUN_TEST(test_addInvalidInput);
-    //RUN_TEST(test_solvable_solution);
-    //RUN_TEST(test_unsolvable_solution);
-    //RUN_TEST(test_null_pointers);
+    RUN_TEST(test_addRemoveInput);
+    RUN_TEST(test_addInvalidInput);
+    RUN_TEST(test_solvable_solution);
+    RUN_TEST(test_unsolvable_solution);
+    RUN_TEST(test_null_pointers);
     RUN_TEST(test_base_conversion);
     return UNITY_END();
 }

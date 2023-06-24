@@ -905,6 +905,7 @@ static int solveExpression(calcCoreState_t *pCalcCoreState,
             SUBRESULT_INT pArgs[2];
             pArgs[0] = (SUBRESULT_INT)(pPrevEntry->entry.subresult);
             pArgs[1] = (SUBRESULT_INT)(pNextEntry->entry.subresult);
+
             // Solve the operation and save the results to the operator
             // subresults.
             int8_t calcStatus = (*pFun)(&(pHigestPrioOp->entry.subresult),
@@ -1186,6 +1187,15 @@ calc_funStatus_t calc_solver(calcCoreState_t *pCalcCoreState) {
     return returnStatus;
 }
 
+void calc_recordSyntaxIssuePos(int16_t *pSyntaxIssuePos,
+                               uint16_t numCharsWritten) {
+    if (pSyntaxIssuePos != NULL) {
+        if (*pSyntaxIssuePos == -1) {
+            *pSyntaxIssuePos = numCharsWritten - 1;
+        }
+    }
+}
+
 calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
                                   char *pResString, uint16_t stringLen,
                                   int16_t *pSyntaxIssuePos) {
@@ -1235,9 +1245,8 @@ calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
                     if (((inputListEntry_t *)(pCurrentListEntry->pPrevious))
                             ->entry.c == ')') {
                         // This is an "illegal" entry of a number. Mark it.
-                        if (*pSyntaxIssuePos == -1) {
-                            *pSyntaxIssuePos = numCharsWritten - 1;
-                        }
+                        calc_recordSyntaxIssuePos(pSyntaxIssuePos,
+                                                  numCharsWritten);
                     }
                 }
                 if (pCurrentListEntry->inputBase == inputBase_HEX) {
@@ -1290,9 +1299,8 @@ calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
                                 ->entry.c == ')' ||
                         previousInputType == INPUT_TYPE_NUMBER) {
                         // This is an "illegal" entry of a number. Mark it.
-                        if (*pSyntaxIssuePos == -1) {
-                            *pSyntaxIssuePos = numCharsWritten - tmpStrLen - 1;
-                        }
+                        calc_recordSyntaxIssuePos(pSyntaxIssuePos,
+                                                  numCharsWritten);
                     }
                 }
                 if (numCharsWritten < stringLen) {
@@ -1309,9 +1317,8 @@ calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
                                 ->entry.c != ')' &&
                         previousInputType != INPUT_TYPE_NUMBER) {
                         // This is an "illegal" entry of a number. Mark it.
-                        if (*pSyntaxIssuePos == -1) {
-                            *pSyntaxIssuePos = numCharsWritten - tmpStrLen - 1;
-                        }
+                        calc_recordSyntaxIssuePos(pSyntaxIssuePos,
+                                                  numCharsWritten);
                     }
                 }
             }
@@ -1324,15 +1331,13 @@ calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
                 // operator.
                 if (pCurrentListEntry->pPrevious != NULL) {
                     if (previousInputType == INPUT_TYPE_NUMBER) {
-                        if (*pSyntaxIssuePos == -1) {
-                            *pSyntaxIssuePos = numCharsWritten - 1;
-                        }
+                        calc_recordSyntaxIssuePos(pSyntaxIssuePos,
+                                                  numCharsWritten);
                     } else if (previousInputType == INPUT_TYPE_EMPTY) {
                         if (((inputListEntry_t *)(pCurrentListEntry->pPrevious))
                                 ->entry.c != '(') {
-                            if (*pSyntaxIssuePos == -1) {
-                                *pSyntaxIssuePos = numCharsWritten - 1;
-                            }
+                            calc_recordSyntaxIssuePos(pSyntaxIssuePos,
+                                                      numCharsWritten);
                         }
                     }
                 }
@@ -1343,27 +1348,21 @@ calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
                     if (previousInputType != INPUT_TYPE_NUMBER &&
                         ((inputListEntry_t *)(pCurrentListEntry->pPrevious))
                                 ->entry.c != CLOSING_BRACKET) {
-                        if (*pSyntaxIssuePos == -1) {
-                            *pSyntaxIssuePos = numCharsWritten - 1;
-                        }
+                        calc_recordSyntaxIssuePos(pSyntaxIssuePos,
+                                                  numCharsWritten);
                     }
                 } else {
-                    if (*pSyntaxIssuePos == -1) {
-                        *pSyntaxIssuePos = numCharsWritten - 1;
-                    }
+                    calc_recordSyntaxIssuePos(pSyntaxIssuePos, numCharsWritten);
                 }
             } else if (pCurrentListEntry->entry.c == '.') {
                 // For a dot, the previous entry must always be a number only.
                 if (pCurrentListEntry->pPrevious != NULL) {
                     if (previousInputType != INPUT_TYPE_NUMBER) {
-                        if (*pSyntaxIssuePos == -1) {
-                            *pSyntaxIssuePos = numCharsWritten - 1;
-                        }
+                        calc_recordSyntaxIssuePos(pSyntaxIssuePos,
+                                                  numCharsWritten);
                     }
                 } else {
-                    if (*pSyntaxIssuePos == -1) {
-                        *pSyntaxIssuePos = numCharsWritten - 1;
-                    }
+                    calc_recordSyntaxIssuePos(pSyntaxIssuePos, numCharsWritten);
                 }
             } else if (pCurrentListEntry->entry.c == ',') {
                 // For a comma, the previous entry must have been a closing
@@ -1400,14 +1399,11 @@ calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
                     }
                     if (previousInputType != INPUT_TYPE_NUMBER ||
                         !inDepthIncreasingFunction) {
-                        if (*pSyntaxIssuePos == -1) {
-                            *pSyntaxIssuePos = numCharsWritten - 1;
-                        }
+                        calc_recordSyntaxIssuePos(pSyntaxIssuePos,
+                                                  numCharsWritten);
                     }
                 } else {
-                    if (*pSyntaxIssuePos == -1) {
-                        *pSyntaxIssuePos = numCharsWritten - 1;
-                    }
+                    calc_recordSyntaxIssuePos(pSyntaxIssuePos, numCharsWritten);
                 }
             } else {
                 logger("Unknown other char [%c] to be syntax checked\r\n",

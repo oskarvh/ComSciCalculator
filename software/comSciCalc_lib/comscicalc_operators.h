@@ -42,9 +42,10 @@
 #define SUBRESULT_TYPE_CHAR 0
 #define SUBRESULT_TYPE_INT 1
 #define INPUT_FMT_INT 0
-#define INPUT_FMT_FLOAT 1
-#define INPUT_FMT_FIXED 2
+#define INPUT_FMT_FIXED 1
+#define INPUT_FMT_FLOAT 2
 #define INPUT_FMT_RESERVED 3
+
 /**@}*/
 /* -------------------------------------------
  * ----------------- MACROS ------------------
@@ -197,6 +198,9 @@ typedef struct numberFormat {
 
     /**
      * @param formatBase Base of the format
+     * @note Only used for incoming formats. Not
+     * applicable to each entry, as that is handled
+     * by the entry type
      * 0 = integer base
      * 1 = fixed point
      * 2 = floating point

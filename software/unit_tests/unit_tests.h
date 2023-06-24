@@ -5,7 +5,7 @@
  */
 
 /* ----------------- DEFINES ----------------- */
-#define MAX_STR_LEN 50
+#define MAX_STR_LEN 100
 /* ----------------- HEADERS ----------------- */
 
 // ComSciCalc headers
@@ -22,7 +22,7 @@ typedef struct testParams {
     char pOutputString[MAX_STR_LEN];
     int pCursor[MAX_STR_LEN];
     inputBase_t inputBase[MAX_STR_LEN];
-    uint32_t expectedResult;
+    SUBRESULT_INT expectedResult;
 } testParams_t;
 
 /* -------------------------------------------
