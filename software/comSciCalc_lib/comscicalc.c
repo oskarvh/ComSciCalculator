@@ -1177,7 +1177,7 @@ static int solveExpression(calcCoreState_t *pCalcCoreState,
             if (calcStatus > 0) {
                 logger("Warning: calculation had some problems");
             }
-            logger("Solved. Result was calculated to %i\r\n",
+            logger("Solved. Result was calculated to 0x%x\r\n",
                    pHigestPrioOp->entry.subresult);
             pHigestPrioOp->entry.typeFlag =
                 CONSTRUCT_TYPEFLAG(sign, inputFormat, SUBRESULT_TYPE_INT,

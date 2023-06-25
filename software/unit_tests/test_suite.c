@@ -728,6 +728,14 @@ testParams_t float_input_params[] = {
         .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
         .expectedResult = 0x42f6e666,// See https://www.h-schmidt.net/FloatConverter/IEEE754.html 
     },
+    {
+        .pInputString = "123.45+34.5\0",
+        .pCursor = {0,0,0,0},
+        .pExpectedString = "123.45+34.5\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 0x431df333,// See https://www.h-schmidt.net/FloatConverter/IEEE754.html 
+    },
 };
 void test_float_input(void){
     calcCoreState_t calcCore;

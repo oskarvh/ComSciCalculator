@@ -20,10 +20,14 @@
 // Operator functions
 #include "comscicalc_operators.h"
 
+// Debug:
+#include "uart_logger.h"
+
 // Standard library
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 /* ------------- GLOBAL VARIABLES ------------ */
 // List of operator function pointers
@@ -344,27 +348,39 @@ int8_t calc_add(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
     }
     uint8_t formatBase = processInputArgs(pArgs, num_args, numberFormat);
     // Read out the args as uint32_t. Will be casted later on
-    SUBRESULT_INT a = pArgs[0].subresult;
-    SUBRESULT_INT b = pArgs[1].subresult;
+
     // Make calculation based on format
     switch (numberFormat.formatBase) {
     case INPUT_FMT_INT:
         // Solve for N bit signed integer
+        logger("INPUT FORMAT IS INT\r\n");
+        SUBRESULT_INT a = pArgs[0].subresult;
+        SUBRESULT_INT b = pArgs[1].subresult;
         (*((SUBRESULT_INT *)pResult)) = a + b;
         // TODO: add overflow detection
         break;
     case INPUT_FMT_FLOAT:
+        logger("INPUT FORMAT IS FLOAT\r\n");
         if (numberFormat.numBits == 32) {
             // Solve for float
+            float a, b;
+            memcpy(&a, &(pArgs[0].subresult), sizeof(float));
+            memcpy(&b, &(pArgs[1].subresult), sizeof(float));
+            float result = a + b;
+            memcpy(pResult, &result, sizeof(float));
+            logger("Solved %f + %f to be %f\r\n", a, b, result);
         } else if (numberFormat.numBits == 64) {
             // Solve for double
+            double a, b;
+            memcpy(&a, &(pArgs[0].subresult), sizeof(double));
+            memcpy(&b, &(pArgs[1].subresult), sizeof(double));
+            double result = a + b;
+            memcpy(pResult, &result, sizeof(double));
+            logger("Solved %d + %d to be %d\r\n", a, b, result);
         } else {
             // Format is not supporteds
             return format_not_supported;
         }
-        // Solve for 32bit floats
-        (*((SUBRESULT_INT *)pResult)) = a + b;
-        // TODO: add overflow detection
         break;
     case INPUT_FMT_FIXED:
         // TODO:Solve for fixed point.
