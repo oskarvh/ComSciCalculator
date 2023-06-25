@@ -555,6 +555,178 @@ int charToInt(char c) {
     return 0;
 }
 
+// Alternative implementation of the copyAndConvertList function,
+// which uses the UNIX string-to-number functions instead.
+calc_funStatus_t copyAndConvertList(calcCoreState_t *pCalcCoreState,
+                                    inputListEntry_t **ppSolverListStart) {
+
+    inputListEntry_t *pCurrentListEntry = pCalcCoreState->pListEntrypoint;
+    // If no input list, simply return NULL
+    if (pCurrentListEntry == NULL) {
+        return calc_funStatus_INPUT_LIST_NULL;
+    }
+
+    inputListEntry_t *pNewListEntry = NULL;
+    inputListEntry_t *pPreviousListEntry = NULL;
+    // Loop through the input list and allocate new
+    // instances.
+    while (pCurrentListEntry != NULL) {
+
+        // Allocate a new entry
+        pNewListEntry = overloaded_malloc(sizeof(inputListEntry_t));
+        if (pNewListEntry == NULL) {
+            return calc_funStatus_ALLOCATE_ERROR;
+        }
+        pCalcCoreState->allocCounter++;
+        // Copy all parameters over
+        memcpy(pNewListEntry, pCurrentListEntry, sizeof(inputListEntry_t));
+
+        // Check if this is the start of the list, in which case save
+        // the parameter.
+        if (pCurrentListEntry == pCalcCoreState->pListEntrypoint) {
+            *ppSolverListStart = pNewListEntry;
+        }
+        if (GET_INPUT_TYPE(pCurrentListEntry->entry.typeFlag) ==
+            INPUT_TYPE_NUMBER) {
+            // If the current entry is numerical, aggregate this
+            // until the entry is either NULL or not numerical.
+            // Note that we cannot start with a decimal point here.
+            inputFormat_t inputFormat =
+                GET_FMT_TYPE(pCurrentListEntry->entry.typeFlag);
+            uint8_t inputBase = pCurrentListEntry->inputBase;
+            bool sign = pCalcCoreState->numberFormat.sign;
+            pNewListEntry->entry.typeFlag =
+                CONSTRUCT_TYPEFLAG(sign, inputFormat, SUBRESULT_TYPE_INT,
+                                   DEPTH_CHANGE_KEEP, INPUT_TYPE_NUMBER);
+            pNewListEntry->entry.subresult = 0;
+
+            uint8_t numberOfNumberEntries = 0;
+            inputListEntry_t *pTmpEntry = pCurrentListEntry;
+            while ((GET_INPUT_TYPE(pTmpEntry->entry.typeFlag) ==
+                    INPUT_TYPE_NUMBER) ||
+                   (GET_INPUT_TYPE(pTmpEntry->entry.typeFlag) ==
+                    INPUT_TYPE_DECIMAL_POINT)) {
+                // Count how manu number and decimal entries there are
+                numberOfNumberEntries += 1;
+                pTmpEntry = pTmpEntry->pNext;
+
+                if (pTmpEntry == NULL) {
+                    break;
+                }
+            }
+            // Allocate a string of the length we just found (+1 for the null
+            // terminator)
+            char *pCurrentString = malloc(sizeof(char) * numberOfNumberEntries);
+            if (pCurrentListEntry == NULL) {
+                return calc_funStatus_ALLOCATE_ERROR;
+            }
+            char *pCurrentChar = pCurrentString;
+            // Time to copy those entries over to the string
+            while ((GET_INPUT_TYPE(pCurrentListEntry->entry.typeFlag) ==
+                    INPUT_TYPE_NUMBER) ||
+                   (GET_INPUT_TYPE(pCurrentListEntry->entry.typeFlag) ==
+                    INPUT_TYPE_DECIMAL_POINT)) {
+                // Copy the current character to the string
+                *pCurrentChar++ = pCurrentListEntry->entry.c;
+
+                pCurrentListEntry = pCurrentListEntry->pNext;
+
+                if (pCurrentListEntry == NULL) {
+                    break;
+                }
+            }
+            // Finally, cap it off with a null terminator
+            *pCurrentChar = '\0';
+            logger("Converting %s. \r\n", pCurrentString);
+            // Now that we have a string to work with, based on the input
+            // format and base, we can convert using the UNIX string-to-X
+            // functions.
+            char *endPtr = NULL;
+            if (inputBase == inputBase_DEC) {
+                if ((inputFormat == INPUT_FMT_INT)) {
+                    // Convert string to int.
+                    // TBD: I think this should work with shorter strings as
+                    // well
+                    if (sign) {
+                        pNewListEntry->entry.subresult =
+                            strtoll(pCurrentString, &endPtr, 10);
+                    } else {
+                        pNewListEntry->entry.subresult =
+                            strtoull(pCurrentString, &endPtr, 10);
+                    }
+                } else if ((inputFormat == INPUT_FMT_FLOAT)) {
+                    if (pCalcCoreState->numberFormat.numBits == 32) {
+                        pNewListEntry->entry.subresult =
+                            strtof(pCurrentString, &endPtr);
+                    }
+                    if (pCalcCoreState->numberFormat.numBits == 64) {
+                        pNewListEntry->entry.subresult =
+                            strtod(pCurrentString, &endPtr);
+                    }
+                } else if ((inputFormat == INPUT_FMT_FIXED)) {
+                    // TODO
+                }
+            } else if (inputBase == inputBase_HEX) {
+                if ((inputFormat == INPUT_FMT_INT)) {
+                    // Convert string to int.
+                    // TBD: I think this should work with shorter strings as
+                    // well
+                    if (sign) {
+                        pNewListEntry->entry.subresult =
+                            strtoll(pCurrentString, &endPtr, 16);
+                    } else {
+                        pNewListEntry->entry.subresult =
+                            strtoull(pCurrentString, &endPtr, 16);
+                    }
+                } else if ((inputFormat == INPUT_FMT_FLOAT)) {
+                    // TODO
+                } else if ((inputFormat == INPUT_FMT_FIXED)) {
+                    // TODO
+                }
+            } else if (inputBase == inputBase_BIN) {
+                if ((inputFormat == INPUT_FMT_INT)) {
+                    // Convert string to int.
+                    // TBD: I think this should work with shorter strings as
+                    // well
+                    if (sign) {
+                        pNewListEntry->entry.subresult =
+                            strtoll(pCurrentString, &endPtr, 2);
+                    } else {
+                        pNewListEntry->entry.subresult =
+                            strtoull(pCurrentString, &endPtr, 2);
+                    }
+                } else if ((inputFormat == INPUT_FMT_FLOAT)) {
+                    // TODO
+                } else if ((inputFormat == INPUT_FMT_FIXED)) {
+                    // TODO
+                }
+            } else {
+                free(pCurrentString);
+                return calc_funStatus_INPUT_BASE_ERROR;
+            }
+            // Free the string
+            free(pCurrentString);
+            if (endPtr != pCurrentChar) {
+                logger("ERROR: The string %s is not well formatted\r\n",
+                       pCurrentString);
+            }
+
+        } else {
+            // Not a number input, therefore move on to the next entry directly
+            logger("Disregarded input: %c\r\n", pCurrentListEntry->entry);
+            pCurrentListEntry = pCurrentListEntry->pNext;
+        }
+
+        // Set the next and previous pointer of new entry
+        pNewListEntry->pNext = NULL;
+        pNewListEntry->pPrevious = pPreviousListEntry;
+        if (pPreviousListEntry != NULL) {
+            pPreviousListEntry->pNext = pNewListEntry;
+        }
+        pPreviousListEntry = pNewListEntry;
+    }
+    return calc_funStatus_SUCCESS;
+}
 /**
  * @brief Converts an input list containing chars, and converts all chars to
  * ints
@@ -566,8 +738,8 @@ int charToInt(char c) {
  * e.g. '1'->'2'->'3' will be converted to 123 (from 3 entries to 1).
  * @warning Floating and fixed point conversion not yet done.
  */
-calc_funStatus_t copyAndConvertList(calcCoreState_t *pCalcCoreState,
-                                    inputListEntry_t **ppSolverListStart) {
+calc_funStatus_t oldcopyAndConvertList(calcCoreState_t *pCalcCoreState,
+                                       inputListEntry_t **ppSolverListStart) {
     inputListEntry_t *pCurrentListEntry = pCalcCoreState->pListEntrypoint;
     // If no input list, simply return NULL
     if (pCurrentListEntry == NULL) {
@@ -607,6 +779,7 @@ calc_funStatus_t copyAndConvertList(calcCoreState_t *pCalcCoreState,
             pNewListEntry->entry.subresult = 0;
             uint8_t decimalPointCounter = 0;
             double divisor = 1.0;
+            // TBD: Is it cleaner to use the atoi/strtof/atof functions here?
             while ((GET_INPUT_TYPE(pCurrentListEntry->entry.typeFlag) ==
                     INPUT_TYPE_NUMBER) ||
                    (GET_INPUT_TYPE(pCurrentListEntry->entry.typeFlag) ==
