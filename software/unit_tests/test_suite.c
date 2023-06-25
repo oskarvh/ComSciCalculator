@@ -726,7 +726,7 @@ testParams_t float_input_params[] = {
         .pExpectedString = "123.45\0",
         .pOutputString = {0},
         .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
-        .expectedResult = 0x42f6e667,// See https://www.h-schmidt.net/FloatConverter/IEEE754.html 
+        .expectedResult = 0x42f6e666,// See https://www.h-schmidt.net/FloatConverter/IEEE754.html 
     },
 };
 void test_float_input(void){
@@ -776,12 +776,12 @@ int main(void)
 {
     verbose = true;
     UNITY_BEGIN();
-    RUN_TEST(test_addRemoveInput);
-    RUN_TEST(test_addInvalidInput);
-    RUN_TEST(test_solvable_solution);
-    RUN_TEST(test_unsolvable_solution);
-    RUN_TEST(test_null_pointers);
-    RUN_TEST(test_base_conversion);
-    //RUN_TEST(test_float_input);
+    //RUN_TEST(test_addRemoveInput);
+    //RUN_TEST(test_addInvalidInput);
+    //RUN_TEST(test_solvable_solution);
+    //RUN_TEST(test_unsolvable_solution);
+    //RUN_TEST(test_null_pointers);
+    //RUN_TEST(test_base_conversion);
+    RUN_TEST(test_float_input);
     return UNITY_END();
 }

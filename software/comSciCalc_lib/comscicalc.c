@@ -637,7 +637,7 @@ calc_funStatus_t copyAndConvertList(calcCoreState_t *pCalcCoreState,
             }
             // Finally, cap it off with a null terminator
             *pCurrentChar = '\0';
-            logger("Converting %s. \r\n", pCurrentString);
+            logger("Converting %s \r\n", pCurrentString);
             // Now that we have a string to work with, based on the input
             // format and base, we can convert using the UNIX string-to-X
             // functions.
@@ -656,12 +656,14 @@ calc_funStatus_t copyAndConvertList(calcCoreState_t *pCalcCoreState,
                     }
                 } else if ((inputFormat == INPUT_FMT_FLOAT)) {
                     if (pCalcCoreState->numberFormat.numBits == 32) {
-                        pNewListEntry->entry.subresult =
-                            strtof(pCurrentString, &endPtr);
+                        float tempFloat = strtof(pCurrentString, &endPtr);
+                        memcpy(&(pNewListEntry->entry.subresult), &tempFloat,
+                               sizeof(float));
                     }
                     if (pCalcCoreState->numberFormat.numBits == 64) {
-                        pNewListEntry->entry.subresult =
-                            strtod(pCurrentString, &endPtr);
+                        double tempFloat = strtof(pCurrentString, &endPtr);
+                        memcpy(&(pNewListEntry->entry.subresult), &tempFloat,
+                               sizeof(double));
                     }
                 } else if ((inputFormat == INPUT_FMT_FIXED)) {
                     // TODO
