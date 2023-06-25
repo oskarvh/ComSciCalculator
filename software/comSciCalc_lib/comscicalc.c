@@ -382,10 +382,10 @@ calc_funStatus_t calc_addInput(calcCoreState_t *pCalcCoreState,
                                    DEPTH_CHANGE_DECREASE, INPUT_TYPE_EMPTY);
         }
     } else if (charIsOther(inputChar)) {
-        if (inputChar == ',') {
+        if (inputChar == '.') {
             pNewListEntry->entry.typeFlag =
                 CONSTRUCT_TYPEFLAG(sign, inputFormat, SUBRESULT_TYPE_CHAR,
-                                   DEPTH_CHANGE_KEEP, INPUT_TYPE_EMPTY);
+                                   DEPTH_CHANGE_KEEP, INPUT_TYPE_DECIMAL_POINT);
         } else {
             pNewListEntry->entry.typeFlag =
                 CONSTRUCT_TYPEFLAG(sign, inputFormat, SUBRESULT_TYPE_CHAR,
@@ -598,53 +598,137 @@ calc_funStatus_t copyAndConvertList(calcCoreState_t *pCalcCoreState,
             INPUT_TYPE_NUMBER) {
             // If the current entry is numerical, aggregate this
             // until the entry is either NULL or not numerical
-            inputFormat_t inputFormat = pCalcCoreState->numberFormat.formatBase;
+            inputFormat_t inputFormat =
+                GET_FMT_TYPE(pCurrentListEntry->entry.typeFlag);
             bool sign = pCalcCoreState->numberFormat.sign;
             pNewListEntry->entry.typeFlag =
                 CONSTRUCT_TYPEFLAG(sign, inputFormat, SUBRESULT_TYPE_INT,
                                    DEPTH_CHANGE_KEEP, INPUT_TYPE_NUMBER);
             pNewListEntry->entry.subresult = 0;
-            while (GET_INPUT_TYPE(pCurrentListEntry->entry.typeFlag) ==
-                   INPUT_TYPE_NUMBER) {
-                // Aggregate the input based on the input base
-                if (pCurrentListEntry->inputBase == inputBase_DEC) {
+            uint8_t decimalPointCounter = 0;
+            double divisor = 1.0;
+            while ((GET_INPUT_TYPE(pCurrentListEntry->entry.typeFlag) ==
+                    INPUT_TYPE_NUMBER) ||
+                   (GET_INPUT_TYPE(pCurrentListEntry->entry.typeFlag) ==
+                    INPUT_TYPE_DECIMAL_POINT)) {
+                if (GET_INPUT_TYPE(pCurrentListEntry->entry.typeFlag) ==
+                    INPUT_TYPE_DECIMAL_POINT) {
+                    if ((inputFormat == INPUT_FMT_FIXED) ||
+                        (inputFormat == INPUT_FMT_FLOAT)) {
+                        if (decimalPointCounter == 0) {
+                            // Always increase the counter here
+                            decimalPointCounter += 1;
+                        } else if (decimalPointCounter == 1) {
+                            // This would be the second decimal pointer.
+                            // This is only applicable for floating point in
+                            // binary or hexadecimal.
+                            if ((pCurrentListEntry->inputBase !=
+                                 inputBase_DEC) &&
+                                (inputFormat == INPUT_FMT_FLOAT)) {
+                                decimalPointCounter += 1;
+                            }
+                        } else {
+                            // There cannot be any other count of decimals.
+                            logger("ERROR: More than two decimal points. \r\n");
+                            return calc_funStatus_UNKNOWN_INPUT;
+                        }
+                    } else {
+                        logger("ERROR: Got a decimal point, but input is not "
+                               "fixed or float \r\n");
+                        return calc_funStatus_UNKNOWN_INPUT;
+                    }
+                } else {
+                    // Aggregate the input based on the input base
+                    if (pCurrentListEntry->inputBase == inputBase_DEC) {
+                        if ((inputFormat == INPUT_FMT_INT)) {
+                            SUBRESULT_INT *pRes = (SUBRESULT_INT *)&(
+                                pNewListEntry->entry.subresult);
+                            *pRes = (*pRes) * 10;
+                            pNewListEntry->entry.subresult +=
+                                charToInt(pCurrentListEntry->entry.c);
+                        } else if ((inputFormat == INPUT_FMT_FLOAT)) {
+                            uint8_t charInInteger =
+                                charToInt(pCurrentListEntry->entry.c);
+                            if (decimalPointCounter == 0) {
+                                // Before the decimal place.
+                                logger("Before decimal place.\r\n");
+                                if (pCalcCoreState->numberFormat.numBits ==
+                                    32) {
+                                    float *pRes = (float *)&(
+                                        pNewListEntry->entry.subresult);
+                                    *pRes = *pRes * 10.0 + charInInteger * 1.0;
+                                } else if (pCalcCoreState->numberFormat
+                                               .numBits == 64) {
+                                    double *pRes = (double *)&(
+                                        pNewListEntry->entry.subresult);
+                                    *pRes = *pRes * 10.0 + charInInteger * 1.0;
+                                } else {
+                                    logger(
+                                        "ERROR: Bitlength %i not supported! "
+                                        "\r\n",
+                                        pCalcCoreState->numberFormat.numBits);
+                                }
+                            } else {
+                                divisor *= 10.0;
+                                if (pCalcCoreState->numberFormat.numBits ==
+                                    32) {
+                                    float *pRes = (float *)&(
+                                        pNewListEntry->entry.subresult);
+                                    *pRes = (*pRes) + charInInteger / divisor;
+                                } else if (pCalcCoreState->numberFormat
+                                               .numBits == 64) {
+                                    double *pRes = (double *)&(
+                                        pNewListEntry->entry.subresult);
+                                    *pRes = (*pRes) + charInInteger / divisor;
+                                } else {
+                                    logger(
+                                        "ERROR: Bitlength %i not supported! "
+                                        "\r\n",
+                                        pCalcCoreState->numberFormat.numBits);
+                                }
+                            }
+                        } else if ((inputFormat == INPUT_FMT_FIXED)) {
+                            // TODO
+                        }
+                    }
+                    if (pCurrentListEntry->inputBase == inputBase_HEX) {
+                        if ((inputFormat == INPUT_FMT_INT)) {
+                            SUBRESULT_INT *pRes = (SUBRESULT_INT *)&(
+                                pNewListEntry->entry.subresult);
+                            *pRes = (*pRes) * 16;
+                            pNewListEntry->entry.subresult +=
+                                charToInt(pCurrentListEntry->entry.c);
+                        } else if ((inputFormat == INPUT_FMT_FLOAT)) {
+                            // TODO
+                        } else if ((inputFormat == INPUT_FMT_FIXED)) {
+                            // TODO
+                        }
+                    }
+                    if (pCurrentListEntry->inputBase == inputBase_BIN) {
+                        if ((inputFormat == INPUT_FMT_INT)) {
+                            SUBRESULT_INT *pRes = (SUBRESULT_INT *)&(
+                                pNewListEntry->entry.subresult);
+                            *pRes = (*pRes) * 2;
+                            pNewListEntry->entry.subresult +=
+                                charToInt(pCurrentListEntry->entry.c);
+                        } else if ((inputFormat == INPUT_FMT_FLOAT)) {
+                            // TODO
+                        } else if ((inputFormat == INPUT_FMT_FIXED)) {
+                            // TODO
+                        }
+                    }
                     if ((inputFormat == INPUT_FMT_INT)) {
-                        SUBRESULT_INT *pRes =
-                            (SUBRESULT_INT *)&(pNewListEntry->entry.subresult);
-                        *pRes = (*pRes) * 10;
+                        logger("Input: %c, output: %i\r\n",
+                               pCurrentListEntry->entry.c,
+                               pNewListEntry->entry.subresult);
                     } else if ((inputFormat == INPUT_FMT_FLOAT)) {
-                        // TODO
+                        logger("Input: %c, output: 0x%x\r\n",
+                               pCurrentListEntry->entry.c,
+                               pNewListEntry->entry.subresult);
                     } else if ((inputFormat == INPUT_FMT_FIXED)) {
                         // TODO
                     }
                 }
-                if (pCurrentListEntry->inputBase == inputBase_HEX) {
-                    if ((inputFormat == INPUT_FMT_INT)) {
-                        SUBRESULT_INT *pRes =
-                            (SUBRESULT_INT *)&(pNewListEntry->entry.subresult);
-                        *pRes = (*pRes) * 16;
-                    } else if ((inputFormat == INPUT_FMT_FLOAT)) {
-                        // TODO
-                    } else if ((inputFormat == INPUT_FMT_FIXED)) {
-                        // TODO
-                    }
-                }
-                if (pCurrentListEntry->inputBase == inputBase_BIN) {
-                    if ((inputFormat == INPUT_FMT_INT)) {
-                        SUBRESULT_INT *pRes =
-                            (SUBRESULT_INT *)&(pNewListEntry->entry.subresult);
-                        *pRes = (*pRes) * 2;
-                    } else if ((inputFormat == INPUT_FMT_FLOAT)) {
-                        // TODO
-                    } else if ((inputFormat == INPUT_FMT_FIXED)) {
-                        // TODO
-                    }
-                }
-                pNewListEntry->entry.subresult +=
-                    charToInt(pCurrentListEntry->entry.c);
-                logger("Input: %c, output: %i\r\n", pCurrentListEntry->entry.c,
-                       pNewListEntry->entry.subresult);
-                logger("Inputbase = %i\r\n", pCurrentListEntry->inputBase);
                 pCurrentListEntry = pCurrentListEntry->pNext;
 
                 if (pCurrentListEntry == NULL) {
@@ -653,6 +737,7 @@ calc_funStatus_t copyAndConvertList(calcCoreState_t *pCalcCoreState,
             }
         } else {
             // Not a number input, therefore move on to the next entry directly
+            logger("Disregarded input: %c\r\n", pCurrentListEntry->entry);
             pCurrentListEntry = pCurrentListEntry->pNext;
         }
 
@@ -704,8 +789,8 @@ uint8_t countArgs(inputListEntry_t *pStart, inputListEntry_t *pEnd) {
  * @param pStart Pointer to start of list
  * @return 0 if OK, otherwise -1
  */
-int8_t readOutArgs(SUBRESULT_INT *pArgs, int8_t numArgs,
-                   inputListEntry_t *pStart, inputListEntry_t *pEnd) {
+int8_t readOutArgs(inputType_t *pArgs, int8_t numArgs, inputListEntry_t *pStart,
+                   inputListEntry_t *pEnd) {
     // pArgs must have been allocated
     if (pStart == NULL) {
         return -1;
@@ -722,7 +807,7 @@ int8_t readOutArgs(SUBRESULT_INT *pArgs, int8_t numArgs,
         if (GET_SUBRESULT_TYPE(pStart->entry.typeFlag) == SUBRESULT_TYPE_INT) {
             // Argument found.
             logger("Argument[%i] = %i\r\n", readArgs, pStart->entry.subresult);
-            *pArgs++ = pStart->entry.subresult;
+            memcpy(pArgs++, &(pStart->entry), sizeof(inputType_t));
             readArgs++;
         }
         pStart = pStart->pNext;
@@ -899,12 +984,12 @@ static int solveExpression(calcCoreState_t *pCalcCoreState,
             bool sign = pCalcCoreState->numberFormat.sign;
             // Get the function pointer casted to the correct format.
             int8_t (*pFun)(SUBRESULT_INT * pResult, numberFormat_t numberFormat,
-                           int num_args, SUBRESULT_INT *args) =
+                           int num_args, inputType_t *args) =
                 (function_operator
                      *)(((operatorEntry_t *)(pHigestPrioOp->pFunEntry))->pFun);
-            SUBRESULT_INT pArgs[2];
-            pArgs[0] = (SUBRESULT_INT)(pPrevEntry->entry.subresult);
-            pArgs[1] = (SUBRESULT_INT)(pNextEntry->entry.subresult);
+            inputType_t pArgs[2];
+            memcpy(&(pArgs[0]), &(pPrevEntry->entry), sizeof(inputType_t));
+            memcpy(&(pArgs[1]), &(pNextEntry->entry), sizeof(inputType_t));
 
             // Solve the operation and save the results to the operator
             // subresults.
@@ -1004,8 +1089,7 @@ static int solveExpression(calcCoreState_t *pCalcCoreState,
                 }
             }
             // Allocate a temporary buffer to hold all arguments and calculate
-            SUBRESULT_INT *pArgs =
-                malloc(numArgsInBuffer * sizeof(SUBRESULT_INT));
+            inputType_t *pArgs = malloc(numArgsInBuffer * sizeof(inputType_t));
             if (pArgs == NULL) {
                 logger("Arguments could not be allocated!\r\n");
                 return calc_solveStatus_ALLOCATION_ERROR;
@@ -1018,7 +1102,7 @@ static int solveExpression(calcCoreState_t *pCalcCoreState,
             inputFormat_t inputFormat = pCalcCoreState->numberFormat.formatBase;
             bool sign = pCalcCoreState->numberFormat.sign;
             int8_t (*pFun)(SUBRESULT_INT * pResult, numberFormat_t numberFormat,
-                           int num_args, SUBRESULT_INT *args) =
+                           int num_args, inputType_t *pArgs) =
                 (function_operator
                      *)(((operatorEntry_t *)(pExprStart->pFunEntry))->pFun);
 
@@ -1187,6 +1271,11 @@ calc_funStatus_t calc_solver(calcCoreState_t *pCalcCoreState) {
     return returnStatus;
 }
 
+/**
+ * @brief Function to add the syntax issue position to a pointer
+ * @param pSyntaxIssuePos Pointer to syntax issue variable
+ * @param numCharsWritten Number of characters that the issue is at.
+ */
 void calc_recordSyntaxIssuePos(int16_t *pSyntaxIssuePos,
                                uint16_t numCharsWritten) {
     if (pSyntaxIssuePos != NULL) {
@@ -1322,7 +1411,8 @@ calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
                     }
                 }
             }
-        } else if (currentInputType == INPUT_TYPE_EMPTY) {
+        } else if ((currentInputType == INPUT_TYPE_EMPTY) ||
+                   (currentInputType == INPUT_TYPE_DECIMAL_POINT)) {
             // This is either bracket or punctuation.
             // Depending on what it is, the syntax can differ.
             if (pCurrentListEntry->entry.c == OPENING_BRACKET) {
@@ -1390,7 +1480,7 @@ calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
                         }
                         // Also check if the entry was a closing bracket, in
                         // which case just break.
-                        if (tmpInputType == INPUT_TYPE_OTHER) {
+                        if (tmpInputType == INPUT_TYPE_EMPTY) {
                             if (pTmpListEntry->entry.c == '(') {
                                 break;
                             }

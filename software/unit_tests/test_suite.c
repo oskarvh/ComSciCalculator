@@ -699,7 +699,6 @@ void test_base_conversion(void){
     }
 }
 
-
 void test_null_pointers(void){
     calcCoreState_t calcCore;
     calcCoreState_t *pCalcCore = NULL;
@@ -719,6 +718,57 @@ void test_null_pointers(void){
     funStatus = calc_printBuffer(&calcCore, NULL, 0, &syntaxIssueLoc);
     TEST_ASSERT_EQUAL_INT_MESSAGE(calc_funStatus_STRING_BUFFER_ERROR,funStatus,"Unexpected return from print buffer");
 }
+
+testParams_t float_input_params[] = {
+    {
+        .pInputString = "123.45\0",
+        .pCursor = {0,0,0,0},
+        .pExpectedString = "123.45\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 0x42f6e667,// See https://www.h-schmidt.net/FloatConverter/IEEE754.html 
+    },
+};
+void test_float_input(void){
+    calcCoreState_t calcCore;
+    int numTests = sizeof(float_input_params)/sizeof(float_input_params[0]);
+    for(int i = 0 ; i < numTests ; i++){
+        setupTestStruct(&calcCore, &float_input_params[i]);
+        calcCore.numberFormat.formatBase = INPUT_FMT_FLOAT;
+        calcCoreAddInput(&calcCore, &float_input_params[i]);
+        int8_t state = calc_solver(&calcCore);
+        calcCoreGetBuffer(&calcCore, &float_input_params[i]);
+        if(verbose){
+            printf("------------------------------------------------\r\n");
+            printf("Input:           %s \r\nExpected:        %s \r\nExpected result: %f \r\nReturned result: %i \r\n", 
+                    float_input_params[i].pExpectedString,
+                    float_input_params[i].pOutputString,
+                    float_input_params[i].expectedResult,
+                    calcCore.result
+                    );
+        }
+        TEST_ASSERT_EQUAL_STRING(
+            float_input_params[i].pExpectedString,
+            float_input_params[i].pOutputString);
+        teardownTestStruct(&calcCore);
+
+        // Check that an equal amount of mallocs and free's happened
+        // in the calculator core
+        //printf("Allocation counter = %i\r\n", calcCore.allocCounter);
+        printf("Got: 0x%x. ", calcCore.result);
+        printf(" Expected 0x%x\r\n", float_input_params[i].expectedResult);
+        TEST_ASSERT_EQUAL_INT_MESSAGE(float_input_params[i].expectedResult, calcCore.result, "Result not right.");
+        TEST_ASSERT_EQUAL_UINT_MESSAGE(0, calcCore.allocCounter, "Leaky memory!");
+        if(calcCore.allocCounter != 0){
+            printf("************************************************\r\n\r\n");
+            printf("WARNING: leaky memory: %i!\r\n", calcCore.allocCounter);
+            printf("************************************************\r\n\r\n");
+        }
+        if(verbose){
+            printf("------------------------------------------------\r\n\r\n");
+        }
+    }
+}
 /* ----------------------------------------------------------------
  * Main. Only starts the tests. 
  * ----------------------------------------------------------------*/
@@ -732,5 +782,6 @@ int main(void)
     RUN_TEST(test_unsolvable_solution);
     RUN_TEST(test_null_pointers);
     RUN_TEST(test_base_conversion);
+    RUN_TEST(test_float_input);
     return UNITY_END();
 }

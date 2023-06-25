@@ -38,8 +38,8 @@ SOFTWARE.
  * ----------------- HEADERS -----------------
  * -------------------------------------------*/
 // Operator functions
+#include "comscicalc_common.h"
 #include "comscicalc_operators.h"
-
 // Standard library
 #include <stdbool.h>
 #include <stdint.h>
@@ -131,35 +131,6 @@ enum inputModStatus {
     //! Error: Pointer to list entry was NULL.
     inputModStatus_INPUT_LIST_NULL = -1,
 };
-
-/**
- * @brief Struct for holding input data and sub result data.
- *
- * This struct holds the data entered by the user, along with
- * storing sub results used while solving the expression.
- */
-typedef struct inputType {
-    /**
-     * @param c Input character.
-     */
-    char c;
-    /**
-     * @param typeFlag Flag holding metadata of the entry
-     *
-     * Call me old school but I try to avoid bitfields.
-     * bit 0-1: 0 = empty, 1 = number, 3 = operator, 3 = custom function.
-     * bit 2-3: 0 = keep depth, 1 = increase depth, 2 = decrease depth, 3 =
-     * reserved.
-     * bit 4: 0 = char input, 1 = subresult.
-     * Bit 5-6: Input is: 0 = int, 1 = floating point
-     * 2 = fixed point, 3 = reserved
-     * bit 7: 1 = signed, 0 = unsigned.
-     */
-    typeFlag_t typeFlag;
-
-    //! Partial restult. Only used for when solving.
-    SUBRESULT_INT subresult;
-} inputType_t;
 
 /**
  * @brief Struct for input entry.

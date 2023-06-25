@@ -229,20 +229,123 @@ const operatorEntry_t operators[NUM_OPERATORS] = {
      .numArgs = 0,
      .pFun = NULL}};
 
+SUBRESULT_INT promoteOrder(SUBRESULT_INT subresult, uint8_t currentOrder,
+                           uint8_t higherOrder, numberFormat_t numberFormat) {
+    SUBRESULT_INT result = subresult;
+    if (higherOrder == INPUT_FMT_FLOAT) {
+        if (currentOrder == INPUT_FMT_INT) {
+            if (numberFormat.numBits == 32) {
+                // Convert to float
+                float res = subresult * 1.0;
+                return (SUBRESULT_INT)res;
+            } else if (numberFormat.numBits == 64) {
+                // Convert to double
+                double res = subresult * 1.0;
+                return (SUBRESULT_INT)res;
+            }
+            // No else here, only 32 and 64 bits are supported.
+        } else if (currentOrder == INPUT_FMT_FIXED) {
+            // Convert the integer part and decimal parts
+            // by themselves
+            uint16_t numBitsDecimal =
+                numberFormat.numBits - numberFormat.fixedPointDecimalPlace;
+
+            SUBRESULT_INT intpart = subresult >> numBitsDecimal;
+            SUBRESULT_INT decPart =
+                subresult & ((1 << (numBitsDecimal + 1)) - 1);
+            // Note: I don't like the dividing here, but due to the
+            // lack of a better alternative, this is the way it's done.
+            if (numberFormat.numBits == 32) {
+                // Convert to float
+                float resInt = intpart * 1.0;
+                float resDec = decPart * 1.0;
+                while (decPart > 1.0) {
+                    decPart /= 10.0;
+                }
+                return (SUBRESULT_INT)(resInt + resDec);
+            } else if (numberFormat.numBits == 64) {
+                // Convert to double
+                double resInt = intpart * 1.0;
+                double resDec = decPart * 1.0;
+                while (decPart > 1.0) {
+                    decPart /= 10.0;
+                }
+                return (SUBRESULT_INT)(resInt + resDec);
+            }
+        } else {
+            // Already float, nothing to do
+            return subresult;
+        }
+    }
+    if (higherOrder == INPUT_FMT_FIXED) {
+        if (currentOrder == INPUT_FMT_INT) {
+            // Simply convert the integer part.
+
+        } else if (currentOrder == INPUT_FMT_FIXED) {
+            // Nothing to do here, simply return
+            return subresult;
+        } else {
+            // Format should not be float at any time.
+            // so this is an unhandled error.
+        }
+    }
+    if (higherOrder == INPUT_FMT_INT) {
+        // Lowest order, do nothing.
+        // Cannot be here if all input is not already int.
+        return subresult;
+    }
+}
+
+/**
+ * @brief Process the input arguments for the calculator operation.
+ *
+ * This function find the highest order input format (int,
+ * fixed or float, in that order), and promotes all the
+ * entries in the arguments to that format.
+ * This is so that calculation can be consistent.
+ * @param pArgs Pointer to arguments
+ * @param numArgs Number of arguments
+ * @param numberFormat Global number format.
+ * @return The format that all arguments have been promoted to.
+ */
+uint8_t processInputArgs(inputType_t *pArgs, uint8_t numArgs,
+                         numberFormat_t numberFormat) {
+    // First, go through all arguments and find the higest order
+    // format.
+    uint8_t higestOrderFormat = INPUT_FMT_INT;
+    for (uint8_t i = 0; i < numArgs; i++) {
+        uint8_t currentFormat = GET_FMT_TYPE(pArgs[i].typeFlag);
+        if (currentFormat > higestOrderFormat) {
+            higestOrderFormat = currentFormat;
+        }
+    }
+
+    // Go through and check if any argument has a lower order,
+    // in which case promote that to the higher order.
+    for (uint8_t i = 0; i < numArgs; i++) {
+        uint8_t currentFormat = GET_FMT_TYPE(pArgs[i].typeFlag);
+        if (currentFormat < higestOrderFormat) {
+            // Promote format to the higer order
+            pArgs[i].subresult = promoteOrder(pArgs[i].subresult, currentFormat,
+                                              higestOrderFormat, numberFormat);
+        }
+    }
+}
+
 /* ------ CALCULATOR OPERATOR FUNCTIONS ------ */
 
 // Calculator operator functions to be used in "operators" table
 int8_t calc_add(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
-                int num_args, SUBRESULT_INT *args) {
+                int num_args, inputType_t *pArgs) {
 
     // Only expecting two variable arguments here
     if (num_args != 2) {
         return incorrect_args;
     }
-
+    uint8_t formatBase = processInputArgs(pArgs, num_args, numberFormat);
     // Read out the args as uint32_t. Will be casted later on
-    SUBRESULT_INT a = args[0];
-    SUBRESULT_INT b = args[1];
+    SUBRESULT_INT a = pArgs[0].subresult;
+    SUBRESULT_INT b = pArgs[1].subresult;
     // Make calculation based on format
     switch (numberFormat.formatBase) {
     case INPUT_FMT_INT:
@@ -273,7 +376,7 @@ int8_t calc_add(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
 }
 
 int8_t calc_subtract(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
-                     int num_args, SUBRESULT_INT *args) {
+                     int num_args, inputType_t *pArgs) {
     // Only expecting two variable arguments here
     if (num_args != 2) {
         return incorrect_args;
@@ -281,8 +384,8 @@ int8_t calc_subtract(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
 
     // Read out the args as uint32_t. Will be casted later on
 
-    SUBRESULT_INT a = args[0];
-    SUBRESULT_INT b = args[1];
+    SUBRESULT_INT a = pArgs[0].subresult;
+    SUBRESULT_INT b = pArgs[1].subresult;
     // Make calculation based on format
     switch (numberFormat.formatBase) {
     case INPUT_FMT_INT:
@@ -305,7 +408,7 @@ int8_t calc_subtract(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
 }
 
 int8_t calc_multiply(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
-                     int num_args, SUBRESULT_INT *args) {
+                     int num_args, inputType_t *pArgs) {
     // Only expecting two variable arguments here
     if (num_args != 2) {
         return incorrect_args;
@@ -313,8 +416,8 @@ int8_t calc_multiply(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
 
     // Read out the args as uint32_t. Will be casted later on
 
-    SUBRESULT_INT a = args[0];
-    SUBRESULT_INT b = args[1];
+    SUBRESULT_INT a = pArgs[0].subresult;
+    SUBRESULT_INT b = pArgs[1].subresult;
     // Make calculation based on format
     switch (numberFormat.formatBase) {
     case INPUT_FMT_INT:
@@ -337,7 +440,7 @@ int8_t calc_multiply(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
 }
 
 int8_t calc_divide(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
-                   int num_args, SUBRESULT_INT *args) {
+                   int num_args, inputType_t *pArgs) {
     // Only expecting two variable arguments here
     if (num_args != 2) {
         return incorrect_args;
@@ -345,8 +448,8 @@ int8_t calc_divide(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
 
     // Read out the args as uint32_t. Will be casted later on
 
-    SUBRESULT_INT a = args[0];
-    SUBRESULT_INT b = args[1];
+    SUBRESULT_INT a = pArgs[0].subresult;
+    SUBRESULT_INT b = pArgs[1].subresult;
     if (b == 0) {
         return error_args;
     }
@@ -372,7 +475,7 @@ int8_t calc_divide(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
 }
 
 int8_t calc_and(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
-                int num_args, SUBRESULT_INT *args) {
+                int num_args, inputType_t *pArgs) {
     // Only expecting two variable arguments here
     if (num_args != 2) {
         return incorrect_args;
@@ -380,8 +483,8 @@ int8_t calc_and(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
 
     // Read out the args as uint32_t. Will be casted later on
 
-    SUBRESULT_INT a = args[0];
-    SUBRESULT_INT b = args[1];
+    SUBRESULT_INT a = pArgs[0].subresult;
+    SUBRESULT_INT b = pArgs[1].subresult;
     if (b == 0) {
         return error_args;
     }
@@ -406,22 +509,22 @@ int8_t calc_and(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
 }
 
 int8_t calc_nand(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
-                 int num_args, SUBRESULT_INT *args) {
+                 int num_args, inputType_t *pArgs) {
     return function_solved;
 }
 
 int8_t calc_or(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
-               int num_args, SUBRESULT_INT *args) {
+               int num_args, inputType_t *pArgs) {
     return function_solved;
 }
 
 int8_t calc_xor(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
-                int num_args, SUBRESULT_INT *args) {
+                int num_args, inputType_t *pArgs) {
     return function_solved;
 }
 
 int8_t calc_not(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
-                int num_args, SUBRESULT_INT *args) {
+                int num_args, inputType_t *pArgs) {
     // Only expecting one variable arguments here
     if (num_args != 1) {
         return incorrect_args;
@@ -429,7 +532,7 @@ int8_t calc_not(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
 
     // Read out the args as uint32_t. Will be casted later on
 
-    SUBRESULT_INT a = args[0];
+    SUBRESULT_INT a = pArgs[0].subresult;
     // Make calculation based on format
     switch (numberFormat.formatBase) {
     case INPUT_FMT_INT:
@@ -451,19 +554,19 @@ int8_t calc_not(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
 }
 
 int8_t calc_leftshift(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
-                      int num_args, SUBRESULT_INT *args) {
+                      int num_args, inputType_t *pArgs) {
     return function_solved;
 }
 
 int8_t calc_rightshift(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
-                       int num_args, SUBRESULT_INT *args) {
+                       int num_args, inputType_t *pArgs) {
     return function_solved;
 }
 
 int8_t calc_sum(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
-                int num_args, SUBRESULT_INT *args) {
+                int num_args, inputType_t *pArgs) {
 
-    if (args == NULL) {
+    if (pArgs == NULL) {
         return incorrect_args;
     }
     if (num_args < 1) {
@@ -475,7 +578,7 @@ int8_t calc_sum(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
         // Solve for N bit signed integer
         (*((SUBRESULT_INT *)pResult)) = 0;
         for (int i = 0; i < num_args; i++) {
-            (*((SUBRESULT_INT *)pResult)) += (SUBRESULT_INT)args[i];
+            (*((SUBRESULT_INT *)pResult)) += (SUBRESULT_INT)pArgs[i].subresult;
         }
         // TODO: add overflow detection
         break;
@@ -483,7 +586,7 @@ int8_t calc_sum(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
         // Solve for 32bit floats
         (*((SUBRESULT_INT *)pResult)) = 0;
         for (int i = 0; i < num_args; i++) {
-            (*((SUBRESULT_INT *)pResult)) += (SUBRESULT_INT)args[i];
+            (*((SUBRESULT_INT *)pResult)) += (SUBRESULT_INT)pArgs[i].subresult;
         }
         // TODO: add overflow detection
         break;
