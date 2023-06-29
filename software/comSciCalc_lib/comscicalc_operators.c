@@ -251,8 +251,7 @@ SUBRESULT_INT promoteOrder(SUBRESULT_INT subresult, uint8_t currentOrder,
         } else if (currentOrder == INPUT_FMT_FIXED) {
             // Convert the integer part and decimal parts
             // by themselves
-            uint16_t numBitsDecimal =
-                numberFormat.numBits - numberFormat.fixedPointDecimalPlace;
+            uint16_t numBitsDecimal = numberFormat.fixedPointDecimalPlace;
 
             SUBRESULT_INT intpart = subresult >> numBitsDecimal;
             SUBRESULT_INT decPart =
@@ -350,17 +349,13 @@ int8_t calc_add(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
     // Read out the args as uint32_t. Will be casted later on
 
     // Make calculation based on format
-    switch (numberFormat.formatBase) {
-    case INPUT_FMT_INT:
+    if (numberFormat.formatBase == INPUT_FMT_INT) {
         // Solve for N bit signed integer
-        logger("INPUT FORMAT IS INT\r\n");
         SUBRESULT_INT a = pArgs[0].subresult;
         SUBRESULT_INT b = pArgs[1].subresult;
         (*((SUBRESULT_INT *)pResult)) = a + b;
         // TODO: add overflow detection
-        break;
-    case INPUT_FMT_FLOAT:
-        logger("INPUT FORMAT IS FLOAT\r\n");
+    } else if (numberFormat.formatBase == INPUT_FMT_FLOAT) {
         if (numberFormat.numBits == 32) {
             // Solve for float
             float a, b;
@@ -381,12 +376,12 @@ int8_t calc_add(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
             // Format is not supporteds
             return format_not_supported;
         }
-        break;
-    case INPUT_FMT_FIXED:
-        // TODO:Solve for fixed point.
+    } else if (numberFormat.formatBase == INPUT_FMT_FIXED) {
+        // Normal addition should be OK here
+        SUBRESULT_INT a = pArgs[0].subresult;
+        SUBRESULT_INT b = pArgs[1].subresult;
+        (*((SUBRESULT_INT *)pResult)) = a + b;
         // TODO: add overflow detection
-        return format_not_supported;
-        break;
     }
     return function_solved;
 }

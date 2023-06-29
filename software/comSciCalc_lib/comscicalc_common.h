@@ -238,8 +238,8 @@ typedef struct numberFormat {
     /**
      * @param fixedPointDecimalPlace Decimal place for fixed point
      * @note Parameter only valid for fixed point. Denotes
-     * how many bits to the left of the decimal place are fixed
-     * for the integer part. The rest is for the decimal part.
+     * how many bits the decimal values hold, i.e. for int this is 0.
+     * For e.g. 0b...1000.00 this is 2
      */
     uint16_t fixedPointDecimalPlace;
 

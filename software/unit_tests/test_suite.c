@@ -777,6 +777,205 @@ void test_float_input(void){
         }
     }
 }
+
+testParams_t fixed_point_input_params[] = {
+    {
+        .pInputString = "123.5\0",
+        .pCursor = {0,0,0,0},
+        .pExpectedString = "123.5\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 0x7b8000, // See https://chummersone.github.io/qformat.html#converter
+    },
+    {
+        .pInputString = "123.45\0",
+        .pCursor = {0,0,0,0},
+        .pExpectedString = "123.45\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 0x007b7333, // See https://chummersone.github.io/qformat.html#converter
+    },
+    {
+        .pInputString = "123.45+34.5\0",
+        .pCursor = {0,0,0,0},
+        .pExpectedString = "123.45+34.5\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 0x9df333, // See https://chummersone.github.io/qformat.html#converter
+    },
+    {
+        .pInputString = "175.188+18.1\0",
+        .pCursor = {0,0,0,0},
+        .pExpectedString = "175.188+18.1\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 0xc149bb, // See https://chummersone.github.io/qformat.html#converter
+    },
+    {
+        .pInputString = "12.8000+7e.ab85\0",
+        .pCursor = {0,0,0,0},
+        .pExpectedString = "0x12.0x8000+0x7e.0xab85\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_HEX},
+        .expectedResult = 0x912b85, // See https://chummersone.github.io/qformat.html#converter
+    },
+    
+};
+void test_fixed_point_input(void){
+    calcCoreState_t calcCore;
+    int numTests = sizeof(fixed_point_input_params)/sizeof(fixed_point_input_params[0]);
+    for(int i = 0 ; i < numTests ; i++){
+        setupTestStruct(&calcCore, &fixed_point_input_params[i]);
+        calcCore.numberFormat.formatBase = INPUT_FMT_FIXED;
+        calcCore.numberFormat.fixedPointDecimalPlace = 16;
+        calcCoreAddInput(&calcCore, &fixed_point_input_params[i]);
+        int8_t state = calc_solver(&calcCore);
+        calcCoreGetBuffer(&calcCore, &fixed_point_input_params[i]);
+        if(verbose){
+            printf("------------------------------------------------\r\n");
+            printf("Input:           %s \r\nExpected:        %s \r\nExpected result: %f \r\nReturned result: %i \r\n", 
+                    fixed_point_input_params[i].pExpectedString,
+                    fixed_point_input_params[i].pOutputString,
+                    fixed_point_input_params[i].expectedResult,
+                    calcCore.result
+                    );
+        }
+        TEST_ASSERT_EQUAL_STRING(
+            fixed_point_input_params[i].pExpectedString,
+            fixed_point_input_params[i].pOutputString);
+        teardownTestStruct(&calcCore);
+
+        // Check that an equal amount of mallocs and free's happened
+        // in the calculator core
+        //printf("Allocation counter = %i\r\n", calcCore.allocCounter);
+        printf("Got: 0x%x. ", calcCore.result);
+        printf(" Expected 0x%x\r\n", fixed_point_input_params[i].expectedResult);
+        TEST_ASSERT(abs(fixed_point_input_params[i].expectedResult - calcCore.result) <= 1);
+        TEST_ASSERT_EQUAL_UINT_MESSAGE(0, calcCore.allocCounter, "Leaky memory!");
+        if(calcCore.allocCounter != 0){
+            printf("************************************************\r\n\r\n");
+            printf("WARNING: leaky memory: %i!\r\n", calcCore.allocCounter);
+            printf("************************************************\r\n\r\n");
+        }
+        if(verbose){
+            printf("------------------------------------------------\r\n\r\n");
+        }
+    }
+}
+
+
+testParams_t fixed_point_test_params[] = {
+    {
+        .pInputString = "123.5\0",
+        .inputBase = {[0 ... MAX_STR_LEN-1] = 10},
+        .expectedResult = 0x7b8000, // See https://chummersone.github.io/qformat.html#converter
+    },
+    {
+        .pInputString = "123.45\0",
+        .inputBase = {[0 ... MAX_STR_LEN-1] = 10},
+        .expectedResult = 0x007b7333, // See https://chummersone.github.io/qformat.html#converter
+    },
+    {
+        .pInputString = "0.5\0",
+        .inputBase = {[0 ... MAX_STR_LEN-1] = 10},
+        .expectedResult = 0x00008000, // See https://chummersone.github.io/qformat.html#converter
+    },
+    {
+        .pInputString = "123.3335\0",
+        .inputBase = {[0 ... MAX_STR_LEN-1] = 10},
+        .expectedResult = 0x007b5560, // See https://chummersone.github.io/qformat.html#converter
+    },
+    {
+        .pInputString = "175.188\0",
+        .inputBase = {[0 ... MAX_STR_LEN-1] = 10},
+        .expectedResult = 0x00af3021, // See https://chummersone.github.io/qformat.html#converter
+    },
+    {
+        .pInputString = "18.1\0",
+        .inputBase = {[0 ... MAX_STR_LEN-1] = 10},
+        .expectedResult = 0x0012199a, // See https://chummersone.github.io/qformat.html#converter
+    },
+    
+};
+void test_string_to_fixed_point(void){
+    int numTests = sizeof(fixed_point_test_params)/sizeof(fixed_point_test_params[0]);
+    for(int i = 0 ; i < numTests ; i++){
+        SUBRESULT_INT fp = 0;
+        fp = strtofp(fixed_point_test_params[i].pInputString, 
+                    false, 
+                    16, 
+                    (uint16_t)(fixed_point_test_params[i].inputBase[0]));
+        printf("fp = 0x%llx, ", fp);
+        printf("expected = 0x%llx\r\n", fixed_point_test_params[i].expectedResult);
+        // Test that it's within 1 bit. Conversion between float and fixed is not 
+        // absolute, but given the circumstances, it should be OK. 
+        TEST_ASSERT(abs(fixed_point_test_params[i].expectedResult - fp) <= 1);
+    }    
+}
+
+testParams_t leading_zeros_test_params[] = {
+    {
+        .pInputString = "0123+056\0",
+        .pCursor = {0,0,0,0},
+        .pExpectedString = "0123+056\0",
+        .pOutputString = {0},
+        .expectedResult = 123+56, 
+        .numberFormat.fixedPointDecimalPlace = 16,
+        .numberFormat.inputBase = inputBase_DEC,
+        .numberFormat.numBits = 32,
+        .numberFormat.sign = false,
+    },
+    {
+        .pInputString = "012.8000+07e.ab85\0",
+        .pCursor = {0,0,0,0},
+        .pExpectedString = "0x012.0x8000+0x07e.0xab85\0",
+        .pOutputString = {0},
+        .expectedResult = 0x912b85, // See https://chummersone.github.io/qformat.html#converter
+        .numberFormat.fixedPointDecimalPlace = 16,
+        .numberFormat.inputBase = inputBase_HEX,
+        .numberFormat.numBits = 32,
+        .numberFormat.sign = false,
+    },
+};
+void test_leading_zeros(void){
+    calcCoreState_t calcCore;
+    int numTests = sizeof(leading_zeros_test_params)/sizeof(leading_zeros_test_params[0]);
+    for(int i = 0 ; i < numTests ; i++){
+        setupTestStruct(&calcCore, &leading_zeros_test_params[i]);
+        memcpy(&(calcCore.numberFormat), &(leading_zeros_test_params[i].numberFormat), sizeof(numberFormat_t));
+        calcCoreAddInput(&calcCore, &leading_zeros_test_params[i]);
+        int8_t state = calc_solver(&calcCore);
+        calcCoreGetBuffer(&calcCore, &leading_zeros_test_params[i]);
+        if(verbose){
+            printf("------------------------------------------------\r\n");
+            printf("Input:           %s \r\nExpected:        %s \r\nExpected result: %i \r\nReturned result: %i \r\n", 
+                    leading_zeros_test_params[i].pExpectedString,
+                    leading_zeros_test_params[i].pOutputString,
+                    leading_zeros_test_params[i].expectedResult,
+                    calcCore.result
+                    );
+        }
+        TEST_ASSERT_EQUAL_STRING(
+            leading_zeros_test_params[i].pExpectedString,
+            leading_zeros_test_params[i].pOutputString);
+        teardownTestStruct(&calcCore);
+
+        // Check that an equal amount of mallocs and free's happened
+        // in the calculator core
+        //printf("Allocation counter = %i\r\n", calcCore.allocCounter);
+        TEST_ASSERT_EQUAL_INT_MESSAGE(leading_zeros_test_params[i].expectedResult, calcCore.result, "Result not right.");
+        TEST_ASSERT_EQUAL_UINT_MESSAGE(0, calcCore.allocCounter, "Leaky memory!");
+        if(calcCore.allocCounter != 0){
+            printf("************************************************\r\n\r\n");
+            printf("WARNING: leaky memory: %i!\r\n", calcCore.allocCounter);
+            printf("************************************************\r\n\r\n");
+        }
+        if(verbose){
+            printf("------------------------------------------------\r\n\r\n");
+        }
+    }
+}
+
 /* ----------------------------------------------------------------
  * Main. Only starts the tests. 
  * ----------------------------------------------------------------*/
@@ -784,12 +983,15 @@ int main(void)
 {
     verbose = true;
     UNITY_BEGIN();
-    //RUN_TEST(test_addRemoveInput);
-    //RUN_TEST(test_addInvalidInput);
-    //RUN_TEST(test_solvable_solution);
-    //RUN_TEST(test_unsolvable_solution);
-    //RUN_TEST(test_null_pointers);
-    //RUN_TEST(test_base_conversion);
+    RUN_TEST(test_addRemoveInput);
+    RUN_TEST(test_addInvalidInput);
+    RUN_TEST(test_solvable_solution);
+    RUN_TEST(test_unsolvable_solution);
+    RUN_TEST(test_null_pointers);
+    RUN_TEST(test_base_conversion);
     RUN_TEST(test_float_input);
+    RUN_TEST(test_fixed_point_input);
+    RUN_TEST(test_string_to_fixed_point);
+    //RUN_TEST(test_leading_zeros);
     return UNITY_END();
 }

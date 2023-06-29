@@ -42,19 +42,6 @@ SOFTWARE.
  * - Signed or unsigned (bool outputSigned)
  * - IEEE 754 float (bool outputFloat)
  *
- * TODO list:
- * 0. Finish the basic implementaion of the solver. This requires extension
- *    later on. (DONE)
- * 1. Enable entry of unsigned, signed, floating point and fixed point.
- * 2. Extend calulation funciton to handle varialble arguments (DONE).
- * 3. Extend input conversion to handle signed, unsigned, float and fixed point.
- * 4. Add support for comma sign in depth increasing functions. (DONE)
- * 5. Inline base conversion (convert from dec->hex->bin->dec).
- *
- * GENERAL FEATURES
- * Add C formatter to pre-commit.
- * Add doxygen and clean up the source code because it looks like shit now.
- *
  */
 
 /* ----------------- HEADERS ----------------- */
@@ -63,6 +50,7 @@ SOFTWARE.
 
 // Standard library
 #include "uart_logger.h"
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -555,8 +543,92 @@ int charToInt(char c) {
     return 0;
 }
 
-// Alternative implementation of the copyAndConvertList function,
-// which uses the UNIX string-to-number functions instead.
+#ifndef STRING_TO_FIXED_POINT_FIXED_ALGO
+SUBRESULT_INT strtofp(char *pString, bool sign, uint16_t decimalPlace,
+                      uint8_t radix) {
+    char *pDecimalPlace = NULL;
+    char *pEndPtr = NULL;
+    if (radix == 10) {
+        double temp = strtof(pString, &pDecimalPlace);
+        return (SUBRESULT_INT)(round(temp * (1 << decimalPlace)));
+    } else {
+        SUBRESULT_INT integerPart = 0;
+        SUBRESULT_INT decimalPart = 0;
+        if (sign) {
+            integerPart = strtoll(pString, &pDecimalPlace, radix);
+        } else {
+            integerPart = strtoull(pString, &pDecimalPlace, radix);
+        }
+
+        if (*pDecimalPlace == '.') {
+            pDecimalPlace++;
+        } else {
+            logger("Error: Expected a . in the fixed point string %s\r\n",
+                   pString);
+        }
+        decimalPart = strtoull(pDecimalPlace, &pEndPtr, radix);
+        SUBRESULT_INT result = (integerPart << decimalPlace) | decimalPart;
+        return result;
+    }
+}
+#else
+SUBRESULT_INT strtofp(char *pString, bool sign, uint16_t decimalPlace,
+                      uint8_t radix) {
+    SUBRESULT_INT integerPart = 0;
+    SUBRESULT_INT decimalPart = 0;
+    char *endPtr = NULL;
+    char *pDecimalPlace = NULL;
+    logger("Converting %s to fixed point with radix %i\r\n", pString, radix);
+    if (sign) {
+        integerPart = strtoll(pString, &pDecimalPlace, radix);
+
+    } else {
+        integerPart = strtoull(pString, &pDecimalPlace, radix);
+    }
+
+    // The end pointer should now point to the '.'
+    if (*pDecimalPlace == '.') {
+        pDecimalPlace++;
+    } else {
+        logger("Error: Expected a . in the fixed point string %s\r\n", pString);
+    }
+    decimalPart = strtoull(pDecimalPlace, &endPtr, radix);
+    // Loop throgh the remaining decimal places and calculate the
+    // fixed point decimal from that.
+    SUBRESULT_INT divisor = 5;
+    uint16_t decimalStrLen = strlen(pDecimalPlace);
+    for (int i = 0; i < decimalStrLen - 1; i++) {
+        divisor *= 10;
+    }
+    SUBRESULT_INT decimalPartFixedPoint = 0;
+    uint16_t shift = decimalPlace - 1;
+    SUBRESULT_INT comparison = decimalPart << shift;
+    divisor = divisor << shift;
+    for (int i = shift; i >= 0; i--) {
+        // logger("Comparing mask: 0x%u to decimal 0x%u\r\n", mask, comparison);
+        if (comparison >= divisor) {
+            comparison -= divisor;
+            decimalPartFixedPoint += 1 << i;
+        }
+        divisor = divisor >> 1;
+    }
+    logger("Solved to: 0x%x", (integerPart << decimalPlace));
+    logger(".0x%x\r\n", decimalPartFixedPoint);
+    // Put the integer and decimal part together
+    return (integerPart << decimalPlace) | decimalPartFixedPoint;
+}
+#endif
+
+/**
+ * @brief Converts an input list containing chars, and converts all chars to
+ * appropriate format
+ * @param pCalcCoreState Pointer to an allocated core state variable.
+ * @param ppSolverListStart Pointer to pointer to start of list.
+ * @return Status of the conversion.
+ *
+ * The conversion from char to int will reduce the length of the list, where
+ * e.g. '1'->'2'->'3' will be converted to 123 (from 3 entries to 1).
+ */
 calc_funStatus_t copyAndConvertList(calcCoreState_t *pCalcCoreState,
                                     inputListEntry_t **ppSolverListStart) {
 
@@ -661,18 +733,19 @@ calc_funStatus_t copyAndConvertList(calcCoreState_t *pCalcCoreState,
                                sizeof(float));
                     }
                     if (pCalcCoreState->numberFormat.numBits == 64) {
-                        double tempFloat = strtof(pCurrentString, &endPtr);
+                        double tempFloat = strtod(pCurrentString, &endPtr);
                         memcpy(&(pNewListEntry->entry.subresult), &tempFloat,
                                sizeof(double));
                     }
                 } else if ((inputFormat == INPUT_FMT_FIXED)) {
-                    // TODO
+                    // Use function to convert to fixed point with radix 10
+                    pNewListEntry->entry.subresult = strtofp(
+                        pCurrentString, sign,
+                        pCalcCoreState->numberFormat.fixedPointDecimalPlace,
+                        10);
                 }
             } else if (inputBase == inputBase_HEX) {
                 if ((inputFormat == INPUT_FMT_INT)) {
-                    // Convert string to int.
-                    // TBD: I think this should work with shorter strings as
-                    // well
                     if (sign) {
                         pNewListEntry->entry.subresult =
                             strtoll(pCurrentString, &endPtr, 16);
@@ -681,9 +754,21 @@ calc_funStatus_t copyAndConvertList(calcCoreState_t *pCalcCoreState,
                             strtoull(pCurrentString, &endPtr, 16);
                     }
                 } else if ((inputFormat == INPUT_FMT_FLOAT)) {
-                    // TODO
+                    // Floats have no specific format in hex, so just
+                    // read out as int, but note the difference between 32 and
+                    // 64 bits
+                    if (pCalcCoreState->numberFormat.numBits == 32) {
+                        pNewListEntry->entry.subresult =
+                            strtoul(pCurrentString, &endPtr, 16);
+                    } else if (pCalcCoreState->numberFormat.numBits == 64) {
+                        pNewListEntry->entry.subresult =
+                            strtoull(pCurrentString, &endPtr, 16);
+                    }
                 } else if ((inputFormat == INPUT_FMT_FIXED)) {
-                    // TODO
+                    pNewListEntry->entry.subresult = strtofp(
+                        pCurrentString, sign,
+                        pCalcCoreState->numberFormat.fixedPointDecimalPlace,
+                        16);
                 }
             } else if (inputBase == inputBase_BIN) {
                 if ((inputFormat == INPUT_FMT_INT)) {
@@ -698,218 +783,32 @@ calc_funStatus_t copyAndConvertList(calcCoreState_t *pCalcCoreState,
                             strtoull(pCurrentString, &endPtr, 2);
                     }
                 } else if ((inputFormat == INPUT_FMT_FLOAT)) {
-                    // TODO
+                    // Floats have no specific format in binary, so just
+                    // read out as int, but note the difference between 32 and
+                    // 64 bits
+                    if (pCalcCoreState->numberFormat.numBits == 32) {
+                        pNewListEntry->entry.subresult =
+                            strtoul(pCurrentString, &endPtr, 2);
+                    } else if (pCalcCoreState->numberFormat.numBits == 64) {
+                        pNewListEntry->entry.subresult =
+                            strtoull(pCurrentString, &endPtr, 2);
+                    }
                 } else if ((inputFormat == INPUT_FMT_FIXED)) {
-                    // TODO
+                    pNewListEntry->entry.subresult = strtofp(
+                        pCurrentString, sign,
+                        pCalcCoreState->numberFormat.fixedPointDecimalPlace, 2);
                 }
             } else {
                 free(pCurrentString);
                 return calc_funStatus_INPUT_BASE_ERROR;
             }
             // Free the string
-            free(pCurrentString);
-            if (endPtr != pCurrentChar) {
-                logger("ERROR: The string %s is not well formatted\r\n",
-                       pCurrentString);
+            if (pCurrentString != NULL) {
+                logger("Free current string.\r\n");
+                free(pCurrentString);
+                logger("String free'd.\r\n");
             }
 
-        } else {
-            // Not a number input, therefore move on to the next entry directly
-            logger("Disregarded input: %c\r\n", pCurrentListEntry->entry);
-            pCurrentListEntry = pCurrentListEntry->pNext;
-        }
-
-        // Set the next and previous pointer of new entry
-        pNewListEntry->pNext = NULL;
-        pNewListEntry->pPrevious = pPreviousListEntry;
-        if (pPreviousListEntry != NULL) {
-            pPreviousListEntry->pNext = pNewListEntry;
-        }
-        pPreviousListEntry = pNewListEntry;
-    }
-    return calc_funStatus_SUCCESS;
-}
-/**
- * @brief Converts an input list containing chars, and converts all chars to
- * ints
- * @param pCalcCoreState Pointer to an allocated core state variable.
- * @param ppSolverListStart Pointer to pointer to start of list.
- * @return Status of the conversion.
- *
- * The conversion from char to int will reduce the length of the list, where
- * e.g. '1'->'2'->'3' will be converted to 123 (from 3 entries to 1).
- * @warning Floating and fixed point conversion not yet done.
- */
-calc_funStatus_t oldcopyAndConvertList(calcCoreState_t *pCalcCoreState,
-                                       inputListEntry_t **ppSolverListStart) {
-    inputListEntry_t *pCurrentListEntry = pCalcCoreState->pListEntrypoint;
-    // If no input list, simply return NULL
-    if (pCurrentListEntry == NULL) {
-        return calc_funStatus_INPUT_LIST_NULL;
-    }
-
-    inputListEntry_t *pNewListEntry = NULL;
-    inputListEntry_t *pPreviousListEntry = NULL;
-    // Loop through the input list and allocate new
-    // instances.
-    while (pCurrentListEntry != NULL) {
-
-        // Allocate a new entry
-        pNewListEntry = overloaded_malloc(sizeof(inputListEntry_t));
-        if (pNewListEntry == NULL) {
-            return calc_funStatus_ALLOCATE_ERROR;
-        }
-        pCalcCoreState->allocCounter++;
-        // Copy all parameters over
-        memcpy(pNewListEntry, pCurrentListEntry, sizeof(inputListEntry_t));
-
-        // Check if this is the start of the list, in which case save
-        // the parameter.
-        if (pCurrentListEntry == pCalcCoreState->pListEntrypoint) {
-            *ppSolverListStart = pNewListEntry;
-        }
-        if (GET_INPUT_TYPE(pCurrentListEntry->entry.typeFlag) ==
-            INPUT_TYPE_NUMBER) {
-            // If the current entry is numerical, aggregate this
-            // until the entry is either NULL or not numerical
-            inputFormat_t inputFormat =
-                GET_FMT_TYPE(pCurrentListEntry->entry.typeFlag);
-            bool sign = pCalcCoreState->numberFormat.sign;
-            pNewListEntry->entry.typeFlag =
-                CONSTRUCT_TYPEFLAG(sign, inputFormat, SUBRESULT_TYPE_INT,
-                                   DEPTH_CHANGE_KEEP, INPUT_TYPE_NUMBER);
-            pNewListEntry->entry.subresult = 0;
-            uint8_t decimalPointCounter = 0;
-            double divisor = 1.0;
-            // TBD: Is it cleaner to use the atoi/strtof/atof functions here?
-            while ((GET_INPUT_TYPE(pCurrentListEntry->entry.typeFlag) ==
-                    INPUT_TYPE_NUMBER) ||
-                   (GET_INPUT_TYPE(pCurrentListEntry->entry.typeFlag) ==
-                    INPUT_TYPE_DECIMAL_POINT)) {
-                if (GET_INPUT_TYPE(pCurrentListEntry->entry.typeFlag) ==
-                    INPUT_TYPE_DECIMAL_POINT) {
-                    if ((inputFormat == INPUT_FMT_FIXED) ||
-                        (inputFormat == INPUT_FMT_FLOAT)) {
-                        if (decimalPointCounter == 0) {
-                            // Always increase the counter here
-                            decimalPointCounter += 1;
-                        } else if (decimalPointCounter == 1) {
-                            // This would be the second decimal pointer.
-                            // This is only applicable for floating point in
-                            // binary or hexadecimal.
-                            if ((pCurrentListEntry->inputBase !=
-                                 inputBase_DEC) &&
-                                (inputFormat == INPUT_FMT_FLOAT)) {
-                                decimalPointCounter += 1;
-                            }
-                        } else {
-                            // There cannot be any other count of decimals.
-                            logger("ERROR: More than two decimal points. \r\n");
-                            return calc_funStatus_UNKNOWN_INPUT;
-                        }
-                    } else {
-                        logger("ERROR: Got a decimal point, but input is not "
-                               "fixed or float \r\n");
-                        return calc_funStatus_UNKNOWN_INPUT;
-                    }
-                } else {
-                    // Aggregate the input based on the input base
-                    if (pCurrentListEntry->inputBase == inputBase_DEC) {
-                        if ((inputFormat == INPUT_FMT_INT)) {
-                            SUBRESULT_INT *pRes = (SUBRESULT_INT *)&(
-                                pNewListEntry->entry.subresult);
-                            *pRes = (*pRes) * 10;
-                            pNewListEntry->entry.subresult +=
-                                charToInt(pCurrentListEntry->entry.c);
-                        } else if ((inputFormat == INPUT_FMT_FLOAT)) {
-                            uint8_t charInInteger =
-                                charToInt(pCurrentListEntry->entry.c);
-                            if (decimalPointCounter == 0) {
-                                // Before the decimal place.
-                                logger("Before decimal place.\r\n");
-                                if (pCalcCoreState->numberFormat.numBits ==
-                                    32) {
-                                    float *pRes = (float *)&(
-                                        pNewListEntry->entry.subresult);
-                                    *pRes = *pRes * 10.0 + charInInteger * 1.0;
-                                } else if (pCalcCoreState->numberFormat
-                                               .numBits == 64) {
-                                    double *pRes = (double *)&(
-                                        pNewListEntry->entry.subresult);
-                                    *pRes = *pRes * 10.0 + charInInteger * 1.0;
-                                } else {
-                                    logger(
-                                        "ERROR: Bitlength %i not supported! "
-                                        "\r\n",
-                                        pCalcCoreState->numberFormat.numBits);
-                                }
-                            } else {
-                                divisor *= 10.0;
-                                if (pCalcCoreState->numberFormat.numBits ==
-                                    32) {
-                                    float *pRes = (float *)&(
-                                        pNewListEntry->entry.subresult);
-                                    *pRes = (*pRes) + charInInteger / divisor;
-                                } else if (pCalcCoreState->numberFormat
-                                               .numBits == 64) {
-                                    double *pRes = (double *)&(
-                                        pNewListEntry->entry.subresult);
-                                    *pRes = (*pRes) + charInInteger / divisor;
-                                } else {
-                                    logger(
-                                        "ERROR: Bitlength %i not supported! "
-                                        "\r\n",
-                                        pCalcCoreState->numberFormat.numBits);
-                                }
-                            }
-                        } else if ((inputFormat == INPUT_FMT_FIXED)) {
-                            // TODO
-                        }
-                    }
-                    if (pCurrentListEntry->inputBase == inputBase_HEX) {
-                        if ((inputFormat == INPUT_FMT_INT)) {
-                            SUBRESULT_INT *pRes = (SUBRESULT_INT *)&(
-                                pNewListEntry->entry.subresult);
-                            *pRes = (*pRes) * 16;
-                            pNewListEntry->entry.subresult +=
-                                charToInt(pCurrentListEntry->entry.c);
-                        } else if ((inputFormat == INPUT_FMT_FLOAT)) {
-                            // TODO
-                        } else if ((inputFormat == INPUT_FMT_FIXED)) {
-                            // TODO
-                        }
-                    }
-                    if (pCurrentListEntry->inputBase == inputBase_BIN) {
-                        if ((inputFormat == INPUT_FMT_INT)) {
-                            SUBRESULT_INT *pRes = (SUBRESULT_INT *)&(
-                                pNewListEntry->entry.subresult);
-                            *pRes = (*pRes) * 2;
-                            pNewListEntry->entry.subresult +=
-                                charToInt(pCurrentListEntry->entry.c);
-                        } else if ((inputFormat == INPUT_FMT_FLOAT)) {
-                            // TODO
-                        } else if ((inputFormat == INPUT_FMT_FIXED)) {
-                            // TODO
-                        }
-                    }
-                    if ((inputFormat == INPUT_FMT_INT)) {
-                        logger("Input: %c, output: %i\r\n",
-                               pCurrentListEntry->entry.c,
-                               pNewListEntry->entry.subresult);
-                    } else if ((inputFormat == INPUT_FMT_FLOAT)) {
-                        logger("Input: %c, output: 0x%x\r\n",
-                               pCurrentListEntry->entry.c,
-                               pNewListEntry->entry.subresult);
-                    } else if ((inputFormat == INPUT_FMT_FIXED)) {
-                        // TODO
-                    }
-                }
-                pCurrentListEntry = pCurrentListEntry->pNext;
-
-                if (pCurrentListEntry == NULL) {
-                    break;
-                }
-            }
         } else {
             // Not a number input, therefore move on to the next entry directly
             logger("Disregarded input: %c\r\n", pCurrentListEntry->entry);
@@ -1004,9 +903,6 @@ int8_t readOutArgs(inputType_t *pArgs, int8_t numArgs, inputListEntry_t *pStart,
  * It solved it using the priority given by the operator,
  * and then finally the outer operator if any
  * @warning This function free's and rearranges the input list.
- * TODO: The input format is currently decided by the pCalcCoreState,
- * which is incorrect. But this reveals a bigger issue: What to do
- * with conflicting formats? (e.g. one float and one int)
  * TODO: Save the location of an error.
  */
 

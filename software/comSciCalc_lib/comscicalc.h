@@ -306,6 +306,28 @@ void calc_updateBase(calcCoreState_t *pCalcCoreState);
  * @return Nothing
  */
 void intToBin(char *pBuf, SUBRESULT_INT number);
+
+/**
+ * @brief Convert string to fixed point
+ * @param pString String to be converted
+ * @param sign True if signed, otherwise false
+ * @param decimalPlace Number of bits for the decimal place
+ * @param radix Base (decimal, hexadecimal or binary)
+ * @return The converted fixed point value
+ *
+ * @note If STRING_TO_FIXED_POINT_FIXED_ALGO is defined,
+ * then this uses a fixed algorithm that should be compiler
+ * agnostic for decimal base.
+ * If not defined, then it uses a casting method that is much
+ * more compact, but could be compiler dependant.
+ *
+ * @warning The decimal to fixed point conversion might
+ * differ depending on implemented method, in that there can
+ * be 1 LSB difference in the result compared to other methods.
+ * This depends on how the algorithm is implmented.
+ */
+SUBRESULT_INT strtofp(char *pString, bool sign, uint16_t decimalPlace,
+                      uint8_t radix);
 /* -------------------------------------------
  * ---------------- VARIABLES ----------------
  * -------------------------------------------*/

@@ -23,6 +23,7 @@ typedef struct testParams {
     int pCursor[MAX_STR_LEN];
     inputBase_t inputBase[MAX_STR_LEN];
     SUBRESULT_INT expectedResult;
+    numberFormat_t numberFormat;
 } testParams_t;
 
 /* -------------------------------------------
