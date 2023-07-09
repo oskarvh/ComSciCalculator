@@ -34,10 +34,13 @@ char pDecRes[MAX_PRINTED_BUFFER_LEN] = {0};
 //! Color wheel for the brackets
 const uint32_t colorWheel[COLORWHEEL_LEN] = {
    WHITE,
+   ORANGE,
+   YELLOW,
    GREEN,
    TURQOISE,
    BLUE_2,
-   MAGENTA
+   MAGENTA,
+   PURPLE
 };
 
 /**

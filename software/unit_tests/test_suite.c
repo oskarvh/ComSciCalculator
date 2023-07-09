@@ -922,8 +922,9 @@ testParams_t leading_zeros_test_params[] = {
         .expectedResult = 123+56, 
         .numberFormat.fixedPointDecimalPlace = 16,
         .numberFormat.inputBase = inputBase_DEC,
-        .numberFormat.numBits = 32,
+        .numberFormat.numBits = 64,
         .numberFormat.sign = false,
+        .numberFormat.formatBase = INPUT_FMT_INT, 
     },
     {
         .pInputString = "012.8000+07e.ab85\0",
@@ -933,8 +934,9 @@ testParams_t leading_zeros_test_params[] = {
         .expectedResult = 0x912b85, // See https://chummersone.github.io/qformat.html#converter
         .numberFormat.fixedPointDecimalPlace = 16,
         .numberFormat.inputBase = inputBase_HEX,
-        .numberFormat.numBits = 32,
+        .numberFormat.numBits = 64,
         .numberFormat.sign = false,
+        .numberFormat.formatBase = INPUT_FMT_FIXED, 
     },
 };
 void test_leading_zeros(void){
@@ -943,6 +945,9 @@ void test_leading_zeros(void){
     for(int i = 0 ; i < numTests ; i++){
         setupTestStruct(&calcCore, &leading_zeros_test_params[i]);
         memcpy(&(calcCore.numberFormat), &(leading_zeros_test_params[i].numberFormat), sizeof(numberFormat_t));
+        for(int j = 0 ; j < MAX_STR_LEN ; j++){
+            leading_zeros_test_params[i].inputBase[j] = leading_zeros_test_params[i].numberFormat.inputBase;
+        }
         calcCoreAddInput(&calcCore, &leading_zeros_test_params[i]);
         int8_t state = calc_solver(&calcCore);
         calcCoreGetBuffer(&calcCore, &leading_zeros_test_params[i]);
@@ -992,6 +997,6 @@ int main(void)
     RUN_TEST(test_float_input);
     RUN_TEST(test_fixed_point_input);
     RUN_TEST(test_string_to_fixed_point);
-    //RUN_TEST(test_leading_zeros);
+    RUN_TEST(test_leading_zeros);
     return UNITY_END();
 }

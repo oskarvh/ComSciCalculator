@@ -59,7 +59,7 @@ SOFTWARE.
 /* ---- CALCULATOR CORE HELPER FUNCTIONS ----- */
 
 // Temporary list containing the allocated pointers
-uint32_t allocatedPointers[100] = {0};
+uint32_t allocatedPointers[200] = {0};
 
 /**
  * @brief Malloc wrapper to help debug memory leaks
@@ -543,36 +543,39 @@ int charToInt(char c) {
     return 0;
 }
 
+//#define STRING_TO_FIXED_POINT_FIXED_ALGO
 #ifndef STRING_TO_FIXED_POINT_FIXED_ALGO
-SUBRESULT_INT strtofp(char *pString, bool sign, uint16_t decimalPlace,
+SUBRESULT_INT strtofp(const char *pString, bool sign, uint16_t decimalPlace,
                       uint8_t radix) {
-    char *pDecimalPlace = NULL;
-    char *pEndPtr = NULL;
+    const char *pLocalPtr = pString;
     if (radix == 10) {
+        char *pDecimalPlace = NULL;
         double temp = strtof(pString, &pDecimalPlace);
         return (SUBRESULT_INT)(round(temp * (1 << decimalPlace)));
     } else {
+        char *pDecimalPlace = NULL;
+        char *pEndPtr = NULL;
         SUBRESULT_INT integerPart = 0;
         SUBRESULT_INT decimalPart = 0;
-        if (sign) {
-            integerPart = strtoll(pString, &pDecimalPlace, radix);
-        } else {
-            integerPart = strtoull(pString, &pDecimalPlace, radix);
-        }
 
+        if (sign) {
+            integerPart = strtoll(pLocalPtr, &pDecimalPlace, radix);
+        } else {
+            integerPart = strtoull(pLocalPtr, &pDecimalPlace, radix);
+        }
         if (*pDecimalPlace == '.') {
             pDecimalPlace++;
         } else {
             logger("Error: Expected a . in the fixed point string %s\r\n",
-                   pString);
+                   pLocalPtr);
         }
         decimalPart = strtoull(pDecimalPlace, &pEndPtr, radix);
-        SUBRESULT_INT result = (integerPart << decimalPlace) | decimalPart;
-        return result;
+
+        return (integerPart << decimalPlace) | decimalPart;
     }
 }
 #else
-SUBRESULT_INT strtofp(char *pString, bool sign, uint16_t decimalPlace,
+SUBRESULT_INT strtofp(const char *pString, bool sign, uint16_t decimalPlace,
                       uint8_t radix) {
     SUBRESULT_INT integerPart = 0;
     SUBRESULT_INT decimalPart = 0;
@@ -688,7 +691,10 @@ calc_funStatus_t copyAndConvertList(calcCoreState_t *pCalcCoreState,
             }
             // Allocate a string of the length we just found (+1 for the null
             // terminator)
-            char *pCurrentString = malloc(sizeof(char) * numberOfNumberEntries);
+            char *pCurrentString =
+                malloc(sizeof(char) * (numberOfNumberEntries + 1));
+            memset(pCurrentString, 0, sizeof(char) * numberOfNumberEntries);
+
             if (pCurrentListEntry == NULL) {
                 return calc_funStatus_ALLOCATE_ERROR;
             }
@@ -709,7 +715,7 @@ calc_funStatus_t copyAndConvertList(calcCoreState_t *pCalcCoreState,
             }
             // Finally, cap it off with a null terminator
             *pCurrentChar = '\0';
-            logger("Converting %s \r\n", pCurrentString);
+
             // Now that we have a string to work with, based on the input
             // format and base, we can convert using the UNIX string-to-X
             // functions.
@@ -770,6 +776,7 @@ calc_funStatus_t copyAndConvertList(calcCoreState_t *pCalcCoreState,
                         pCalcCoreState->numberFormat.fixedPointDecimalPlace,
                         16);
                 }
+
             } else if (inputBase == inputBase_BIN) {
                 if ((inputFormat == INPUT_FMT_INT)) {
                     // Convert string to int.
@@ -803,16 +810,15 @@ calc_funStatus_t copyAndConvertList(calcCoreState_t *pCalcCoreState,
                 return calc_funStatus_INPUT_BASE_ERROR;
             }
             // Free the string
-            if (pCurrentString != NULL) {
-                logger("Free current string.\r\n");
-                free(pCurrentString);
-                logger("String free'd.\r\n");
-            }
+            free(pCurrentString);
 
         } else {
             // Not a number input, therefore move on to the next entry directly
-            logger("Disregarded input: %c\r\n", pCurrentListEntry->entry);
-            pCurrentListEntry = pCurrentListEntry->pNext;
+            if (pCurrentListEntry != NULL) {
+                pCurrentListEntry = pCurrentListEntry->pNext;
+            } else {
+                break;
+            }
         }
 
         // Set the next and previous pointer of new entry
@@ -1243,7 +1249,6 @@ calc_funStatus_t calc_solver(calcCoreState_t *pCalcCoreState) {
     inputListEntry_t *pSolverListStart = NULL;
     logger("Copy and convert list.\r\n");
     copyAndConvertList(pCalcCoreState, &pSolverListStart);
-
     // Loop through and find the deepest point of the buffer
     inputListEntry_t *pStart = pSolverListStart;
     inputListEntry_t *pEnd = NULL;

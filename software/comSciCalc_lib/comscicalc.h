@@ -326,7 +326,7 @@ void intToBin(char *pBuf, SUBRESULT_INT number);
  * be 1 LSB difference in the result compared to other methods.
  * This depends on how the algorithm is implmented.
  */
-SUBRESULT_INT strtofp(char *pString, bool sign, uint16_t decimalPlace,
+SUBRESULT_INT strtofp(const char *pString, bool sign, uint16_t decimalPlace,
                       uint8_t radix);
 /* -------------------------------------------
  * ---------------- VARIABLES ----------------
