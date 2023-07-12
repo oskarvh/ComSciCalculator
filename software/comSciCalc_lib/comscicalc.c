@@ -55,7 +55,11 @@ SOFTWARE.
 #include <string.h>
 
 /* ------------- GLOBAL VARIABLES ------------ */
-
+const uint8_t baseToRadix[3] = {
+    10, // inputBase_DEC
+    16, // inputBase_HEX
+    2,  // inputBase_BIN
+};
 /* ---- CALCULATOR CORE HELPER FUNCTIONS ----- */
 
 // Temporary list containing the allocated pointers
@@ -1750,43 +1754,44 @@ void calc_updateBase(calcCoreState_t *pCalcCoreState) {
 
     // Allocate a temporary buffer to store the converted string to int.
     // Size is the maximum size of binary input, i.e. 64 bits
-    char pTempCharBuffer[64] = {'\0'};
+    char pTempCharBuffer[65] = {'\0'};
 
     inputBase_t newEntryInputBase = pCalcCoreState->numberFormat.inputBase;
     inputListEntry_t *pTempInputEntry = pCurrentEntry;
     uint8_t inputFormat = GET_FMT_TYPE(pTempInputEntry->entry.typeFlag);
     bool sign = pCalcCoreState->numberFormat.sign;
     if (inputFormat == INPUT_FMT_INT) {
-        SUBRESULT_INT stringInInt = 0;
-        uint8_t multiplier = 10;
-        if (pTempInputEntry->inputBase == inputBase_HEX) {
-            multiplier = 16;
-        } else if (pTempInputEntry->inputBase == inputBase_BIN) {
-            multiplier = 2;
-        }
+        uint8_t charCount = 0;
         while (GET_INPUT_TYPE(pTempInputEntry->entry.typeFlag) ==
                INPUT_TYPE_NUMBER) {
-            // Convert the char into an int in the current input base.
-            // This will result in an integer, but needs to be handled based on
-            // the base it's in.
-            stringInInt =
-                stringInInt * multiplier + charToInt(pTempInputEntry->entry.c);
+            pTempCharBuffer[charCount++] = pTempInputEntry->entry.c;
             // Move on to the next entry
             pTempInputEntry = pTempInputEntry->pNext;
             if (pTempInputEntry == NULL) {
                 break;
             }
         }
+        pTempCharBuffer[charCount] = '\0';
+        // Convert string to integer:
+        SUBRESULT_INT stringInInt = 0;
+        if (pCalcCoreState->numberFormat.sign) {
+            stringInInt = strtoll(pTempCharBuffer, NULL,
+                                  baseToRadix[pCurrentEntry->inputBase]);
+        } else {
+            stringInInt = strtoull(pTempCharBuffer, NULL,
+                                   baseToRadix[pCurrentEntry->inputBase]);
+        }
+        memset(pTempCharBuffer, 0, 65);
         // All the entries have now been accounted for.
         // Therefore, make new entries with the new base,
         // repoint, and free the old entries.
         if (newEntryInputBase == inputBase_HEX) {
             // TBD: Do these support 64 bit?
-            sprintf(pTempCharBuffer, "%x", stringInInt);
+            sprintf(pTempCharBuffer, "%lx", stringInInt);
         } else if (newEntryInputBase == inputBase_BIN) {
             intToBin(pTempCharBuffer, stringInInt);
         } else if (newEntryInputBase == inputBase_DEC) {
-            sprintf(pTempCharBuffer, "%i\r\n", stringInInt);
+            sprintf(pTempCharBuffer, "%li", stringInInt);
         }
     } else if (inputFormat == INPUT_FMT_FLOAT) {
         // TODO

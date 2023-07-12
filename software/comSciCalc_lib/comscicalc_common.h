@@ -66,6 +66,7 @@ SOFTWARE.
 #define GET_INPUT_TYPE(typeFlag) ((typeFlag)&0x3)
 #define GET_SUBRESULT_TYPE(typeFlag) ((typeFlag >> 4) & 0x1)
 #define GET_FMT_TYPE(typeFlag) ((typeFlag >> 5) & 0x3)
+
 /**@}*/
 /* -------------------------------------------
  * ------- ENUMS, TYPEDEFS AND STRUCTS -------

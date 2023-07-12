@@ -136,6 +136,11 @@
 			<locationURI>PARENT-2-PROJECT_LOC/comSciCalc_lib/comscicalc.h</locationURI>
 		</link>
 		<link>
+			<name>comSciCalc_lib/comscicalc_common.h</name>
+			<type>1</type>
+			<locationURI>PARENT-2-PROJECT_LOC/comSciCalc_lib/comscicalc_common.h</locationURI>
+		</link>
+		<link>
 			<name>comSciCalc_lib/comscicalc_operators.c</name>
 			<type>1</type>
 			<locationURI>PARENT-2-PROJECT_LOC/comSciCalc_lib/comscicalc_operators.c</locationURI>

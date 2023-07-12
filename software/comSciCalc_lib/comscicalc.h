@@ -37,13 +37,14 @@ SOFTWARE.
 /* -------------------------------------------
  * ----------------- HEADERS -----------------
  * -------------------------------------------*/
-// Operator functions
-#include "comscicalc_common.h"
-#include "comscicalc_operators.h"
 // Standard library
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+
+// Operator functions
+#include "comscicalc_common.h"
+#include "comscicalc_operators.h"
 
 /* -------------------------------------------
  * ------- ENUMS, TYPEDEFS AND STRUCTS -------
@@ -331,7 +332,8 @@ SUBRESULT_INT strtofp(const char *pString, bool sign, uint16_t decimalPlace,
 /* -------------------------------------------
  * ---------------- VARIABLES ----------------
  * -------------------------------------------*/
-
+//! Simple LUT to get the radix from the base.
+extern const uint8_t baseToRadix[3];
 /* -------------------------------------------
  * ------------ FUNCTION WRAPPERS ------------
  * -------------------------------------------*/

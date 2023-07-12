@@ -354,7 +354,11 @@ void calcCoreTask(void *p){
 
     // TODO: Initialize based on what was saved in flash
     // For now though, just initialize to decimal base.
+
     calcState.numberFormat.inputBase = inputBase_DEC;
+    calcState.numberFormat.numBits = 64;
+    calcState.numberFormat.sign = false;
+    calcState.numberFormat.formatBase = INPUT_FMT_INT;
     while(1){
         // Wait for UART data to be available in the queue
         if(uartReceiveQueue != 0){
@@ -388,6 +392,10 @@ void calcCoreTask(void *p){
                         }
                         if(receiveChar == 'i' || receiveChar == 'I'){
                             // Update the input base.
+                            calcState.numberFormat.inputBase += 1;
+                            if(calcState.numberFormat.inputBase > 2){
+                                calcState.numberFormat.inputBase = 0;
+                            }
                             calc_updateBase(&calcState);
                         }
                         // The add input contains valuable checks.
@@ -396,6 +404,7 @@ void calcCoreTask(void *p){
                     // Check if the input wasn't accepted
                     if(addRemoveStatus == calc_funStatus_UNKNOWN_INPUT){
                         // For now, do nothing here. Might trigger something later on
+                        // Could be kind of cool to blink the button red or something.
                     }
                     // Check if there was an issue with adding/removing input
                     else if(addRemoveStatus != calc_funStatus_SUCCESS){
