@@ -31,7 +31,9 @@ SOFTWARE.
 #include "font_library.h"
 
 // Included fonts. Add new fonts here.
+#include "Cascadia_20_L2.h"
 #include "Cascadia_38_L2.h"
+//#include "Comic_Sans_MS_20_L2.h"
 #include "Comic_Sans_MS_38_L2.h"
 
 
@@ -60,10 +62,20 @@ font_t rom_font_1 = {
     .fontTableSize = 0
 };
 
-font_t *pFontLibraryTable[MAX_LEN_FONT_LIBRARY_TABLE] = {
-    [0] = &rom_font_0,
-    [1] = &font_Cascadia_38_L2,
-    [2] = &font_Comic_Sans_MS_38_L2,
+const font_collection_t cascadia = {
+    .pSmallFont = &font_Cascadia_20_L2,
+    .pLargeFont = &font_Cascadia_38_L2,
+};
+
+const font_collection_t rom_font = {
+    .pSmallFont = &rom_font_0,
+    .pLargeFont = &rom_font_1,
+};
+
+font_collection_t *pFontLibraryTable[MAX_LEN_FONT_LIBRARY_TABLE] = {
+    [0] = &cascadia,
+    [1] = NULL,
+    [2] = NULL,
     [3] = NULL,
     [4] = NULL,
     [5] = NULL,

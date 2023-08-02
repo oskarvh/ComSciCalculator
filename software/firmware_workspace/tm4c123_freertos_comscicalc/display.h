@@ -104,6 +104,10 @@ SOFTWARE.
 //! Hexadecimal Y coordinate. Depends on font height
 #define OUTPUT_HEX_YC0(font_height) (EVE_VSIZE - font_height - font_height/2)
 
+//! Status bar X offset
+#define OUTPUT_STATUS_X0 (5)
+//! Status bar Y offset
+#define OUTPUT_STATUS_YC0(font_height) (2)
 //! Display text options for input buffer
 #define INPUT_TEXT_OPTIONS EVE_OPT_RIGHTX
 #define FONT 18
@@ -169,7 +173,7 @@ typedef struct displayState {
      * @param inputOptions Contains information regarding the
      * options currently active for the input format.
      */
-    inputState_t inputOptions;
+    numberFormat_t inputOptions;
     /**
      * @param solveStatus This variable is the output from the
      * calculator solver.

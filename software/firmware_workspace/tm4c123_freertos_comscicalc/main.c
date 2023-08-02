@@ -439,9 +439,17 @@ void calcCoreTask(void *p){
                 if(solveStatus == calc_solveStatus_SUCCESS){
                     displayState.result = calcState.result;
                 }
+                if(displayState.printStatus == calc_funStatus_INPUT_LIST_NULL){
+                    // If there is no result due to the input list being 0,
+                    // that means that there wasn't any input chars. So set the
+                    // result to 0
+                    displayState.result = 0;
+                }
                 displayState.cursorLoc = calc_getCursorLocation(&calcState);
+                memcpy(&(displayState.inputOptions), &(calcState.numberFormat), sizeof(numberFormat_t));
                 // Give the semaphore back
                 xSemaphoreGive(displayStateSemaphore);
+
             }
             xEventGroupSetBits(displayTriggerEvent, DISPLAY_EVENT_NEW_DATA);
         }

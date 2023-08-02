@@ -242,7 +242,7 @@ typedef struct numberFormat {
      * how many bits the decimal values hold, i.e. for int this is 0.
      * For e.g. 0b...1000.00 this is 2
      */
-    uint16_t fixedPointDecimalPlace;
+    uint8_t fixedPointDecimalPlace;
 
 } numberFormat_t;
 

@@ -42,6 +42,31 @@ const uint32_t colorWheel[COLORWHEEL_LEN] = {
    MAGENTA,
    PURPLE
 };
+//! String for displaying the decimal base to the user on the screen
+char dec_display_string[] = "DEC";
+//! String for displaying the hexadecimal base to the user on the screen
+char hex_display_string[] = "HEX";
+//! String for displaying the binary base to the user on the screen
+char bin_display_string[] = "BIN";
+//! Array of pointers to the strings used to show which base is active on the screen.
+const char* baseDisplayStrings[] = {
+  [inputBase_DEC] = dec_display_string,
+  [inputBase_HEX] = hex_display_string,
+  [inputBase_BIN] = bin_display_string,
+};
+
+//! String for displaying the integer format to the user
+char int_display_string[] = "INT";
+//! String for displaying the fixed point format to the user.
+char fixed_display_string[] = "FIXED";
+//! String for displaying the floating point format to the user
+char float_display_string[] = "FLOAT";
+//! Array of pointers to the strings used to show which format is active on the screen.
+const char* formatDisplayStrings[] = {
+  [INPUT_FMT_INT] = int_display_string,
+  [INPUT_FMT_FIXED] = fixed_display_string,
+  [INPUT_FMT_FLOAT] = float_display_string,
+};
 
 /**
  * @brief Print the outline of graphics
@@ -183,6 +208,25 @@ void programFont(font_t *pFont, uint8_t fontIndex){
 
     endDisplayList();
 }
+
+/**
+ * @brief Programs the font library
+ * @return None
+ */
+void programFontLibrary(void){
+    // Go through all entries in the font library,
+    // and program the large font at the even indexes, followed by the
+    // small font add the odd ones.
+    for(uint8_t i = 0 ; i < MAX_LEN_FONT_LIBRARY_TABLE ; i++){
+        if(pFontLibraryTable[i] != NULL){
+            // Program the large index:
+            programFont(pFontLibraryTable[i]->pLargeFont, i*2);
+            pFontLibraryTable[i]->pLargeFont->ft81x_font_index = i*2;
+            programFont(pFontLibraryTable[i]->pSmallFont, i*2+1);
+            pFontLibraryTable[i]->pSmallFont->ft81x_font_index = i*2+1;
+        }
+    }
+}
 /**
  * @brief Find the width of the font, in pixels
  * @param pFont Pointer to the font struct
@@ -205,9 +249,50 @@ uint8_t getFontCharWidth(font_t *pFont, char c){
 }
 
 /**
- * @brief Print the input buffer to the screen
+ * @brief Print the calculator state to the top of the screen.
+ *        This function displays the arithmetic used (float, int, fixed),
+ *        the base (hex, dec, bin), the bit length (0-64), and anything else
+ *        that might be useful.
  * @param pRxBuf Pointer to the input string
  * @param syntaxErrorIndex Index
+ * @return Nothing
+ */
+void displayCalcState(displayState_t *pDisplayState){
+    // Get the string and length depending on the base:
+    char *pBaseString = baseDisplayStrings[pDisplayState->inputOptions.inputBase];
+    uint8_t baseStringLen = strlen(pBaseString);
+
+    // Get the string and length depending on the format:
+    char *pFormatString = formatDisplayStrings[pDisplayState->inputOptions.formatBase];
+    uint8_t formatStringLen = strlen(pFormatString);
+
+    // Display the bit width. Note: for fixed point, it's shown in Q notation
+    char bitWidthString[7] = {0}; // Worst case scenario is 100.28\0
+    if(pDisplayState->inputOptions.formatBase == INPUT_FMT_FIXED){
+        // Fixed point require Q notation.
+        uint8_t numBits = pDisplayState->inputOptions.numBits;
+        uint8_t decimalBits = pDisplayState->inputOptions.fixedPointDecimalPlace;
+        // Work out the Q notation:
+        uint8_t integerBits = numBits-decimalBits;
+        sprintf(bitWidthString, "%u.%u", integerBits, decimalBits);
+    } else {
+        // Just get the bit width as int and convert to string
+        sprintf(bitWidthString, "%u", pDisplayState->inputOptions.numBits);
+    }
+
+    // Find the maximum length of string we can print to the screen.
+    // This has to be based on the font.
+    //uint16_t maxDisplayStrLen =
+    char pStatusString[60] = {0};
+    sprintf(pStatusString, "%s  %s  BITS:%s\0", pBaseString, pFormatString,bitWidthString );
+    font_t *pCurrentFont = pFontLibraryTable[pDisplayState->fontIdx]->pSmallFont;
+    EVE_cmd_text_burst(OUTPUT_STATUS_X0, OUTPUT_STATUS_YC0(pCurrentFont->font_caps_height), pCurrentFont->ft81x_font_index, 0, pStatusString);
+}
+
+/**
+ * @brief Print the input buffer to the screen
+ * @param pDisplayState Pointer to the display states
+ * @param writeCursor Cursor location
  * @return Nothing
  */
 void displayInputText(displayState_t *pDisplayState, bool writeCursor){
@@ -218,7 +303,7 @@ void displayInputText(displayState_t *pDisplayState, bool writeCursor){
     // Iterate through each char until null pointer
     uint16_t charIter = 0;
     // Get the current font
-    font_t *pCurrentFont = pFontLibraryTable[pDisplayState->fontIdx];
+    font_t *pCurrentFont = pFontLibraryTable[pDisplayState->fontIdx]->pLargeFont;
     // Width of the cumulative characters now written
     uint32_t widthWrittenChars = 0;
     while(pDisplayState->printedInputBuffer[charIter] != '\0'){
@@ -272,11 +357,14 @@ void displayInputText(displayState_t *pDisplayState, bool writeCursor){
 
 
 void initDisplayState(displayState_t *pDisplayState){
-    pDisplayState->inputOptions.currentInputArith = 0; // TBD
-    pDisplayState->inputOptions.currentInputBase = 0; // TBD
+    pDisplayState->inputOptions.fixedPointDecimalPlace = 0; // TBD
+    pDisplayState->inputOptions.formatBase = 0; // TBD
+    pDisplayState->inputOptions.inputBase = 0; // TBD
+    pDisplayState->inputOptions.numBits = 0; // TBD
+    pDisplayState->inputOptions.sign = 0; // TBD
     pDisplayState->solveStatus = calc_solveStatus_INPUT_LIST_NULL;
     pDisplayState->printStatus = 0;
-    pDisplayState->fontIdx = 1; // Try the custom RAM font
+    pDisplayState->fontIdx = 0; // Try the custom RAM font
     memset(pDisplayState->printedInputBuffer, '\0', MAX_PRINTED_BUFFER_LEN);
     pDisplayState->syntaxIssueIndex = -1;
 
@@ -294,27 +382,23 @@ void initDisplayState(displayState_t *pDisplayState){
 //      set this as done.DONE
 // 4. For non-monospaced operators (e.g. SUM), the cursor is at the incorrect location.
 void displayTask(void *p){
-    // Write the outlines:
-    startDisplaylist();
-    displayOutline();
-    endDisplayList();
 
-    // Loop through the custom fonts and program as many
-    // as fits.
 
-    for(uint8_t i = 0 ; i < MAX_LEN_FONT_LIBRARY_TABLE ; i++){
+    // Program the font library
+    programFontLibrary();
 
-        if(pFontLibraryTable[i] != NULL){
-            programFont(pFontLibraryTable[i], i);
-            pFontLibraryTable[i]->ft81x_font_index = i;
-        }
-    }
 
     // Update the screen to begin with
     bool updateScreen = true;
     bool writeCursor = true;
     displayState_t localDisplayState;
     initDisplayState(&localDisplayState);
+
+    // Write the outlines:
+    startDisplaylist();
+    displayOutline();
+    displayCalcState(&localDisplayState);
+    endDisplayList();
 
     while(1){
         // Wait for the trigger event from the calculator task to tell this task
@@ -358,6 +442,8 @@ void displayTask(void *p){
         // Update the screen:
         startDisplaylist();
         displayOutline();
+        // Write the calculator setting state:
+        displayCalcState(&localDisplayState);
         // Write the input text
         displayInputText(&localDisplayState, writeCursor);
         //EVE_cmd_text_burst(INPUT_TEXT_XC0, INPUT_TEXT_YC0, FONT, INPUT_TEXT_OPTIONS, pRxBuf);
@@ -368,7 +454,8 @@ void displayTask(void *p){
         } else {
             EVE_cmd_dl_burst(DL_COLOR_RGB | GRAY);
         }
-        font_t *pCurrentFont = pFontLibraryTable[localDisplayState.fontIdx];
+
+        font_t *pCurrentFont = pFontLibraryTable[localDisplayState.fontIdx]->pLargeFont;
         EVE_cmd_text_burst(OUTPUT_DEC_XC0, OUTPUT_DEC_YC0(pCurrentFont->font_caps_height), pCurrentFont->ft81x_font_index, INPUT_TEXT_OPTIONS, pDecRes);
         EVE_cmd_text_burst(OUTPUT_BIN_XC0, OUTPUT_BIN_YC0(pCurrentFont->font_caps_height), pCurrentFont->ft81x_font_index, INPUT_TEXT_OPTIONS, pBinRes);
         EVE_cmd_text_burst(OUTPUT_HEX_XC0, OUTPUT_HEX_YC0(pCurrentFont->font_caps_height), pCurrentFont->ft81x_font_index, INPUT_TEXT_OPTIONS, pHexRes);
