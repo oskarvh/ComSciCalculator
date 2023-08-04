@@ -63,7 +63,7 @@ const uint8_t baseToRadix[3] = {
 /* ---- CALCULATOR CORE HELPER FUNCTIONS ----- */
 
 // Temporary list containing the allocated pointers
-uint32_t allocatedPointers[200] = {0};
+uint32_t allocatedPointers[400] = {0};
 
 /**
  * @brief Malloc wrapper to help debug memory leaks

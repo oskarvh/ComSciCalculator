@@ -130,7 +130,7 @@ SOFTWARE.
 #define PURPLE  0x4b0082//0x800080
 #define WHITE   0xffffff
 #define BLACK   0x000000
-#define GRAY    0x969696
+#define GRAY    0x303030
 #define TURQOISE 0x00fff7
  /**@}*/
 

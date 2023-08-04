@@ -295,6 +295,10 @@ void displayCalcState(displayState_t *pDisplayState){
  * @param writeCursor Cursor location
  * @return Nothing
  */
+//! Screen left and right buffer area for input
+#define VISIBLE_INPUT_X_BUFFER (5)
+//! How many horizontal pixels are allocated for the input area
+#define VISIBLE_INPUT_X_AREA_PX (EVE_HSIZE - VISIBLE_INPUT_X_BUFFER)
 void displayInputText(displayState_t *pDisplayState, bool writeCursor){
 
     uint8_t colorWheelIndex = 0; // Maximum COLORWHEEL_LEN
@@ -306,6 +310,23 @@ void displayInputText(displayState_t *pDisplayState, bool writeCursor){
     font_t *pCurrentFont = pFontLibraryTable[pDisplayState->fontIdx]->pLargeFont;
     // Width of the cumulative characters now written
     uint32_t widthWrittenChars = 0;
+
+    // Calculate if the input display should be wrapped, and by how many lines
+    uint32_t widthAllChars = VISIBLE_INPUT_X_BUFFER;
+    uint16_t numLinesWrap = 0;
+    while(pDisplayState->printedInputBuffer[charIter] != '\0'){
+        widthAllChars += getFontCharWidth(pCurrentFont, pDisplayState->printedInputBuffer[charIter]);
+        // If the current line width is larger than visible area, then that means a new line should be made
+        if(widthAllChars >= VISIBLE_INPUT_X_AREA_PX){
+            widthAllChars = VISIBLE_INPUT_X_BUFFER + getFontCharWidth(pCurrentFont, pDisplayState->printedInputBuffer[charIter]);
+            numLinesWrap++;
+        }
+        charIter++;
+    }
+    charIter = 0; // Reset before using again.
+    uint8_t displayWrapOffset = 0; // Track how many lines have been written.
+    uint16_t currentLineWidth = VISIBLE_INPUT_X_BUFFER; // Tracks the current line width
+    uint16_t cursorOffset = VISIBLE_INPUT_X_BUFFER;
     while(pDisplayState->printedInputBuffer[charIter] != '\0'){
         // Increase color index if opening bracket
         if(pDisplayState->printedInputBuffer[charIter] == '('){
@@ -321,17 +342,22 @@ void displayInputText(displayState_t *pDisplayState, bool writeCursor){
 
         // Add the width of the char to be written:
         widthWrittenChars += getFontCharWidth(pCurrentFont, pDisplayState->printedInputBuffer[charIter]);
-
+        currentLineWidth += getFontCharWidth(pCurrentFont, pDisplayState->printedInputBuffer[charIter]);
+        // If the current line width is larger than visible area, then that means a new line should be made
+        if(currentLineWidth >= VISIBLE_INPUT_X_AREA_PX){
+            currentLineWidth = VISIBLE_INPUT_X_BUFFER + getFontCharWidth(pCurrentFont, pDisplayState->printedInputBuffer[charIter]);
+            displayWrapOffset++;
+        }
         // Have a temporary buffer to be able to print in different colors. Null terminated
         char pTmpRxBuf[2] = {pDisplayState->printedInputBuffer[charIter], '\0'};
 
+        uint32_t yOffset = INPUT_TEXT_YC0(pCurrentFont->font_caps_height) - (numLinesWrap-displayWrapOffset)*(pCurrentFont->font_caps_height+5);
         // Print one colored char
-        EVE_cmd_text_burst(5+widthWrittenChars,
-                           INPUT_TEXT_YC0(pCurrentFont->font_caps_height),
+        EVE_cmd_text_burst(currentLineWidth,
+                           yOffset,//INPUT_TEXT_YC0(pCurrentFont->font_caps_height),
                            pCurrentFont->ft81x_font_index,
                            INPUT_TEXT_OPTIONS,
                            pTmpRxBuf);
-
 
         // Decrease color index if closing bracket.
         if(pDisplayState->printedInputBuffer[charIter] == ')'){
@@ -340,15 +366,23 @@ void displayInputText(displayState_t *pDisplayState, bool writeCursor){
         charIter++;
     }
     if(writeCursor){
+        displayWrapOffset = 0;
         // Get the width of the chars until the current cursor
-        uint32_t widthWrittenCharsUntilCursor = 0;
+        uint32_t widthWrittenCharsUntilCursor = VISIBLE_INPUT_X_BUFFER;
         for(int i = 0 ; i < charIter - pDisplayState->cursorLoc ; i++){
             widthWrittenCharsUntilCursor += getFontCharWidth(pCurrentFont, pDisplayState->printedInputBuffer[i]);
+            // Reset if width of the screen has been reached.
+            if(widthWrittenCharsUntilCursor >= VISIBLE_INPUT_X_AREA_PX){
+                widthWrittenCharsUntilCursor = VISIBLE_INPUT_X_BUFFER + getFontCharWidth(pCurrentFont, pDisplayState->printedInputBuffer[i]);
+                displayWrapOffset++;
+            }
         }
         // Cursor is always white
         EVE_cmd_dl_burst(DL_COLOR_RGB | WHITE);
-        EVE_cmd_text_burst(5+ widthWrittenCharsUntilCursor + getFontCharWidth(pCurrentFont, ' ')/2,
-                           INPUT_TEXT_YC0(pCurrentFont->font_caps_height),
+        // Write cursor
+        uint32_t yOffset = INPUT_TEXT_YC0(pCurrentFont->font_caps_height) - (numLinesWrap-displayWrapOffset)*(pCurrentFont->font_caps_height+5);
+        EVE_cmd_text_burst(widthWrittenCharsUntilCursor + getFontCharWidth(pCurrentFont, ' ')/2,
+                           yOffset,
                            pCurrentFont->ft81x_font_index,
                            INPUT_TEXT_OPTIONS,
                            "|");

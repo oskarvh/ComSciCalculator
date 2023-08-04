@@ -518,7 +518,7 @@ main(void)
     xTaskCreate(
             calcCoreTask, // Function that implements the task.
             "CALCCORE",               // Text name for the task.
-            700,                    // Stack size in words, not bytes.
+            2000,                    // Stack size in words, not bytes.
             ( void * ) 1,            // Parameter passed into the task.
             tskIDLE_PRIORITY,        // Slightly higher priority than display task
             &calcCoreTaskHandle );              // Used to pass out the created task's handle.
