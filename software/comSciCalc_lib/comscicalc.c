@@ -1395,8 +1395,9 @@ calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
     // A variable to keep track of the depth of the current entry based
     // only on depth increasing functions
     uint8_t depthDueToFunction = 0;
-    // Loop through all buffers
+    // Save the previous input type of checking if 0x or 0b should be printed
     uint8_t previousInputType = INPUT_TYPE_EMPTY;
+    // Loop through all buffers
     while (pCurrentListEntry != NULL) {
         // Depending on the input type, print different things.
         uint8_t currentInputType =
@@ -1449,14 +1450,6 @@ calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
             // Input is operator. Print the string related to that operator.
             const operatorEntry_t *pOperator =
                 (operatorEntry_t *)pCurrentListEntry->pFunEntry;
-            uint8_t tmpStrLen = strlen(pOperator->opString);
-
-            if (numCharsWritten < stringLen - tmpStrLen) {
-                numCharsWritten += sprintf(pString, pOperator->opString);
-                pString += tmpStrLen;
-            } else {
-                return calc_funStatus_STRING_BUFFER_ERROR;
-            }
             // If the operator increase depth, then print an opening bracket too
             if (GET_DEPTH_FLAG(pCurrentListEntry->entry.typeFlag) ==
                 DEPTH_CHANGE_INCREASE) {
@@ -1490,6 +1483,14 @@ calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
                                                   numCharsWritten);
                     }
                 }
+            }
+            // Write the operator.
+            uint8_t tmpStrLen = strlen(pOperator->opString);
+            if (numCharsWritten < stringLen - tmpStrLen) {
+                numCharsWritten += sprintf(pString, pOperator->opString);
+                pString += tmpStrLen;
+            } else {
+                return calc_funStatus_STRING_BUFFER_ERROR;
             }
         } else if ((currentInputType == INPUT_TYPE_EMPTY) ||
                    (currentInputType == INPUT_TYPE_DECIMAL_POINT)) {
