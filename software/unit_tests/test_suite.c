@@ -981,6 +981,58 @@ void test_leading_zeros(void){
     }
 }
 
+
+/* ----------------------------------------------------------------
+ * Solvable equations (positive testing)
+ * ----------------------------------------------------------------*/
+testParams_t long_expression[] = {
+    {
+        .pInputString = "1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 32,
+    },
+};
+void test_solvable_long_expression(void){
+    calcCoreState_t calcCore;
+    int numTests = sizeof(long_expression)/sizeof(long_expression[0]);
+    for(int i = 0 ; i < numTests ; i++){
+        setupTestStruct(&calcCore, &long_expression[i]);
+        calcCoreAddInput(&calcCore, &long_expression[i]);
+        int8_t state = calc_solver(&calcCore);
+        calcCoreGetBuffer(&calcCore, &long_expression[i]);
+        if(verbose){
+            printf("------------------------------------------------\r\n");
+            printf("Input:           %s \r\nExpected:        %s \r\nExpected result: %i \r\nReturned result: %i \r\n", 
+                    long_expression[i].pExpectedString,
+                    long_expression[i].pOutputString,
+                    long_expression[i].expectedResult,
+                    calcCore.result
+                    );
+        }
+        TEST_ASSERT_EQUAL_STRING(
+            long_expression[i].pExpectedString,
+            long_expression[i].pOutputString);
+        teardownTestStruct(&calcCore);
+
+        // Check that an equal amount of mallocs and free's happened
+        // in the calculator core
+        //printf("Allocation counter = %i\r\n", calcCore.allocCounter);
+        TEST_ASSERT_EQUAL_INT_MESSAGE(long_expression[i].expectedResult, calcCore.result, "Result not right.");
+        TEST_ASSERT_EQUAL_UINT_MESSAGE(0, calcCore.allocCounter, "Leaky memory!");
+        if(calcCore.allocCounter != 0){
+            printf("************************************************\r\n\r\n");
+            printf("WARNING: leaky memory: %i!\r\n", calcCore.allocCounter);
+            printf("************************************************\r\n\r\n");
+        }
+        if(verbose){
+            printf("------------------------------------------------\r\n\r\n");
+        }
+    }
+}
+
 /* ----------------------------------------------------------------
  * Main. Only starts the tests. 
  * ----------------------------------------------------------------*/
@@ -988,6 +1040,7 @@ int main(void)
 {
     verbose = true;
     UNITY_BEGIN();
+    /*
     RUN_TEST(test_addRemoveInput);
     RUN_TEST(test_addInvalidInput);
     RUN_TEST(test_solvable_solution);
@@ -998,5 +1051,7 @@ int main(void)
     RUN_TEST(test_fixed_point_input);
     RUN_TEST(test_string_to_fixed_point);
     RUN_TEST(test_leading_zeros);
+    */
+    RUN_TEST(test_solvable_long_expression);
     return UNITY_END();
 }

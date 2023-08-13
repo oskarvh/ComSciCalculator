@@ -63,7 +63,8 @@ const uint8_t baseToRadix[3] = {
 /* ---- CALCULATOR CORE HELPER FUNCTIONS ----- */
 
 // Temporary list containing the allocated pointers
-uint32_t allocatedPointers[400] = {0};
+#define ALLOC_TABLE_SZ 400
+uint32_t allocatedPointers[ALLOC_TABLE_SZ] = {0};
 
 /**
  * @brief Malloc wrapper to help debug memory leaks
@@ -93,7 +94,7 @@ inputListEntry_t *overloaded_malloc(size_t size) {
 void overloaded_free(inputListEntry_t *ptr) {
     logger("[free] : 0x%08x\r\n", ptr);
     bool okToFree = false;
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < ALLOC_TABLE_SZ; i++) {
         if (allocatedPointers[i] == (uint32_t)ptr) {
             okToFree = true;
             allocatedPointers[i] = 0;
@@ -102,6 +103,7 @@ void overloaded_free(inputListEntry_t *ptr) {
     }
     if (!okToFree) {
         logger("Could not find that 0x%08x was allocated! \r\n", ptr);
+
         while (1)
             ;
     }
