@@ -1040,7 +1040,6 @@ int main(void)
 {
     verbose = true;
     UNITY_BEGIN();
-    /*
     RUN_TEST(test_addRemoveInput);
     RUN_TEST(test_addInvalidInput);
     RUN_TEST(test_solvable_solution);
@@ -1051,7 +1050,6 @@ int main(void)
     RUN_TEST(test_fixed_point_input);
     RUN_TEST(test_string_to_fixed_point);
     RUN_TEST(test_leading_zeros);
-    */
     RUN_TEST(test_solvable_long_expression);
     return UNITY_END();
 }

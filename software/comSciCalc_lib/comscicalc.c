@@ -1139,6 +1139,8 @@ static int solveExpression(calcCoreState_t *pCalcCoreState,
                      SUBRESULT_TYPE_INT)) {
                     pResult = pStart;
                 }
+            } else if (pStart == pEnd) {
+                pResult = pStart;
             }
             logger("Operator not found or none left. \r\n");
         }
