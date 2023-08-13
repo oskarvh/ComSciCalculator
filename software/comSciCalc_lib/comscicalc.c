@@ -1450,6 +1450,17 @@ calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
             // Input is operator. Print the string related to that operator.
             const operatorEntry_t *pOperator =
                 (operatorEntry_t *)pCurrentListEntry->pFunEntry;
+            // Record the starting point of the number of chars written for
+            // the syntax issue recording
+            uint16_t charsWrittenBeforeOperator = numCharsWritten;
+            // Write the operator.
+            uint8_t tmpStrLen = strlen(pOperator->opString);
+            if (numCharsWritten < stringLen - tmpStrLen) {
+                numCharsWritten += sprintf(pString, pOperator->opString);
+                pString += tmpStrLen;
+            } else {
+                return calc_funStatus_STRING_BUFFER_ERROR;
+            }
             // If the operator increase depth, then print an opening bracket too
             if (GET_DEPTH_FLAG(pCurrentListEntry->entry.typeFlag) ==
                 DEPTH_CHANGE_INCREASE) {
@@ -1462,7 +1473,7 @@ calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
                         previousInputType == INPUT_TYPE_NUMBER) {
                         // This is an "illegal" entry of a number. Mark it.
                         calc_recordSyntaxIssuePos(pSyntaxIssuePos,
-                                                  numCharsWritten);
+                                                  charsWrittenBeforeOperator);
                     }
                 }
                 if (numCharsWritten < stringLen) {
@@ -1480,18 +1491,11 @@ calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
                         previousInputType != INPUT_TYPE_NUMBER) {
                         // This is an "illegal" entry of a number. Mark it.
                         calc_recordSyntaxIssuePos(pSyntaxIssuePos,
-                                                  numCharsWritten);
+                                                  charsWrittenBeforeOperator);
                     }
                 }
             }
-            // Write the operator.
-            uint8_t tmpStrLen = strlen(pOperator->opString);
-            if (numCharsWritten < stringLen - tmpStrLen) {
-                numCharsWritten += sprintf(pString, pOperator->opString);
-                pString += tmpStrLen;
-            } else {
-                return calc_funStatus_STRING_BUFFER_ERROR;
-            }
+
         } else if ((currentInputType == INPUT_TYPE_EMPTY) ||
                    (currentInputType == INPUT_TYPE_DECIMAL_POINT)) {
             // This is either bracket or punctuation.
