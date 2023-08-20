@@ -48,8 +48,11 @@ SOFTWARE.
 // comsci header file
 #include "comscicalc.h"
 
-// Standard library
+// utils
+#include "print_utils.h"
 #include "uart_logger.h"
+
+// Standard library
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -273,10 +276,11 @@ calc_funStatus_t calc_coreInit(calcCoreState_t *pCalcCoreState) {
     // Set the result to 0 and solved to false
     pCalcCoreState->result = 0;
     pCalcCoreState->solved = false;
-    pCalcCoreState->numberFormat.formatBase = INPUT_FMT_INT;
+    pCalcCoreState->numberFormat.inputFormat = INPUT_FMT_INT;
+    pCalcCoreState->numberFormat.outputFormat = INPUT_FMT_INT;
     pCalcCoreState->numberFormat.sign = false;
-    pCalcCoreState->numberFormat.numBits = 32;
-    pCalcCoreState->numberFormat.fixedPointDecimalPlace = 0;
+    pCalcCoreState->numberFormat.numBits = 64;
+    pCalcCoreState->numberFormat.fixedPointDecimalPlace = 32;
 
     return calc_funStatus_SUCCESS;
 }
@@ -342,7 +346,7 @@ calc_funStatus_t calc_addInput(calcCoreState_t *pCalcCoreState,
 
     // Add the input
     pNewListEntry->entry.c = inputChar;
-    inputFormat_t inputFormat = pCalcCoreState->numberFormat.formatBase;
+    inputFormat_t inputFormat = pCalcCoreState->numberFormat.inputFormat;
     bool sign = pCalcCoreState->numberFormat.sign;
     // Set the input subresult to 0
     pNewListEntry->entry.subresult = 0;
@@ -533,100 +537,256 @@ int8_t findDeepestPoint(inputListEntry_t **ppStart, inputListEntry_t **ppEnd) {
     return 0;
 }
 
-/**
- * @brief Function that converts a char to corresponding int (dec or bin)
- * @param c Char to be converted
- * @return 0 if not possible, but input function already checks for this.
- *   Otherwise returns the int in decimal base.
- */
-int charToInt(char c) {
-    if ((c >= '0') && (c <= '9')) {
-        return (int)(c - '0');
+void convertResult(char *pString, SUBRESULT_INT result,
+                   numberFormat_t *pNumberFormat, uint8_t base) {
+    // NULL check on pointer
+    if (pString == NULL) {
+        return;
     }
-    if ((c >= 'a') && (c <= 'f')) {
-        return (int)(c - 'a' + 10);
-    }
-    return 0;
-}
+    // Based on the result format, convert to the appropriate format.
+    if (pNumberFormat->outputFormat == INPUT_FMT_INT) {
+        // Output format is integer. Convert based on input format.
+        if (pNumberFormat->inputFormat == INPUT_FMT_INT) {
+            // Input format is integer, meaning that the result is
+            // on integer format as well.
+            // Simply print long long.
+            if (base == inputBase_DEC) {
+                sprintf(pString, "%1lli", result);
+            } else if (base == inputBase_BIN) {
+                printToBinary(pString, result, false, pNumberFormat->numBits);
+            } else if (base == inputBase_HEX) {
+                sprintf(pString, "0x%1llX", result);
+            }
+        } else if (pNumberFormat->inputFormat == INPUT_FMT_FLOAT) {
+            // Floating point format. First convert to either float or double,
+            // based on the number format, and then round and print.
+            SUBRESULT_INT tmpResInt = 0;
+            if (pNumberFormat->numBits == 32) {
+                float tmpRes = 0.0;
+                // Copy the result over to float to keep formatting
+                memcpy(&tmpRes, &result, sizeof(float));
+                // Round to integer:
+                tmpResInt = round(tmpRes);
+            } else if (pNumberFormat->numBits == 64) {
+                double tmpRes = 0.0;
+                // Copy the result over to double to keep formatting
+                memcpy(&tmpRes, &result, sizeof(double));
+                // Round to integer:
+                tmpResInt = round(tmpRes);
+            }
+            if (base == inputBase_DEC) {
+                sprintf(pString, "%1lli", tmpResInt);
+            } else if (base == inputBase_BIN) {
+                printToBinary(pString, tmpResInt, false,
+                              pNumberFormat->numBits);
+            } else if (base == inputBase_HEX) {
+                sprintf(pString, "0x%1llX", tmpResInt);
+            }
 
-//#define STRING_TO_FIXED_POINT_FIXED_ALGO
-#ifndef STRING_TO_FIXED_POINT_FIXED_ALGO
-SUBRESULT_INT strtofp(const char *pString, bool sign, uint16_t decimalPlace,
-                      uint8_t radix) {
-    const char *pLocalPtr = pString;
-    if (radix == 10) {
-        char *pDecimalPlace = NULL;
-        double temp = strtof(pString, &pDecimalPlace);
-        return (SUBRESULT_INT)(round(temp * (1 << decimalPlace)));
-    } else {
-        char *pDecimalPlace = NULL;
-        char *pEndPtr = NULL;
-        SUBRESULT_INT integerPart = 0;
-        SUBRESULT_INT decimalPart = 0;
-
-        if (sign) {
-            integerPart = strtoll(pLocalPtr, &pDecimalPlace, radix);
-        } else {
-            integerPart = strtoull(pLocalPtr, &pDecimalPlace, radix);
+        } else if (pNumberFormat->inputFormat == INPUT_FMT_FIXED) {
+            // Just truncate.
+            SUBRESULT_INT decimalPlace = pNumberFormat->fixedPointDecimalPlace;
+            SUBRESULT_INT tmpRes = result >> ((SUBRESULT_INT)decimalPlace);
+            if (base == inputBase_DEC) {
+                sprintf(pString, "%1lli", tmpRes);
+            } else if (base == inputBase_BIN) {
+                printToBinary(pString, tmpRes, false, pNumberFormat->numBits);
+            } else if (base == inputBase_HEX) {
+                sprintf(pString, "0x%1llX", tmpRes);
+            }
         }
-        if (*pDecimalPlace == '.') {
-            pDecimalPlace++;
-        } else {
-            logger("Error: Expected a . in the fixed point string %s\r\n",
-                   pLocalPtr);
-        }
-        decimalPart = strtoull(pDecimalPlace, &pEndPtr, radix);
+    } else if (pNumberFormat->outputFormat == INPUT_FMT_FLOAT) {
+        // Output format is floating point. Convert based on input format.
+        if (pNumberFormat->inputFormat == INPUT_FMT_INT) {
+            // Convert integer to floating point format:
+            // Using only double to be sure.
+            if (base == inputBase_DEC) {
+                if (pNumberFormat->numBits == 32) {
+                    float tmpRes = (float)result;
+                    sprintf(pString, "%g.0", tmpRes);
+                } else if (pNumberFormat->numBits == 64) {
+                    double tmpRes = (double)result;
+                    sprintf(pString, "%lg.0", tmpRes);
+                }
+            } else if (base == inputBase_BIN) {
+                SUBRESULT_INT tmpRes = 0;
+                if (pNumberFormat->numBits == 32) {
+                    float tmpResf = (float)result;
+                    memcpy(&tmpRes, &tmpResf, sizeof(float));
+                    // Here, we want to print all bits to make it
+                    // easier to read
 
-        return (integerPart << decimalPlace) | decimalPart;
+                } else if (pNumberFormat->numBits == 64) {
+                    double tmpResd = (double)result;
+                    memcpy(&tmpRes, &tmpResd, sizeof(double));
+                }
+                printToBinary(pString, tmpRes, true, pNumberFormat->numBits);
+            } else if (base == inputBase_HEX) {
+                if (pNumberFormat->numBits == 32) {
+                    float tmpResf = (float)result;
+                    SUBRESULT_INT tmpRes = 0;
+                    memcpy(&tmpRes, &tmpResf, sizeof(float));
+                    sprintf(pString, "0x%1lX", tmpRes);
+                } else if (pNumberFormat->numBits == 64) {
+                    double tmpResd = (double)result;
+                    SUBRESULT_INT tmpRes;
+                    memcpy(&tmpRes, &tmpResd, sizeof(double));
+                    sprintf(pString, "0x%1llX", tmpRes);
+                }
+            }
+        } else if (pNumberFormat->inputFormat == INPUT_FMT_FLOAT) {
+            // Input is float and output is float. Just make sure
+            // to keep track of bit width.
+            if (base == inputBase_DEC) {
+                if (pNumberFormat->numBits == 32) {
+                    float tmpRes = 0.0;
+                    memcpy(&tmpRes, &result, sizeof(float));
+                    sprintf(pString, "%lg", tmpRes);
+                } else if (pNumberFormat->numBits == 64) {
+                    double tmpRes = 0.0;
+                    memcpy(&tmpRes, &result, sizeof(double));
+                    sprintf(pString, "%lg", tmpRes);
+                }
+            } else if (base == inputBase_BIN) {
+                // Nothing special, just print as is.
+                printToBinary(pString, result, true, pNumberFormat->numBits);
+            } else if (base == inputBase_HEX) {
+                // Nothing special, just print as is.
+                sprintf(pString, "0x%1llX", result);
+            }
+        } else if (pNumberFormat->inputFormat == INPUT_FMT_FIXED) {
+            // Fixed point to floating point conversion.
+            if (base == inputBase_DEC) {
+                // For decimal, this is just a straight forward printing,
+                // as there are no differences between floating point
+                // or fixed point (actually, float is used in the conversion
+                // from fixed point, so this gives the same format. )
+                fptostr(pString, result, pNumberFormat->sign,
+                        pNumberFormat->fixedPointDecimalPlace, 10);
+            } else {
+                // Here though, a conversion from fixed point to float is
+                // required.
+                uint16_t decimalPlace = pNumberFormat->fixedPointDecimalPlace;
+                uint64_t decPart = result >> decimalPlace;
+                uint64_t mask = (1ULL << decimalPlace) - 1;
+                uint64_t tmpRes = 0;
+                if (pNumberFormat->numBits == 32) {
+                    float res = 0.0;
+                    float mult = 0.5;
+                    mask = 1ULL << (decimalPlace - 1);
+                    while (mask != 0) {
+                        if (mask & result) {
+                            res += mult;
+                        }
+                        mask = mask >> 1;
+                        mult /= 2.0;
+                    }
+                    res += decPart;
+                    memcpy(&tmpRes, &res, sizeof(float));
+                } else if (pNumberFormat->numBits == 64) {
+                    double res = 0.0;
+                    double mult = 0.5;
+                    mask = 1ULL << (decimalPlace - 1);
+                    while (mask != 0) {
+                        if (mask & result) {
+                            res += mult;
+                        }
+                        mask = mask >> 1;
+                        mult /= 2.0;
+                    }
+                    res += decPart;
+                    memcpy(&tmpRes, &res, sizeof(double));
+                }
+                if (base == inputBase_BIN) {
+                    printToBinary(pString, tmpRes, true,
+                                  pNumberFormat->numBits);
+                } else if (base == inputBase_HEX) {
+                    sprintf(pString, "0x%1llX", tmpRes);
+                }
+            }
+        }
+    } else if (pNumberFormat->outputFormat == INPUT_FMT_FIXED) {
+        // Output format is fixed point. Convert based on input format.
+        if (pNumberFormat->inputFormat == INPUT_FMT_INT) {
+            // Integer to fixed point conversion. Just shift by decimal place.
+            SUBRESULT_INT tmpRes = result
+                                   << (pNumberFormat->fixedPointDecimalPlace);
+            if (base == inputBase_DEC) {
+                // Hack: integer to fixed point will always result in xxx.0
+                sprintf(pString, "%1lli.0", result);
+            } else if (base == inputBase_BIN) {
+                printToBinary(pString, result, false, pNumberFormat->numBits);
+                strcat(pString, ".0\0");
+            } else if (base == inputBase_HEX) {
+                sprintf(pString, "0x%1llX.0", result);
+            }
+        } else if (pNumberFormat->inputFormat == INPUT_FMT_FLOAT) {
+            // This requires floating point to fixed point conversion.
+            // Start by constructing the integer and fractional parts
+            SUBRESULT_INT fp_res = 0;
+            if (pNumberFormat->numBits == 32) {
+                float tmpResf = 0.0;
+                memcpy(&tmpResf, &result, sizeof(float));
+                SUBRESULT_INT decPart = floor(tmpResf);
+                float fractPart = tmpResf - floor(tmpResf);
+                uint16_t decimalPlace = pNumberFormat->fixedPointDecimalPlace;
+                fp_res = decPart << decimalPlace;
+                float mult = 0.5;
+
+                for (int i = decimalPlace - 1; i >= 0; i--) {
+                    if (fractPart >= mult) {
+                        fp_res |= 1ULL << i;
+                        fractPart -= mult;
+                    }
+                    mult /= 2.0;
+                }
+
+            } else if (pNumberFormat->numBits == 64) {
+                double tmpResf = 0.0;
+                memcpy(&tmpResf, &result, sizeof(double));
+                SUBRESULT_INT decPart = floor(tmpResf);
+                double fractPart = tmpResf - floor(tmpResf);
+                uint16_t decimalPlace = pNumberFormat->fixedPointDecimalPlace;
+                fp_res = decPart << decimalPlace;
+                double mult = 0.5;
+
+                for (int i = decimalPlace - 1; i >= 0; i--) {
+                    if (fractPart >= mult) {
+                        fp_res |= 1ULL << i;
+                        fractPart -= mult;
+                    }
+                    mult /= 2.0;
+                }
+            }
+            if (base == inputBase_DEC) {
+                // For decimal, this is just a straight forward printing,
+                // as there are no differences between floating point
+                // or fixed point (actually, float is used in the conversion
+                // from fixed point, so this gives the same format. )
+                fptostr(pString, fp_res, pNumberFormat->sign,
+                        pNumberFormat->fixedPointDecimalPlace, 10);
+            } else if (base == inputBase_BIN) {
+                fptostr(pString, fp_res, pNumberFormat->sign,
+                        pNumberFormat->fixedPointDecimalPlace, 2);
+            } else if (base == inputBase_HEX) {
+                fptostr(pString, fp_res, pNumberFormat->sign,
+                        pNumberFormat->fixedPointDecimalPlace, 16);
+            }
+        } else if (pNumberFormat->inputFormat == INPUT_FMT_FIXED) {
+            // Fixed point to fixed point conversion. Just print the result.
+            if (base == inputBase_DEC) {
+                fptostr(pString, result, pNumberFormat->sign,
+                        pNumberFormat->fixedPointDecimalPlace, 10);
+            } else if (base == inputBase_BIN) {
+                fptostr(pString, result, pNumberFormat->sign,
+                        pNumberFormat->fixedPointDecimalPlace, 2);
+            } else if (base == inputBase_HEX) {
+                fptostr(pString, result, pNumberFormat->sign,
+                        pNumberFormat->fixedPointDecimalPlace, 16);
+            }
+        }
     }
 }
-#else
-SUBRESULT_INT strtofp(const char *pString, bool sign, uint16_t decimalPlace,
-                      uint8_t radix) {
-    SUBRESULT_INT integerPart = 0;
-    SUBRESULT_INT decimalPart = 0;
-    char *endPtr = NULL;
-    char *pDecimalPlace = NULL;
-    logger("Converting %s to fixed point with radix %i\r\n", pString, radix);
-    if (sign) {
-        integerPart = strtoll(pString, &pDecimalPlace, radix);
-
-    } else {
-        integerPart = strtoull(pString, &pDecimalPlace, radix);
-    }
-
-    // The end pointer should now point to the '.'
-    if (*pDecimalPlace == '.') {
-        pDecimalPlace++;
-    } else {
-        logger("Error: Expected a . in the fixed point string %s\r\n", pString);
-    }
-    decimalPart = strtoull(pDecimalPlace, &endPtr, radix);
-    // Loop throgh the remaining decimal places and calculate the
-    // fixed point decimal from that.
-    SUBRESULT_INT divisor = 5;
-    uint16_t decimalStrLen = strlen(pDecimalPlace);
-    for (int i = 0; i < decimalStrLen - 1; i++) {
-        divisor *= 10;
-    }
-    SUBRESULT_INT decimalPartFixedPoint = 0;
-    uint16_t shift = decimalPlace - 1;
-    SUBRESULT_INT comparison = decimalPart << shift;
-    divisor = divisor << shift;
-    for (int i = shift; i >= 0; i--) {
-        // logger("Comparing mask: 0x%u to decimal 0x%u\r\n", mask, comparison);
-        if (comparison >= divisor) {
-            comparison -= divisor;
-            decimalPartFixedPoint += 1 << i;
-        }
-        divisor = divisor >> 1;
-    }
-    logger("Solved to: 0x%x", (integerPart << decimalPlace));
-    logger(".0x%x\r\n", decimalPartFixedPoint);
-    // Put the integer and decimal part together
-    return (integerPart << decimalPlace) | decimalPartFixedPoint;
-}
-#endif
 
 /**
  * @brief Converts an input list containing chars, and converts all chars to
@@ -638,15 +798,15 @@ SUBRESULT_INT strtofp(const char *pString, bool sign, uint16_t decimalPlace,
  * The conversion from char to int will reduce the length of the list, where
  * e.g. '1'->'2'->'3' will be converted to 123 (from 3 entries to 1).
  */
-calc_funStatus_t copyAndConvertList(calcCoreState_t *pCalcCoreState,
-                                    inputListEntry_t **ppSolverListStart) {
+static calc_funStatus_t
+copyAndConvertList(calcCoreState_t *pCalcCoreState,
+                   inputListEntry_t **ppSolverListStart) {
 
     inputListEntry_t *pCurrentListEntry = pCalcCoreState->pListEntrypoint;
     // If no input list, simply return NULL
     if (pCurrentListEntry == NULL) {
         return calc_funStatus_INPUT_LIST_NULL;
     }
-
     inputListEntry_t *pNewListEntry = NULL;
     inputListEntry_t *pPreviousListEntry = NULL;
     // Loop through the input list and allocate new
@@ -727,7 +887,7 @@ calc_funStatus_t copyAndConvertList(calcCoreState_t *pCalcCoreState,
             // functions.
             char *endPtr = NULL;
             if (inputBase == inputBase_DEC) {
-                if ((inputFormat == INPUT_FMT_INT)) {
+                if (inputFormat == INPUT_FMT_INT) {
                     // Convert string to int.
                     // TBD: I think this should work with shorter strings as
                     // well
@@ -738,7 +898,7 @@ calc_funStatus_t copyAndConvertList(calcCoreState_t *pCalcCoreState,
                         pNewListEntry->entry.subresult =
                             strtoull(pCurrentString, &endPtr, 10);
                     }
-                } else if ((inputFormat == INPUT_FMT_FLOAT)) {
+                } else if (inputFormat == INPUT_FMT_FLOAT) {
                     if (pCalcCoreState->numberFormat.numBits == 32) {
                         float tempFloat = strtof(pCurrentString, &endPtr);
                         memcpy(&(pNewListEntry->entry.subresult), &tempFloat,
@@ -749,7 +909,7 @@ calc_funStatus_t copyAndConvertList(calcCoreState_t *pCalcCoreState,
                         memcpy(&(pNewListEntry->entry.subresult), &tempFloat,
                                sizeof(double));
                     }
-                } else if ((inputFormat == INPUT_FMT_FIXED)) {
+                } else if (inputFormat == INPUT_FMT_FIXED) {
                     // Use function to convert to fixed point with radix 10
                     pNewListEntry->entry.subresult = strtofp(
                         pCurrentString, sign,
@@ -757,7 +917,7 @@ calc_funStatus_t copyAndConvertList(calcCoreState_t *pCalcCoreState,
                         10);
                 }
             } else if (inputBase == inputBase_HEX) {
-                if ((inputFormat == INPUT_FMT_INT)) {
+                if (inputFormat == INPUT_FMT_INT) {
                     if (sign) {
                         pNewListEntry->entry.subresult =
                             strtoll(pCurrentString, &endPtr, 16);
@@ -765,7 +925,7 @@ calc_funStatus_t copyAndConvertList(calcCoreState_t *pCalcCoreState,
                         pNewListEntry->entry.subresult =
                             strtoull(pCurrentString, &endPtr, 16);
                     }
-                } else if ((inputFormat == INPUT_FMT_FLOAT)) {
+                } else if (inputFormat == INPUT_FMT_FLOAT) {
                     // Floats have no specific format in hex, so just
                     // read out as int, but note the difference between 32 and
                     // 64 bits
@@ -776,7 +936,7 @@ calc_funStatus_t copyAndConvertList(calcCoreState_t *pCalcCoreState,
                         pNewListEntry->entry.subresult =
                             strtoull(pCurrentString, &endPtr, 16);
                     }
-                } else if ((inputFormat == INPUT_FMT_FIXED)) {
+                } else if (inputFormat == INPUT_FMT_FIXED) {
                     pNewListEntry->entry.subresult = strtofp(
                         pCurrentString, sign,
                         pCalcCoreState->numberFormat.fixedPointDecimalPlace,
@@ -784,7 +944,7 @@ calc_funStatus_t copyAndConvertList(calcCoreState_t *pCalcCoreState,
                 }
 
             } else if (inputBase == inputBase_BIN) {
-                if ((inputFormat == INPUT_FMT_INT)) {
+                if (inputFormat == INPUT_FMT_INT) {
                     // Convert string to int.
                     // TBD: I think this should work with shorter strings as
                     // well
@@ -795,7 +955,7 @@ calc_funStatus_t copyAndConvertList(calcCoreState_t *pCalcCoreState,
                         pNewListEntry->entry.subresult =
                             strtoull(pCurrentString, &endPtr, 2);
                     }
-                } else if ((inputFormat == INPUT_FMT_FLOAT)) {
+                } else if (inputFormat == INPUT_FMT_FLOAT) {
                     // Floats have no specific format in binary, so just
                     // read out as int, but note the difference between 32 and
                     // 64 bits
@@ -806,7 +966,7 @@ calc_funStatus_t copyAndConvertList(calcCoreState_t *pCalcCoreState,
                         pNewListEntry->entry.subresult =
                             strtoull(pCurrentString, &endPtr, 2);
                     }
-                } else if ((inputFormat == INPUT_FMT_FIXED)) {
+                } else if (inputFormat == INPUT_FMT_FIXED) {
                     pNewListEntry->entry.subresult = strtofp(
                         pCurrentString, sign,
                         pCalcCoreState->numberFormat.fixedPointDecimalPlace, 2);
@@ -1063,7 +1223,8 @@ static int solveExpression(calcCoreState_t *pCalcCoreState,
                    ((operatorEntry_t *)(pHigestPrioOp->pFunEntry))->opString);
             logger("%i\r\n", pNextEntry->entry.subresult);
 
-            inputFormat_t inputFormat = pCalcCoreState->numberFormat.formatBase;
+            inputFormat_t inputFormat =
+                pCalcCoreState->numberFormat.inputFormat;
             bool sign = pCalcCoreState->numberFormat.sign;
             // Get the function pointer casted to the correct format.
             int8_t (*pFun)(SUBRESULT_INT * pResult, numberFormat_t numberFormat,
@@ -1184,7 +1345,8 @@ static int solveExpression(calcCoreState_t *pCalcCoreState,
                 logger("Error: Incorrect arguments.\r\n");
                 return calc_solveStatus_INVALID_ARGS;
             }
-            inputFormat_t inputFormat = pCalcCoreState->numberFormat.formatBase;
+            inputFormat_t inputFormat =
+                pCalcCoreState->numberFormat.inputFormat;
             bool sign = pCalcCoreState->numberFormat.sign;
             int8_t (*pFun)(SUBRESULT_INT * pResult, numberFormat_t numberFormat,
                            int num_args, inputType_t *pArgs) =
@@ -1679,7 +1841,14 @@ uint8_t calc_getCursorLocation(calcCoreState_t *pCalcCoreState) {
     return numChars;
 }
 
-void intToBin(char *pBuf, SUBRESULT_INT number) {
+/**
+ * @brief Convert an integer to a binary string
+ *
+ * @param pBuf Pointer to a string buffer of size of #i number of bits
+ * @param number The integer to be converted
+ * @return Nothing
+ */
+static void intToBin(char *pBuf, SUBRESULT_INT number) {
     const uint8_t numBits = sizeof(SUBRESULT_INT) * 8;
     // Since we want the most significant bit at the start of
     // the buffer, e.g. number 10 = 0b1010 should be printed
@@ -1881,4 +2050,49 @@ void calc_updateBase(calcCoreState_t *pCalcCoreState) {
             break;
         }
     }
+}
+
+calc_funStatus_t calc_updateOutputFormat(calcCoreState_t *pCalcCoreState,
+                                         uint8_t outputFormat) {
+    // Validate inputs:
+    if (pCalcCoreState == NULL) {
+        return calc_funStatus_CALC_CORE_STATE_NULL;
+    }
+    if (outputFormat >= INPUT_FMT_RESERVED) {
+        return calc_funStatus_UNKNOWN_PARAMETER;
+    }
+
+    // There not that much to updating the output format.
+    // There really are no restrictions, so just update it.
+    pCalcCoreState->numberFormat.outputFormat = outputFormat;
+
+    return calc_funStatus_SUCCESS;
+}
+
+calc_funStatus_t calc_updateInputFormat(calcCoreState_t *pCalcCoreState,
+                                        uint8_t inputFormat) {
+    // Validate inputs:
+    if (pCalcCoreState == NULL) {
+        return calc_funStatus_CALC_CORE_STATE_NULL;
+    }
+    if (inputFormat >= INPUT_FMT_RESERVED) {
+        return calc_funStatus_UNKNOWN_PARAMETER;
+    }
+
+    // Get the current input list object pointed at by the cursor:
+    inputListEntry_t *pCurrentListEntry = pCalcCoreState->pListEntrypoint;
+    if (pCurrentListEntry != NULL) {
+        inputModStatus_t listState =
+            getInputListEntry(pCalcCoreState, &pCurrentListEntry);
+        // Check if the current list entry is numerical
+        if (GET_INPUT_TYPE(pCurrentListEntry->entry.typeFlag) ==
+            INPUT_TYPE_NUMBER) {
+            // Conversion at numerical input is not allowed.
+            return calc_funStatus_FORMAT_ERROR;
+        }
+    }
+    // If we get here, then we can safely update the input format
+    pCalcCoreState->numberFormat.inputFormat = inputFormat;
+
+    return calc_funStatus_SUCCESS;
 }

@@ -24,13 +24,15 @@ SOFTWARE.
 
 #include "display.h"
 #include "EVE.h"
+#include "print_utils.h"
+#include "uart_logger.h"
 
 //! Binary result string buffer
-char pBinRes[MAX_PRINTED_BUFFER_LEN] = {0};
+char pBinRes[MAX_PRINTED_BUFFER_LEN_BIN] = {0};
 //! Hexadecimal result string buffer
-char pHexRes[MAX_PRINTED_BUFFER_LEN] = {0};
+char pHexRes[MAX_PRINTED_BUFFER_LEN_HEX] = {0};
 //! Decimal result string buffer
-char pDecRes[MAX_PRINTED_BUFFER_LEN] = {0};
+char pDecRes[MAX_PRINTED_BUFFER_LEN_DEC] = {0};
 //! Color wheel for the brackets
 const uint32_t colorWheel[COLORWHEEL_LEN] = {
    WHITE,
@@ -113,46 +115,6 @@ static void endDisplayList(void){
     EVE_end_cmd_burst();
     // Wait until EVE is not busy anymore to ensure conclusion of command.
     while(EVE_busy());
-}
-
-/**
- * @brief Convert binary value to string
- * @param pBuf Pointer to buffer to write the binary string
- * @param num Binary number to convert to string
- * @return Nothing
- */
-static void printToBinary(char* pBuf, uint32_t num){
-    // First, reset the buffer
-    pBuf[0] = '0';
-    pBuf[1] = 'b';
-
-    // In order to print the buffer with non-leading zeros,
-    // the last index must be the least significant bit.
-    // The approach is to go through each bit, starting from
-    // the MSB, find the first non-zero bit and start printing
-    // that.
-    bool firstBitFound = false;
-    uint8_t index = 2;
-    if(num != 0){
-        for(int i = 31 ; i >= 0 ; i--){
-            // Get the bit at the current index.
-            uint8_t currentBit = (num & (1 << i)) >> i;
-            // If the current bit is 1, and the first bit
-            // hasn't been found, then set the firstBitFound
-            // as true, causing the string to start printing
-            if(!firstBitFound && currentBit == 1){
-                firstBitFound = true;
-            }
-            if(firstBitFound){
-                pBuf[index++] = currentBit + '0';
-            }
-        }
-    } else {
-        // If the result is 0, then print a 0
-        pBuf[index++] = '0';
-    }
-    // Set the last index to a null terminator
-    pBuf[index] = '\0';
 }
 
 //! Offset used when programming custom fonts into RAM_G
@@ -262,13 +224,13 @@ void displayCalcState(displayState_t *pDisplayState){
     char *pBaseString = baseDisplayStrings[pDisplayState->inputOptions.inputBase];
     uint8_t baseStringLen = strlen(pBaseString);
 
-    // Get the string and length depending on the format:
-    char *pFormatString = formatDisplayStrings[pDisplayState->inputOptions.formatBase];
-    uint8_t formatStringLen = strlen(pFormatString);
+    // Get the string and length depending on the input format:
+    char *pInputFormatString = formatDisplayStrings[pDisplayState->inputOptions.inputFormat];
+    uint8_t inputFormatStringLen = strlen(pInputFormatString);
 
     // Display the bit width. Note: for fixed point, it's shown in Q notation
     char bitWidthString[7] = {0}; // Worst case scenario is 100.28\0
-    if(pDisplayState->inputOptions.formatBase == INPUT_FMT_FIXED){
+    if(pDisplayState->inputOptions.inputFormat == INPUT_FMT_FIXED){
         // Fixed point require Q notation.
         uint8_t numBits = pDisplayState->inputOptions.numBits;
         uint8_t decimalBits = pDisplayState->inputOptions.fixedPointDecimalPlace;
@@ -280,11 +242,32 @@ void displayCalcState(displayState_t *pDisplayState){
         sprintf(bitWidthString, "%u", pDisplayState->inputOptions.numBits);
     }
 
+    // Get the string and length depending on the output format:
+    char *pOutputFormatString = formatDisplayStrings[pDisplayState->inputOptions.outputFormat];
+    uint8_t outputFormatStringLen = strlen(pOutputFormatString);
+
+    /*
+    // Display the bit width. Note: for fixed point, it's shown in Q notation
+    // Ignore the output format bit length for now. Since it's shared with the input.
+    char outputBitWidthString[7] = {0}; // Worst case scenario is 100.28\0
+    if(pDisplayState->inputOptions.inputFormat == INPUT_FMT_FIXED){
+        // Fixed point require Q notation.
+        uint8_t numBits = pDisplayState->inputOptions.numBits;
+        uint8_t decimalBits = pDisplayState->inputOptions.fixedPointDecimalPlace;
+        // Work out the Q notation:
+        uint8_t integerBits = numBits-decimalBits;
+        sprintf(outputBitWidthString, "%u.%u", integerBits, decimalBits);
+    } else {
+        // Just get the bit width as int and convert to string
+        sprintf(outputBitWidthString, "%u", pDisplayState->inputOptions.numBits);
+    }
+    */
+
     // Find the maximum length of string we can print to the screen.
     // This has to be based on the font.
     //uint16_t maxDisplayStrLen =
     char pStatusString[60] = {0};
-    sprintf(pStatusString, "%s  %s  BITS:%s\0", pBaseString, pFormatString,bitWidthString );
+    sprintf(pStatusString, "%s  BITS:%s  INPUT:%s  OUTPUT:%s\0", pBaseString, bitWidthString, pInputFormatString, pOutputFormatString);
     font_t *pCurrentFont = pFontLibraryTable[pDisplayState->fontIdx]->pSmallFont;
     EVE_cmd_text_burst(OUTPUT_STATUS_X0, OUTPUT_STATUS_YC0(pCurrentFont->font_caps_height), pCurrentFont->ft81x_font_index, 0, pStatusString);
 }
@@ -326,7 +309,6 @@ void displayInputText(displayState_t *pDisplayState, bool writeCursor){
     charIter = 0; // Reset before using again.
     uint8_t displayWrapOffset = 0; // Track how many lines have been written.
     uint16_t currentLineWidth = VISIBLE_INPUT_X_BUFFER; // Tracks the current line width
-    uint16_t cursorOffset = VISIBLE_INPUT_X_BUFFER;
     while(pDisplayState->printedInputBuffer[charIter] != '\0'){
         // Increase color index if opening bracket
         if(pDisplayState->printedInputBuffer[charIter] == '('){
@@ -391,8 +373,9 @@ void displayInputText(displayState_t *pDisplayState, bool writeCursor){
 
 
 void initDisplayState(displayState_t *pDisplayState){
-    pDisplayState->inputOptions.fixedPointDecimalPlace = 0; // TBD
-    pDisplayState->inputOptions.formatBase = 0; // TBD
+    pDisplayState->inputOptions.fixedPointDecimalPlace = 32; // TBD
+    pDisplayState->inputOptions.inputFormat = 0; // TBD
+    pDisplayState->inputOptions.outputFormat = 0; // TBD
     pDisplayState->inputOptions.inputBase = 0; // TBD
     pDisplayState->inputOptions.numBits = 0; // TBD
     pDisplayState->inputOptions.sign = 0; // TBD
@@ -404,6 +387,26 @@ void initDisplayState(displayState_t *pDisplayState){
 
 }
 
+void printResult(displayState_t *pDisplayState){
+    // Get the result and output formats
+    SUBRESULT_INT result = pDisplayState->result;
+
+    // Clear the buffers
+    memset(pDecRes, 0, MAX_PRINTED_BUFFER_LEN_DEC);
+    memset(pBinRes, 0, MAX_PRINTED_BUFFER_LEN_BIN);
+    memset(pHexRes, 0, MAX_PRINTED_BUFFER_LEN_HEX);
+
+    // Convert to each base
+    convertResult(pDecRes, result, &(pDisplayState->inputOptions), inputBase_DEC);
+    convertResult(pBinRes, result, &(pDisplayState->inputOptions), inputBase_BIN);
+    convertResult(pHexRes, result, &(pDisplayState->inputOptions), inputBase_HEX);
+
+    // Get the current font:
+    font_t *pCurrentFont = pFontLibraryTable[pDisplayState->fontIdx]->pLargeFont;
+    EVE_cmd_text_burst(OUTPUT_DEC_XC0, OUTPUT_DEC_YC0(pCurrentFont->font_caps_height), pCurrentFont->ft81x_font_index, INPUT_TEXT_OPTIONS, pDecRes);
+    EVE_cmd_text_burst(OUTPUT_BIN_XC0, OUTPUT_BIN_YC0(pCurrentFont->font_caps_height), pCurrentFont->ft81x_font_index, INPUT_TEXT_OPTIONS, pBinRes);
+    EVE_cmd_text_burst(OUTPUT_HEX_XC0, OUTPUT_HEX_YC0(pCurrentFont->font_caps_height), pCurrentFont->ft81x_font_index, INPUT_TEXT_OPTIONS, pHexRes);
+}
 
 // TODO:
 // 1. Support different color output + freeze output if
@@ -471,7 +474,7 @@ void displayTask(void *p){
 #endif
         // The result is now in calcResult, print to the different types
         sprintf(pDecRes, "%1i", localDisplayState.result);
-        printToBinary(pBinRes, localDisplayState.result);
+        printToBinary(pBinRes, localDisplayState.result, false, localDisplayState.inputOptions.numBits);
         sprintf(pHexRes, "0x%1X", localDisplayState.result);
         // Update the screen:
         startDisplaylist();
@@ -488,11 +491,8 @@ void displayTask(void *p){
         } else {
             EVE_cmd_dl_burst(DL_COLOR_RGB | GRAY);
         }
+        printResult(&localDisplayState),
 
-        font_t *pCurrentFont = pFontLibraryTable[localDisplayState.fontIdx]->pLargeFont;
-        EVE_cmd_text_burst(OUTPUT_DEC_XC0, OUTPUT_DEC_YC0(pCurrentFont->font_caps_height), pCurrentFont->ft81x_font_index, INPUT_TEXT_OPTIONS, pDecRes);
-        EVE_cmd_text_burst(OUTPUT_BIN_XC0, OUTPUT_BIN_YC0(pCurrentFont->font_caps_height), pCurrentFont->ft81x_font_index, INPUT_TEXT_OPTIONS, pBinRes);
-        EVE_cmd_text_burst(OUTPUT_HEX_XC0, OUTPUT_HEX_YC0(pCurrentFont->font_caps_height), pCurrentFont->ft81x_font_index, INPUT_TEXT_OPTIONS, pHexRes);
         endDisplayList();
         // Screen has been updated, set update variable to false
         //updateScreen = false;

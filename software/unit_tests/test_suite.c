@@ -28,6 +28,9 @@
 // Unit test header
 #include "unit_tests.h"
 
+// utils
+#include "../comSciCalc_lib/print_utils.h"
+
 
 static bool verbose;
 // This function will run before each test. 
@@ -719,151 +722,6 @@ void test_null_pointers(void){
     TEST_ASSERT_EQUAL_INT_MESSAGE(calc_funStatus_STRING_BUFFER_ERROR,funStatus,"Unexpected return from print buffer");
 }
 
-testParams_t float_input_params[] = {
-    {
-        .pInputString = "123.45\0",
-        .pCursor = {0,0,0,0},
-        .pExpectedString = "123.45\0",
-        .pOutputString = {0},
-        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
-        .expectedResult = 0x42f6e666,// See https://www.h-schmidt.net/FloatConverter/IEEE754.html 
-    },
-    {
-        .pInputString = "123.45+34.5\0",
-        .pCursor = {0,0,0,0},
-        .pExpectedString = "123.45+34.5\0",
-        .pOutputString = {0},
-        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
-        .expectedResult = 0x431df333,// See https://www.h-schmidt.net/FloatConverter/IEEE754.html 
-    },
-};
-void test_float_input(void){
-    calcCoreState_t calcCore;
-    int numTests = sizeof(float_input_params)/sizeof(float_input_params[0]);
-    for(int i = 0 ; i < numTests ; i++){
-        setupTestStruct(&calcCore, &float_input_params[i]);
-        calcCore.numberFormat.formatBase = INPUT_FMT_FLOAT;
-        calcCoreAddInput(&calcCore, &float_input_params[i]);
-        int8_t state = calc_solver(&calcCore);
-        calcCoreGetBuffer(&calcCore, &float_input_params[i]);
-        if(verbose){
-            printf("------------------------------------------------\r\n");
-            printf("Input:           %s \r\nExpected:        %s \r\nExpected result: %f \r\nReturned result: %i \r\n", 
-                    float_input_params[i].pExpectedString,
-                    float_input_params[i].pOutputString,
-                    float_input_params[i].expectedResult,
-                    calcCore.result
-                    );
-        }
-        TEST_ASSERT_EQUAL_STRING(
-            float_input_params[i].pExpectedString,
-            float_input_params[i].pOutputString);
-        teardownTestStruct(&calcCore);
-
-        // Check that an equal amount of mallocs and free's happened
-        // in the calculator core
-        //printf("Allocation counter = %i\r\n", calcCore.allocCounter);
-        printf("Got: 0x%x. ", calcCore.result);
-        printf(" Expected 0x%x\r\n", float_input_params[i].expectedResult);
-        TEST_ASSERT_EQUAL_INT_MESSAGE(float_input_params[i].expectedResult, calcCore.result, "Result not right.");
-        TEST_ASSERT_EQUAL_UINT_MESSAGE(0, calcCore.allocCounter, "Leaky memory!");
-        if(calcCore.allocCounter != 0){
-            printf("************************************************\r\n\r\n");
-            printf("WARNING: leaky memory: %i!\r\n", calcCore.allocCounter);
-            printf("************************************************\r\n\r\n");
-        }
-        if(verbose){
-            printf("------------------------------------------------\r\n\r\n");
-        }
-    }
-}
-
-testParams_t fixed_point_input_params[] = {
-    {
-        .pInputString = "123.5\0",
-        .pCursor = {0,0,0,0},
-        .pExpectedString = "123.5\0",
-        .pOutputString = {0},
-        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
-        .expectedResult = 0x7b8000, // See https://chummersone.github.io/qformat.html#converter
-    },
-    {
-        .pInputString = "123.45\0",
-        .pCursor = {0,0,0,0},
-        .pExpectedString = "123.45\0",
-        .pOutputString = {0},
-        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
-        .expectedResult = 0x007b7333, // See https://chummersone.github.io/qformat.html#converter
-    },
-    {
-        .pInputString = "123.45+34.5\0",
-        .pCursor = {0,0,0,0},
-        .pExpectedString = "123.45+34.5\0",
-        .pOutputString = {0},
-        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
-        .expectedResult = 0x9df333, // See https://chummersone.github.io/qformat.html#converter
-    },
-    {
-        .pInputString = "175.188+18.1\0",
-        .pCursor = {0,0,0,0},
-        .pExpectedString = "175.188+18.1\0",
-        .pOutputString = {0},
-        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
-        .expectedResult = 0xc149bb, // See https://chummersone.github.io/qformat.html#converter
-    },
-    {
-        .pInputString = "12.8000+7e.ab85\0",
-        .pCursor = {0,0,0,0},
-        .pExpectedString = "0x12.0x8000+0x7e.0xab85\0",
-        .pOutputString = {0},
-        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_HEX},
-        .expectedResult = 0x912b85, // See https://chummersone.github.io/qformat.html#converter
-    },
-    
-};
-void test_fixed_point_input(void){
-    calcCoreState_t calcCore;
-    int numTests = sizeof(fixed_point_input_params)/sizeof(fixed_point_input_params[0]);
-    for(int i = 0 ; i < numTests ; i++){
-        setupTestStruct(&calcCore, &fixed_point_input_params[i]);
-        calcCore.numberFormat.formatBase = INPUT_FMT_FIXED;
-        calcCore.numberFormat.fixedPointDecimalPlace = 16;
-        calcCoreAddInput(&calcCore, &fixed_point_input_params[i]);
-        int8_t state = calc_solver(&calcCore);
-        calcCoreGetBuffer(&calcCore, &fixed_point_input_params[i]);
-        if(verbose){
-            printf("------------------------------------------------\r\n");
-            printf("Input:           %s \r\nExpected:        %s \r\nExpected result: %f \r\nReturned result: %i \r\n", 
-                    fixed_point_input_params[i].pExpectedString,
-                    fixed_point_input_params[i].pOutputString,
-                    fixed_point_input_params[i].expectedResult,
-                    calcCore.result
-                    );
-        }
-        TEST_ASSERT_EQUAL_STRING(
-            fixed_point_input_params[i].pExpectedString,
-            fixed_point_input_params[i].pOutputString);
-        teardownTestStruct(&calcCore);
-
-        // Check that an equal amount of mallocs and free's happened
-        // in the calculator core
-        //printf("Allocation counter = %i\r\n", calcCore.allocCounter);
-        printf("Got: 0x%x. ", calcCore.result);
-        printf(" Expected 0x%x\r\n", fixed_point_input_params[i].expectedResult);
-        TEST_ASSERT(abs(fixed_point_input_params[i].expectedResult - calcCore.result) <= 1);
-        TEST_ASSERT_EQUAL_UINT_MESSAGE(0, calcCore.allocCounter, "Leaky memory!");
-        if(calcCore.allocCounter != 0){
-            printf("************************************************\r\n\r\n");
-            printf("WARNING: leaky memory: %i!\r\n", calcCore.allocCounter);
-            printf("************************************************\r\n\r\n");
-        }
-        if(verbose){
-            printf("------------------------------------------------\r\n\r\n");
-        }
-    }
-}
-
-
 testParams_t fixed_point_test_params[] = {
     {
         .pInputString = "123.5\0",
@@ -905,8 +763,10 @@ void test_string_to_fixed_point(void){
                     false, 
                     16, 
                     (uint16_t)(fixed_point_test_params[i].inputBase[0]));
-        printf("fp = 0x%llx, ", fp);
-        printf("expected = 0x%llx\r\n", fixed_point_test_params[i].expectedResult);
+        if(verbose){
+            printf("fp = 0x%llx, ", fp);
+            printf("expected = 0x%llx\r\n", fixed_point_test_params[i].expectedResult);
+        }
         // Test that it's within 1 bit. Conversion between float and fixed is not 
         // absolute, but given the circumstances, it should be OK. 
         TEST_ASSERT(abs(fixed_point_test_params[i].expectedResult - fp) <= 1);
@@ -924,7 +784,7 @@ testParams_t leading_zeros_test_params[] = {
         .numberFormat.inputBase = inputBase_DEC,
         .numberFormat.numBits = 64,
         .numberFormat.sign = false,
-        .numberFormat.formatBase = INPUT_FMT_INT, 
+        .numberFormat.inputFormat = INPUT_FMT_INT, 
     },
     {
         .pInputString = "012.8000+07e.ab85\0",
@@ -936,7 +796,7 @@ testParams_t leading_zeros_test_params[] = {
         .numberFormat.inputBase = inputBase_HEX,
         .numberFormat.numBits = 64,
         .numberFormat.sign = false,
-        .numberFormat.formatBase = INPUT_FMT_FIXED, 
+        .numberFormat.inputFormat = INPUT_FMT_FIXED, 
     },
 };
 void test_leading_zeros(void){
@@ -1033,12 +893,288 @@ void test_solvable_long_expression(void){
     }
 }
 
+
+testParams_t output_formatting[] = {
+    // Integer input, Integer output
+    {
+        .pInputString = "123\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "123\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 123,
+        .numberFormat.fixedPointDecimalPlace = 32,
+        .numberFormat.inputBase = inputBase_DEC,
+        .numberFormat.numBits = 64,
+        .numberFormat.sign = false,
+        .numberFormat.inputFormat = INPUT_FMT_INT, 
+        .numberFormat.outputFormat = INPUT_FMT_INT, 
+        .pResultStringDec = "123\0",
+        .pResultStringHex = "0x7B\0",
+        .pResultStringBin = "0b1111011\0",
+    },
+    // Integer input, fixed point output
+    {
+        .pInputString = "123\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "123\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 123,
+        .numberFormat.fixedPointDecimalPlace = 32,
+        .numberFormat.inputBase = inputBase_DEC,
+        .numberFormat.numBits = 64,
+        .numberFormat.sign = false,
+        .numberFormat.inputFormat = INPUT_FMT_INT, 
+        .numberFormat.outputFormat = INPUT_FMT_FIXED, 
+        .pResultStringDec = "123.0\0",
+        .pResultStringHex = "0x7B.0\0",
+        .pResultStringBin = "0b1111011.0\0",
+    },
+    // Integer input, IEEE 754 floating point output
+    // See https://www.h-schmidt.net/FloatConverter/IEEE754.html
+    {
+        .pInputString = "123\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "123\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = (float)123,
+        .numberFormat.fixedPointDecimalPlace = 32,
+        .numberFormat.inputBase = inputBase_DEC,
+        .numberFormat.numBits = 32,
+        .numberFormat.sign = false,
+        .numberFormat.inputFormat = INPUT_FMT_INT, 
+        .numberFormat.outputFormat = INPUT_FMT_FLOAT, 
+        .pResultStringDec = "123.0\0",
+        .pResultStringHex = "0x42F60000\0",
+        .pResultStringBin = "0b01000010111101100000000000000000\0",
+    },
+    // Integer input, double precision floating point output
+    // see https://www.binaryconvert.com/convert_double.html
+    {
+        .pInputString = "123\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "123\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = (double)123,
+        .numberFormat.fixedPointDecimalPlace = 32,
+        .numberFormat.inputBase = inputBase_DEC,
+        .numberFormat.numBits = 64,
+        .numberFormat.sign = false,
+        .numberFormat.inputFormat = INPUT_FMT_INT, 
+        .numberFormat.outputFormat = INPUT_FMT_FLOAT, 
+        .pResultStringDec = "123.0\0",
+        .pResultStringHex = "0x405EC00000000000\0",
+        .pResultStringBin = "0b0100000001011110110000000000000000000000000000000000000000000000\0",
+    },
+    //==========================FLOATING POINT INPUT==========================
+    // float input, Integer output
+    {
+        .pInputString = "123.12\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "123.12\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 0x42f63d71, // see https://www.h-schmidt.net/FloatConverter/IEEE754.html
+        .numberFormat.fixedPointDecimalPlace = 32,
+        .numberFormat.inputBase = inputBase_DEC,
+        .numberFormat.numBits = 32,
+        .numberFormat.sign = false,
+        .numberFormat.inputFormat = INPUT_FMT_FLOAT, 
+        .numberFormat.outputFormat = INPUT_FMT_INT, 
+        .pResultStringDec = "123\0",
+        .pResultStringHex = "0x7B\0",
+        .pResultStringBin = "0b1111011\0",
+    },
+    // double precision float input, Integer output
+    {
+        .pInputString = "123.12\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "123.12\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 0x405EC7AE147AE148, // see https://www.binaryconvert.com/convert_double.html
+        .numberFormat.fixedPointDecimalPlace = 32,
+        .numberFormat.inputBase = inputBase_DEC,
+        .numberFormat.numBits = 64,
+        .numberFormat.sign = false,
+        .numberFormat.inputFormat = INPUT_FMT_FLOAT, 
+        .numberFormat.outputFormat = INPUT_FMT_INT, 
+        .pResultStringDec = "123\0",
+        .pResultStringHex = "0x7B\0",
+        .pResultStringBin = "0b1111011\0",
+    },
+    // float input, float output
+    {
+        .pInputString = "123.12\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "123.12\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 0x42f63d71, // see https://www.h-schmidt.net/FloatConverter/IEEE754.html
+        .numberFormat.fixedPointDecimalPlace = 32,
+        .numberFormat.inputBase = inputBase_DEC,
+        .numberFormat.numBits = 32,
+        .numberFormat.sign = false,
+        .numberFormat.inputFormat = INPUT_FMT_FLOAT, 
+        .numberFormat.outputFormat = INPUT_FMT_FLOAT, 
+        .pResultStringDec = "123.12\0",
+        .pResultStringHex = "0x42F63D71\0",
+        .pResultStringBin = "0b01000010111101100011110101110001\0",
+    },
+    // double precision float input, double precision float output
+    {
+        .pInputString = "123.12\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "123.12\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 0x405EC7AE147AE148, // see https://www.binaryconvert.com/convert_double.html
+        .numberFormat.fixedPointDecimalPlace = 32,
+        .numberFormat.inputBase = inputBase_DEC,
+        .numberFormat.numBits = 64,
+        .numberFormat.sign = false,
+        .numberFormat.inputFormat = INPUT_FMT_FLOAT, 
+        .numberFormat.outputFormat = INPUT_FMT_FLOAT, 
+        .pResultStringDec = "123.12\0",
+        .pResultStringHex = "0x405EC7AE147AE148\0",
+        .pResultStringBin = "0b0100000001011110110001111010111000010100011110101110000101001000\0",
+    },
+    // float input, fixed point 16.16 output
+    {
+        .pInputString = "123.12\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "123.12\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 0x42f63d71, // see https://www.h-schmidt.net/FloatConverter/IEEE754.html
+        .numberFormat.fixedPointDecimalPlace = 16,
+        .numberFormat.inputBase = inputBase_DEC,
+        .numberFormat.numBits = 32,
+        .numberFormat.sign = false,
+        .numberFormat.inputFormat = INPUT_FMT_FLOAT, 
+        .numberFormat.outputFormat = INPUT_FMT_FIXED, 
+        .pResultStringDec = "123.12\0",
+        .pResultStringHex = "0x7B.1EB8\0",
+        .pResultStringBin = "0b1111011.0001111010111\0",
+    },
+    // double precision floating point input, fixed point 32.32 output
+    {
+        .pInputString = "123.12\0",
+        .pCursor = {0,0,0},
+        .pExpectedString = "123.12\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
+        .expectedResult = 0x405EC7AE147AE148, // see https://www.h-schmidt.net/FloatConverter/IEEE754.html
+        .numberFormat.fixedPointDecimalPlace = 32,
+        .numberFormat.inputBase = inputBase_DEC,
+        .numberFormat.numBits = 64,
+        .numberFormat.sign = false,
+        .numberFormat.inputFormat = INPUT_FMT_FLOAT, 
+        .numberFormat.outputFormat = INPUT_FMT_FIXED, 
+        .pResultStringDec = "123.12\0",
+        .pResultStringHex = "0x7B.1EB851EB\0",
+        .pResultStringBin = "0b1111011.00011110101110000101000111101011\0",
+    },
+
+
+};
+// This function tests conversions between different input format
+// e.g. fixed, float and int, and output formats, e.g. fixed, float, int. 
+void test_format_conversion(void){
+    //! String for displaying the integer format to the user
+    char int_display_string[] = "INT";
+    //! String for displaying the fixed point format to the user.
+    char fixed_display_string[] = "FIXED";
+    //! String for displaying the floating point format to the user
+    char float_display_string[] = "FLOAT";
+    //! Array of pointers to the strings used to show which format is active on the screen.
+    const char* formatDisplayStrings[] = {
+        [INPUT_FMT_INT] = int_display_string,
+        [INPUT_FMT_FIXED] = fixed_display_string,
+        [INPUT_FMT_FLOAT] = float_display_string,
+    };
+    calcCoreState_t calcCore;
+    int numTests = sizeof(output_formatting)/sizeof(output_formatting[0]);
+    for(int i = 0 ; i < numTests ; i++){
+        setupTestStruct(&calcCore, &output_formatting[i]);
+        calcCoreAddInput(&calcCore, &output_formatting[i]);
+        int8_t state = calc_solver(&calcCore);
+        calcCoreGetBuffer(&calcCore, &output_formatting[i]);
+        if(verbose){
+            printf("input: %s, output:%s\r\n", 
+                formatDisplayStrings[(output_formatting[i].numberFormat.inputFormat)],
+                formatDisplayStrings[(output_formatting[i].numberFormat.outputFormat)]);
+            printf("------------------------------------------------\r\n");
+            printf("Input:           %s \r\nExpected:        %s \r\nExpected result: %lli \r\nReturned result: %lli \r\n", 
+                    output_formatting[i].pExpectedString,
+                    output_formatting[i].pOutputString,
+                    output_formatting[i].expectedResult,
+                    calcCore.result
+                    );
+        }
+        TEST_ASSERT_EQUAL_STRING(
+            output_formatting[i].pExpectedString,
+            output_formatting[i].pOutputString
+        );
+        // Convert the results to string:
+        char resultStringDec[MAX_STR_LEN] = {0};
+        convertResult(
+            resultStringDec, 
+            calcCore.result, 
+            &(output_formatting[i].numberFormat),
+            inputBase_DEC);
+        TEST_ASSERT_EQUAL_STRING(
+            output_formatting[i].pResultStringDec,
+            resultStringDec
+        );
+        char resultStringHex[MAX_STR_LEN] = {0};
+        convertResult(
+            resultStringHex, 
+            calcCore.result, 
+            &(output_formatting[i].numberFormat),
+            inputBase_HEX);
+        TEST_ASSERT_EQUAL_STRING(
+            output_formatting[i].pResultStringHex,
+            resultStringHex
+        );
+        char resultStringBin[MAX_STR_LEN] = {0};
+        convertResult(
+            resultStringBin, 
+            calcCore.result, 
+            &(output_formatting[i].numberFormat),
+            inputBase_BIN);
+        TEST_ASSERT_EQUAL_STRING(
+            output_formatting[i].pResultStringBin,
+            resultStringBin
+        );
+        teardownTestStruct(&calcCore);
+
+        // Check that an equal amount of mallocs and free's happened
+        // in the calculator core
+        //printf("Allocation counter = %i\r\n", calcCore.allocCounter);
+        TEST_ASSERT_EQUAL_INT_MESSAGE(output_formatting[i].expectedResult, calcCore.result, "Result not right.");
+        TEST_ASSERT_EQUAL_UINT_MESSAGE(0, calcCore.allocCounter, "Leaky memory!");
+        if(calcCore.allocCounter != 0){
+            printf("************************************************\r\n\r\n");
+            printf("WARNING: leaky memory: %i!\r\n", calcCore.allocCounter);
+            printf("************************************************\r\n\r\n");
+        }
+        if(verbose){
+            printf("------------------------------------------------\r\n\r\n");
+        }
+    }
+
+}
+
 /* ----------------------------------------------------------------
  * Main. Only starts the tests. 
  * ----------------------------------------------------------------*/
 int main(void)
 {
-    verbose = true;
+    verbose = false;
     UNITY_BEGIN();
     RUN_TEST(test_addRemoveInput);
     RUN_TEST(test_addInvalidInput);
@@ -1046,10 +1182,9 @@ int main(void)
     RUN_TEST(test_unsolvable_solution);
     RUN_TEST(test_null_pointers);
     RUN_TEST(test_base_conversion);
-    RUN_TEST(test_float_input);
-    RUN_TEST(test_fixed_point_input);
     RUN_TEST(test_string_to_fixed_point);
     RUN_TEST(test_leading_zeros);
     RUN_TEST(test_solvable_long_expression);
+    RUN_TEST(test_format_conversion);
     return UNITY_END();
 }

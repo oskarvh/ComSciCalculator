@@ -210,7 +210,7 @@ typedef struct numberFormat {
     uint8_t numBits;
 
     /**
-     * @param formatBase Base of the format
+     * @param inputFormat Input formatting
      * @note Only used for incoming formats. Not
      * applicable to each entry, as that is handled
      * by the entry type
@@ -219,7 +219,18 @@ typedef struct numberFormat {
      * 2 = floating point
      * others = Not valid
      */
-    uint8_t formatBase;
+    uint8_t inputFormat;
+
+    /**
+     * @param outputFormat Output formatting
+     * @note Only affects which format the result is
+     * formatted as.
+     * 0 = integer base
+     * 1 = fixed point
+     * 2 = floating point
+     * others = Not valid
+     */
+    uint8_t outputFormat;
 
     /**
      * @param sign True if using signed, false if unsigned

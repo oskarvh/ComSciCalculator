@@ -97,6 +97,7 @@ void calcCoreAddInput(calcCoreState_t *pCoreState, testParams_t *pTestParams){
             pCoreState->cursorPosition = pCursor[i];
         }
         // Set the input base
+        memcpy(&(pCoreState->numberFormat), &(pTestParams->numberFormat), sizeof(numberFormat_t));
         pCoreState->numberFormat.inputBase = pTestParams->inputBase[i];
 
         if(*pInputChar == '\b'){
@@ -106,16 +107,11 @@ void calcCoreAddInput(calcCoreState_t *pCoreState, testParams_t *pTestParams){
             status = calc_removeInput(pCoreState);
         }
         else if(*pInputChar == 'i'){
-            printf("Changing input base\r\n");
             calc_updateBase(pCoreState);
         }
         else{
             //printf("Adding %c with base %i\r\n", *pInputChar, pTestParams->inputBase[i]);
             status = calc_addInput(pCoreState, *pInputChar);
-        }
-        if(status != calc_funStatus_SUCCESS){
-            printf("Could not add input \r\n");
-            printf("Status = %d\n", status);
         }
         pInputChar++;
         i++;
@@ -129,8 +125,5 @@ void calcCoreGetBuffer(calcCoreState_t *pCoreState, testParams_t *pTestParams){
     // Get the output, using the comSciCalc library function
     char *pOutputString = pTestParams->pOutputString;
     uint8_t status = calc_printBuffer(pCoreState, pOutputString, MAX_STR_LEN, NULL);
-    if(status != calc_funStatus_SUCCESS){
-        printf("Could not print \r\n");
-        printf("Status = %d\n", status);
-    }
+    
 }

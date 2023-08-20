@@ -134,9 +134,14 @@ SOFTWARE.
 #define TURQOISE 0x00fff7
  /**@}*/
 
-//! Maximum length of printed input buffer
+//! Maximum length of printed input buffer in decimal. Maximum is -9 223 372 036 854 775 808 with a decimal (and \0)
+#define MAX_PRINTED_BUFFER_LEN_DEC 21
+//! Maximum length of printed input buffer in binary. Maximum is 64 bits with decimal point (and \0)
+#define MAX_PRINTED_BUFFER_LEN_BIN 66
+//! Maximum length of printed input buffer in hexadecimal. Maximum looks like 16 bits with decimal point but it's 2 extra with decimal (and \0)
+#define MAX_PRINTED_BUFFER_LEN_HEX 20
+//! Maximum length of results buffer
 #define MAX_PRINTED_BUFFER_LEN 100
-
 /**
  * @brief Struct holding the state of the options shown
  * at the top of the screen
@@ -168,7 +173,7 @@ typedef struct displayState {
     /**
      * @param result Copy of the calculated result
      */
-    int32_t result;
+    SUBRESULT_INT result;
     /**
      * @param inputOptions Contains information regarding the
      * options currently active for the input format.

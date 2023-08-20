@@ -27,7 +27,7 @@ if [ $clean == true ]; then
     if [ $verbose == true ]; then
         flags=-DVERBOSE
     fi
-    gcc -W $flags unit_tests/test_suite.c unit_tests/unit_tests.c Unity/src/unity.c comSciCalc_lib/comscicalc.c comSciCalc_lib/comscicalc_operators.c comSciCalc_lib/uart_logger.c -o unit_tests/test_suite
+    gcc -W $flags unit_tests/test_suite.c unit_tests/unit_tests.c Unity/src/unity.c comSciCalc_lib/comscicalc.c comSciCalc_lib/comscicalc_operators.c comSciCalc_lib/uart_logger.c comSciCalc_lib/print_utils.c -o unit_tests/test_suite
 fi
 
 FILE=unit_tests/test_suite.exe

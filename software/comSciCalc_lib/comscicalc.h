@@ -93,6 +93,10 @@ enum calc_funStatus {
     calc_funStatus_TEARDOWN_INCOMPLETE = 9,
     //! Warning: Could not solve expression.
     calc_funStatus_SOLVE_INCOMPLETE = 10,
+    //! Error: Unknown other input
+    calc_funStatus_UNKNOWN_PARAMETER = 11,
+    //! Error: Format error (format is e.g. int, float, fixed)
+    calc_funStatus_FORMAT_ERROR = 12,
 };
 
 /**
@@ -300,35 +304,42 @@ uint8_t calc_getCursorLocation(calcCoreState_t *pCalcCoreState);
 void calc_updateBase(calcCoreState_t *pCalcCoreState);
 
 /**
- * @brief Convert an integer to a binary string
+ * @brief Update the input format.
  *
- * @param pBuf Pointer to a string buffer of size of #i number of bits
- * @param number The integer to be converted
- * @return Nothing
+ * This function updates the format based on the inputFormat variable.
+ * However, the format cannot be changed mid-expression, unlike the base.
+ * This is simply because there is no clear operation without loss to
+ * change between e.g. float and fixed point, and certainly float/fixed
+ * point to integer results in truncation.
+ * @param pCalcCoreState Pointer to an allocated core state variable.
+ * @param inputFormat Input format for which to change to.
+ * @return Status of operation
  */
-void intToBin(char *pBuf, SUBRESULT_INT number);
+calc_funStatus_t calc_updateInputFormat(calcCoreState_t *pCalcCoreState,
+                                        uint8_t inputFormat);
 
 /**
- * @brief Convert string to fixed point
- * @param pString String to be converted
- * @param sign True if signed, otherwise false
- * @param decimalPlace Number of bits for the decimal place
- * @param radix Base (decimal, hexadecimal or binary)
- * @return The converted fixed point value
+ * @brief Update the output format.
  *
- * @note If STRING_TO_FIXED_POINT_FIXED_ALGO is defined,
- * then this uses a fixed algorithm that should be compiler
- * agnostic for decimal base.
- * If not defined, then it uses a casting method that is much
- * more compact, but could be compiler dependant.
- *
- * @warning The decimal to fixed point conversion might
- * differ depending on implemented method, in that there can
- * be 1 LSB difference in the result compared to other methods.
- * This depends on how the algorithm is implmented.
+ * This function changes the output format of the result.
+ * It's simply
+ * @param pCalcCoreState Pointer to an allocated core state variable.
+ * @param outputFormat Output format for which to change to.
+ * @return Status of operation
  */
-SUBRESULT_INT strtofp(const char *pString, bool sign, uint16_t decimalPlace,
-                      uint8_t radix);
+calc_funStatus_t calc_updateOutputFormat(calcCoreState_t *pCalcCoreState,
+                                         uint8_t outputFormat);
+
+/**
+ * @brief Convert the result to string.
+ * @param pString Pointer to string
+ * @param result Result from calc core
+ * @param pNumberFormat Pointer to number format used
+ * @param base Base to print to (hex, dec, bin)
+ */
+void convertResult(char *pString, SUBRESULT_INT result,
+                   numberFormat_t *pNumberFormat, uint8_t base);
+
 /* -------------------------------------------
  * ---------------- VARIABLES ----------------
  * -------------------------------------------*/

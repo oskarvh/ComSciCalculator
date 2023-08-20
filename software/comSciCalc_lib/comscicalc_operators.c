@@ -345,17 +345,17 @@ int8_t calc_add(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
     if (num_args != 2) {
         return incorrect_args;
     }
-    uint8_t formatBase = processInputArgs(pArgs, num_args, numberFormat);
+    uint8_t inputFormat = processInputArgs(pArgs, num_args, numberFormat);
     // Read out the args as uint32_t. Will be casted later on
 
     // Make calculation based on format
-    if (numberFormat.formatBase == INPUT_FMT_INT) {
+    if (numberFormat.inputFormat == INPUT_FMT_INT) {
         // Solve for N bit signed integer
         SUBRESULT_INT a = pArgs[0].subresult;
         SUBRESULT_INT b = pArgs[1].subresult;
         (*((SUBRESULT_INT *)pResult)) = a + b;
         // TODO: add overflow detection
-    } else if (numberFormat.formatBase == INPUT_FMT_FLOAT) {
+    } else if (numberFormat.inputFormat == INPUT_FMT_FLOAT) {
         if (numberFormat.numBits == 32) {
             // Solve for float
             float a, b;
@@ -376,7 +376,7 @@ int8_t calc_add(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
             // Format is not supporteds
             return format_not_supported;
         }
-    } else if (numberFormat.formatBase == INPUT_FMT_FIXED) {
+    } else if (numberFormat.inputFormat == INPUT_FMT_FIXED) {
         // Normal addition should be OK here
         SUBRESULT_INT a = pArgs[0].subresult;
         SUBRESULT_INT b = pArgs[1].subresult;
@@ -398,7 +398,7 @@ int8_t calc_subtract(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
     SUBRESULT_INT a = pArgs[0].subresult;
     SUBRESULT_INT b = pArgs[1].subresult;
     // Make calculation based on format
-    switch (numberFormat.formatBase) {
+    switch (numberFormat.inputFormat) {
     case INPUT_FMT_INT:
         // Solve for N bit signed integer
         (*((SUBRESULT_INT *)pResult)) = a - b;
@@ -430,7 +430,7 @@ int8_t calc_multiply(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
     SUBRESULT_INT a = pArgs[0].subresult;
     SUBRESULT_INT b = pArgs[1].subresult;
     // Make calculation based on format
-    switch (numberFormat.formatBase) {
+    switch (numberFormat.inputFormat) {
     case INPUT_FMT_INT:
         // Solve for 32 bit signed integer
         (*((SUBRESULT_INT *)pResult)) = a * b;
@@ -465,7 +465,7 @@ int8_t calc_divide(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
         return error_args;
     }
     // Make calculation based on format
-    switch (numberFormat.formatBase) {
+    switch (numberFormat.inputFormat) {
     case INPUT_FMT_INT:
         // Solve for 32 bit signed integer
         (*((SUBRESULT_INT *)pResult)) = a / b;
@@ -499,7 +499,7 @@ int8_t calc_and(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
     if (b == 0) {
         return error_args;
     }
-    switch (numberFormat.formatBase) {
+    switch (numberFormat.inputFormat) {
     case INPUT_FMT_INT:
         // Solve for 32 bit signed integer
         (*((SUBRESULT_INT *)pResult)) = a & b;
@@ -545,7 +545,7 @@ int8_t calc_not(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
 
     SUBRESULT_INT a = pArgs[0].subresult;
     // Make calculation based on format
-    switch (numberFormat.formatBase) {
+    switch (numberFormat.inputFormat) {
     case INPUT_FMT_INT:
         // Solve for 32bit unsigned or signed integer
         (*((SUBRESULT_INT *)pResult)) = ~a;
@@ -584,7 +584,7 @@ int8_t calc_sum(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
         return incorrect_args;
     }
     // Make calculation based on format
-    switch (numberFormat.formatBase) {
+    switch (numberFormat.inputFormat) {
     case INPUT_FMT_INT:
         // Solve for N bit signed integer
         (*((SUBRESULT_INT *)pResult)) = 0;

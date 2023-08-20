@@ -358,7 +358,6 @@ void calcCoreTask(void *p){
     calcState.numberFormat.inputBase = inputBase_DEC;
     calcState.numberFormat.numBits = 64;
     calcState.numberFormat.sign = false;
-    calcState.numberFormat.formatBase = INPUT_FMT_INT;
     while(1){
         // Wait for UART data to be available in the queue
         if(uartReceiveQueue != 0){
@@ -398,6 +397,25 @@ void calcCoreTask(void *p){
                             }
                             calc_updateBase(&calcState);
                         }
+                        if(receiveChar == 'm' || receiveChar == 'M'){
+                            // Update the input format (int, float, fixed)
+                            uint8_t inputFormat = calcState.numberFormat.inputFormat;
+                            inputFormat += 1;
+                            if(inputFormat >= INPUT_FMT_RESERVED){
+                                inputFormat = 0;
+                            }
+                            calc_updateInputFormat(&calcState, inputFormat);
+                        }
+                        if(receiveChar == 'o' || receiveChar == 'O'){
+                            // Update the output format (int, float, fixed)
+                            uint8_t outputFormat = calcState.numberFormat.outputFormat;
+                            outputFormat += 1;
+                            if(outputFormat >= INPUT_FMT_RESERVED){
+                                outputFormat = 0;
+                            }
+                            calc_updateOutputFormat(&calcState, outputFormat);
+                        }
+
                         // The add input contains valuable checks.
                         addRemoveStatus = calc_addInput(&calcState, receiveChar);
                     }

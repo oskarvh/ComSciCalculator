@@ -24,6 +24,9 @@ typedef struct testParams {
     inputBase_t inputBase[MAX_STR_LEN];
     SUBRESULT_INT expectedResult;
     numberFormat_t numberFormat;
+    char pResultStringDec[MAX_STR_LEN];
+    char pResultStringBin[MAX_STR_LEN];
+    char pResultStringHex[MAX_STR_LEN];
 } testParams_t;
 
 /* -------------------------------------------
