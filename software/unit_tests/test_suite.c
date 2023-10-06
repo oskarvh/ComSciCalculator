@@ -273,7 +273,7 @@ testParams_t solvable_params[] = {
     },
     {
         .pInputString = "123+456\0",
-        .pCursor = {0,0,0},
+        .pCursor = {0},
         .pExpectedString = "123+456\0",
         .pOutputString = {0},
         .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},
@@ -281,7 +281,7 @@ testParams_t solvable_params[] = {
     },
     {
         .pInputString = "123+456+789\0",
-        .pCursor = {0,0,0},
+        .pCursor = {0},
         .pExpectedString = "123+456+789\0",
         .pOutputString = {0},
         .inputBase = {[0 ... MAX_STR_LEN-1] = inputBase_DEC},

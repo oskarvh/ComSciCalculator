@@ -135,24 +135,6 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char * pcTaskName)
 // UART receive interrupt handler
 //
 //*****************************************************************************
-/**
- * @brief Struct holding one UART entry, to enable fast
- * reception of UART data.
- */
-typedef struct uartListEntry{
-    /*
-     * @param pNext Pointer to the next entry
-     */
-    void *pNext;
-    /*
-     * @param pPrev Pointer to the previous entry
-     */
-    void *pPrev;
-    /*
-     * @param c Char for this entry
-     */
-    char c;
-}uartListEntry_t;
 void uartRxIntHandler(void){
     // Clear the interrupt
     UARTIntClear(UART0_BASE, UART_INT_RX);

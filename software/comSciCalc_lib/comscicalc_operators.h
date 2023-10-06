@@ -47,7 +47,7 @@ enum functionStatus {
  * ---------------- VARIABLES ----------------
  * -------------------------------------------*/
 //! Table of operators and functions.
-const operatorEntry_t operators[NUM_OPERATORS];
+extern const operatorEntry_t operators[NUM_OPERATORS];
 
 /* -------------------------------------------
  * ----------- FUNCTION PROTOTYPES -----------
