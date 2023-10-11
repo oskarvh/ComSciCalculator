@@ -15,3 +15,4 @@ software/html/
 software/test_coverage
 utils/fontConverter/output_files/
 utils/fontConverter/input_files/
+firmware/renesas/config.cmake
