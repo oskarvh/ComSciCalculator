@@ -134,7 +134,7 @@ SOFTWARE.
 #define TURQOISE 0x00fff7
  /**@}*/
 
-//! Maximum length of printed input buffer in decimal. Maximum is -9 223 372 036 854 775 808 with a decimal (and \0)
+//! Maximum length of printed input buffer in decimal. Maximum is -9,223,372,036,854,775,808 with a decimal (and \0)
 #define MAX_PRINTED_BUFFER_LEN_DEC 21
 //! Maximum length of printed input buffer in binary. Maximum is 64 bits with decimal point (and \0)
 #define MAX_PRINTED_BUFFER_LEN_BIN 66
