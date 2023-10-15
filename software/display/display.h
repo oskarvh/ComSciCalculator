@@ -29,15 +29,15 @@ SOFTWARE.
 #include "comscicalc.h"
 
 // Font library
-#include "fonts/font_library.h"
 #include "fonts/font.h"
+#include "fonts/font_library.h"
 
 // FreeRTOS
 #include "FreeRTOS.h"
-#include "task.h"
+#include "event_groups.h"
 #include "queue.h"
 #include "semphr.h"
-#include "event_groups.h"
+#include "task.h"
 
 // Standard library
 #include <stdint.h>
@@ -61,48 +61,50 @@ SOFTWARE.
 #define DISPLAY_EVENT_CURSOR (1 << 1)
 
 //! Top line which parts the options from the input
-#define OUTLINE_WIDTH 2*16
+#define OUTLINE_WIDTH 2 * 16
 /**
  * @defgroup outline Definitions for writing the outline of the screen.
  * @{
  */
-//Top outline X start coordinate.
+// Top outline X start coordinate.
 #define TOP_OUTLINE_X0 0
 #define TOP_OUTLINE_X1 EVE_HSIZE
-#define TOP_OUTLINE_Y (FONT_SIZE_OPTIONS+2)
+#define TOP_OUTLINE_Y (FONT_SIZE_OPTIONS + 2)
 // Middle horizontal line that parts the input from results
 #define MID_TOP_OUTLINE_X0 0
 #define MID_TOP_OUTLINE_X1 EVE_HSIZE
-#define MID_TOP_OUTLINE_Y (EVE_VSIZE/2)
+#define MID_TOP_OUTLINE_Y (EVE_VSIZE / 2)
 // Lower middle horizontal line that parts binary output from hex and dec
 #define MID_LOW_OUTLINE_X0 0
 #define MID_LOW_OUTLINE_X1 EVE_HSIZE
-#define MID_LOW_OUTLINE_Y (EVE_VSIZE*3/4)
+#define MID_LOW_OUTLINE_Y (EVE_VSIZE * 3 / 4)
 // Vertical line parting the hex and dec results
-#define VERT_LOW_OUTLINE_X (EVE_HSIZE/2)
-#define VERT_LOW_OUTLINE_Y0 (EVE_VSIZE*3/4)
+#define VERT_LOW_OUTLINE_X (EVE_HSIZE / 2)
+#define VERT_LOW_OUTLINE_Y0 (EVE_VSIZE * 3 / 4)
 #define VERT_LOW_OUTLINE_Y1 (EVE_VSIZE)
 /**@}*/
 
 //! Input text X start coordinate
 #define INPUT_TEXT_XC0 (EVE_HSIZE - 5)
 //! Input text Y coordinate. Will depend on font height
-#define INPUT_TEXT_YC0(font_height) (EVE_VSIZE/2 - font_height -  font_height/2)
+#define INPUT_TEXT_YC0(font_height)                                            \
+    (EVE_VSIZE / 2 - font_height - font_height / 2)
 
 //! Decimal output X start coordinate.
 #define OUTPUT_DEC_XC0 (EVE_HSIZE - 5)
 //! Decimal output Y coordinate, depends on fond height
-#define OUTPUT_DEC_YC0(font_height) (EVE_VSIZE - font_height - font_height/2)
+#define OUTPUT_DEC_YC0(font_height) (EVE_VSIZE - font_height - font_height / 2)
 
 //! Binary output X start coordinate
 #define OUTPUT_BIN_XC0 (EVE_HSIZE - 5)
 //! Binary Y coordinate, depends on font height
-#define OUTPUT_BIN_YC0(font_height) (EVE_VSIZE*3/4  - font_height - font_height/2)
+#define OUTPUT_BIN_YC0(font_height)                                            \
+    (EVE_VSIZE * 3 / 4 - font_height - font_height / 2)
 
 //! Hexadecimal X start coordinate
-#define OUTPUT_HEX_XC0 (EVE_HSIZE/2 - 5)
+#define OUTPUT_HEX_XC0 (EVE_HSIZE / 2 - 5)
 //! Hexadecimal Y coordinate. Depends on font height
-#define OUTPUT_HEX_YC0(font_height) (EVE_VSIZE - font_height - font_height/2)
+#define OUTPUT_HEX_YC0(font_height) (EVE_VSIZE - font_height - font_height / 2)
 
 //! Status bar X offset
 #define OUTPUT_STATUS_X0 (5)
@@ -119,26 +121,29 @@ SOFTWARE.
  * @{
  */
 #define COLORWHEEL_LEN 8
-#define RED     0xff0000
-#define ORANGE  0xff7f00
-#define GREEN   0x00ff00
-#define BLUE    0x0000ff
-#define BLUE_1  0x5dade2
-#define BLUE_2  0x4c7efc
-#define YELLOW  0xffff00
+#define RED 0xff0000
+#define ORANGE 0xff7f00
+#define GREEN 0x00ff00
+#define BLUE 0x0000ff
+#define BLUE_1 0x5dade2
+#define BLUE_2 0x4c7efc
+#define YELLOW 0xffff00
 #define MAGENTA 0xff00ff
-#define PURPLE  0x4b0082//0x800080
-#define WHITE   0xffffff
-#define BLACK   0x000000
-#define GRAY    0x303030
+#define PURPLE 0x4b0082 // 0x800080
+#define WHITE 0xffffff
+#define BLACK 0x000000
+#define GRAY 0x303030
 #define TURQOISE 0x00fff7
- /**@}*/
+/**@}*/
 
-//! Maximum length of printed input buffer in decimal. Maximum is -9,223,372,036,854,775,808 with a decimal (and \0)
+//! Maximum length of printed input buffer in decimal. Maximum is
+//! -9,223,372,036,854,775,808 with a decimal (and \0)
 #define MAX_PRINTED_BUFFER_LEN_DEC 21
-//! Maximum length of printed input buffer in binary. Maximum is 64 bits with decimal point (and \0)
+//! Maximum length of printed input buffer in binary. Maximum is 64 bits with
+//! decimal point (and \0)
 #define MAX_PRINTED_BUFFER_LEN_BIN 66
-//! Maximum length of printed input buffer in hexadecimal. Maximum looks like 16 bits with decimal point but it's 2 extra with decimal (and \0)
+//! Maximum length of printed input buffer in hexadecimal. Maximum looks like 16
+//! bits with decimal point but it's 2 extra with decimal (and \0)
 #define MAX_PRINTED_BUFFER_LEN_HEX 20
 //! Maximum length of results buffer
 #define MAX_PRINTED_BUFFER_LEN 100
@@ -161,7 +166,7 @@ typedef struct inputState {
      */
     uint8_t currentInputBase;
 
-}inputState_t;
+} inputState_t;
 
 /**
  * @brief Struct holding the display state, along with calculator

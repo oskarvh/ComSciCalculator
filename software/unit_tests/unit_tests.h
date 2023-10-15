@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2023
- * Oskar von Heideken. 
+ * Oskar von Heideken.
  *
  */
 
@@ -15,7 +15,7 @@
 /* -------------------------------------------
  * ------- ENUMS, TYPEDEFS AND STRUCTS -------
  * -------------------------------------------*/
-// Struct for the test parameters. 
+// Struct for the test parameters.
 typedef struct testParams {
     char pInputString[MAX_STR_LEN];
     char pExpectedString[MAX_STR_LEN];
@@ -33,11 +33,10 @@ typedef struct testParams {
  * ----------- FUNCTION PROTOTYPES -----------
  * -------------------------------------------*/
 
-// Setup and teardown functions. Need custom here. 
-void setupTestStruct(calcCoreState_t *pCoreState, 
-    testParams_t *pTestParams);
+// Setup and teardown functions. Need custom here.
+void setupTestStruct(calcCoreState_t *pCoreState, testParams_t *pTestParams);
 void teardownTestStruct(calcCoreState_t *pCoreState);
 
-// Function to add the input to the calc core. 
+// Function to add the input to the calc core.
 void calcCoreAddInput(calcCoreState_t *pCoreState, testParams_t *pTestParams);
 void calcCoreGetBuffer(calcCoreState_t *pCoreState, testParams_t *pTestParams);
