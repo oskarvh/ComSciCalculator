@@ -32,20 +32,25 @@ file(GLOB freertos_files
     ${GIT_ROOT}/software/FreeRTOS-Kernel/portable/GCC/ARM_CM33_NTZ/non_secure/*.c
     ${GIT_ROOT}/software/FreeRTOS-kernel/portable/MemMang/heap_3.c
 )
+file(GLOB_RECURSE fsp_files
+    ${PROJECT_ROOT}/fsp/ra/fsp/src/bsp/*.c
+    ${PROJECT_ROOT}/fsp/ra/board/ra4m3_ek/*.c
+    ${PROJECT_ROOT}/fsp/ra/fsp/src/r_ioport/*.c
+    ${PROJECT_ROOT}/fsp/ra/fsp/src/r_sci_uart/*.c
+    ${PROJECT_ROOT}/fsp/ra/fsp/src/r_sci_spi/*.c
+)
+
 
 
 #-------------Source files-------------
 file(GLOB_RECURSE source_files 
     # Firmware source files, incl. generated sources
-    "${CMAKE_CURRENT_LIST_DIR}/src/*.c"
-    "${CMAKE_CURRENT_LIST_DIR}/inc/*.c"
-    # Include FSP files, which are static
-    "${PROJECT_ROOT}/fsp/ra/fsp/src/bsp/*.c"
-    "${PROJECT_ROOT}/fsp/ra/fsp/src/r_ioport/*.c"
-    "${PROJECT_ROOT}/fsp/ra/board/ra4m3_ek/*.c"
+    ${CMAKE_CURRENT_LIST_DIR}/src/*.c
+    ${CMAKE_CURRENT_LIST_DIR}/inc/*.c  
 )
 SET(ALL_FILES 
-    ${source_files} 
+    ${source_files}
+    ${fsp_files} 
     ${display_files} 
     ${freertos_files} 
     ${comscicalc_files} 
@@ -72,8 +77,10 @@ target_include_directories(${PROJECT_NAME}.elf PUBLIC
     ${PROJECT_ROOT}/fsp/ra/fsp/inc/instances/
     ${PROJECT_ROOT}/fsp/ra/fsp/inc/api/
     ${PROJECT_ROOT}/fsp/ra/fsp/src/bsp/
-    ${PROJECT_ROOT}/fsp/ra/fsp/src/r_ioport/
     ${PROJECT_ROOT}/fsp/ra/board/ra4m3_ek/
+    ${PROJECT_ROOT}/fsp/ra/fsp/src/r_ioport/
+    ${PROJECT_ROOT}/fsp/ra/fsp/src/r_sci_uart/
+    ${PROJECT_ROOT}/fsp/ra/fsp/src/r_sci_spi/
     # Display:
     ${GIT_ROOT}/software/display/
     ${GIT_ROOT}/software/display/fonts/

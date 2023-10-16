@@ -32,6 +32,11 @@
 #include "display.h"
 #include "uart_logger.h"
 
+//FSP specific includes:
+#include <stdint.h>
+#include "r_sci_spi.h"
+#include "r_sci_uart.h"
+
 //! Display state - holding shared variables between calc core thread and display thread
 displayState_t displayState;
 //! Semaphore protecting the display state
@@ -85,8 +90,29 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char * pcTaskName)
 
 /*-------------------------MCU SPECIFIC DRIVERS-------------------------------*/
 // TODO
-void uartRxIntHandler(void){
 
+void uartRxIntHandler(uart_callback_args_t *p_args){
+    
+
+    // Read the FIFO and put in a queue.
+    char uartRxChar = 0; 
+
+    if(UART_EVENT_RX_CHAR == p_args->event)
+    {
+        uartRxChar = (uint8_t ) p_args->data;
+    }
+    
+    // Handle escape char sequence.
+    // Ideally, this should be handled by something else than the ISR,
+    // since we don't want to wait in the ISR.yy
+    if(uartRxChar != 255 && uartRxChar != 27){
+        // hooray, there is a character in the rx buffer
+        // which is now read!
+        // Push that to the queue.
+        if(!xQueueSendToBackFromISR(uartReceiveQueue, (void*)&uartRxChar, (TickType_t)0)){
+            while(1);
+        }
+    }
 }
 void Timer0BIntHandler(void){
 
@@ -94,8 +120,20 @@ void Timer0BIntHandler(void){
 void Timer0AIntHandler(void){
 
 }
-void ConfigureUART(void){
 
+#define UART_TX_PIN BSP_IO_PORT_01_PIN_01
+#define UART_RX_PIN BSP_IO_PORT_01_PIN_00
+sci_uart_instance_ctrl_t ConfigureUART(void){
+ 
+
+    fsp_err_t err = R_SCI_UART_Open(&g_uart_ctrl, &g_uart_cfg);
+    if (FSP_SUCCESS != err)
+    {
+        //HACK: Just loop here if UART couldn't be init'd
+        while(1);
+    }
+    
+    return g_uart_ctrl;
 }
 void initTimer(){
 
