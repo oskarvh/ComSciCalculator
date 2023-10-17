@@ -1,10 +1,10 @@
 /* generated common header file - do not edit */
 #ifndef COMMON_DATA_H_
 #define COMMON_DATA_H_
-#include <stdint.h>
 #include "bsp_api.h"
-#include "r_ioport.h"
 #include "bsp_pin_cfg.h"
+#include "r_ioport.h"
+#include <stdint.h>
 FSP_HEADER
 #define IOPORT_CFG_NAME g_bsp_pin_cfg
 

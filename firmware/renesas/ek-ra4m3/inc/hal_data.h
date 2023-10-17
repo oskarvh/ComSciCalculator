@@ -1,22 +1,39 @@
 /* generated HAL header file - do not edit */
 #ifndef HAL_DATA_H_
 #define HAL_DATA_H_
-#include <stdint.h>
 #include "bsp_api.h"
 #include "common_data.h"
+#include "r_sci_spi.h"
 #include "r_sci_uart.h"
+#include "r_spi_api.h"
+#include "r_uart_api.h"
+#include <stdint.h>
 FSP_HEADER
-void hal_entry(void);
-void g_hal_init(void);
+/** SPI on SCI Instance. */
+extern const spi_instance_t g_spi0;
+
+/** Access the SCI_SPI instance using these structures when calling API
+ * functions directly (::p_api is not used). */
+extern sci_spi_instance_ctrl_t g_spi0_ctrl;
+extern const spi_cfg_t g_spi0_cfg;
+
+/** Called by the driver when a transfer has completed or an error has occurred
+ * (Must be implemented by the user). */
+#ifndef sci_spi_callback
+void sci_spi_callback(spi_callback_args_t *p_args);
+#endif
 /** UART on SCI Instance. */
-extern const uart_instance_t g_uart;
+extern const uart_instance_t g_uart0;
 
-/** Access the UART instance using these structures when calling API functions directly (::p_api is not used). */
-extern sci_uart_instance_ctrl_t g_uart_ctrl;
-extern const uart_cfg_t g_uart_cfg;
-extern const sci_uart_extended_cfg_t g_uart_cfg_extend;
+/** Access the UART instance using these structures when calling API functions
+ * directly (::p_api is not used). */
+extern sci_uart_instance_ctrl_t g_uart0_ctrl;
+extern const uart_cfg_t g_uart0_cfg;
+extern const sci_uart_extended_cfg_t g_uart0_cfg_extend;
 
-void uartRxIntHandler(uart_callback_args_t *p_args);
+#ifndef user_uart_callback
+void user_uart_callback(uart_callback_args_t *p_args);
+#endif
 void hal_entry(void);
 void g_hal_init(void);
 FSP_FOOTER

@@ -32,8 +32,9 @@ file(GLOB freertos_files
     ${GIT_ROOT}/software/FreeRTOS-Kernel/portable/GCC/ARM_CM33_NTZ/non_secure/*.c
     ${GIT_ROOT}/software/FreeRTOS-kernel/portable/MemMang/heap_3.c
 )
-file(GLOB_RECURSE fsp_files
-    ${PROJECT_ROOT}/fsp/ra/fsp/src/bsp/*.c
+file(GLOB fsp_files
+    ${PROJECT_ROOT}/fsp/ra/fsp/src/bsp/cmsis/Device/RENESAS/Source/*.c
+    ${PROJECT_ROOT}/fsp/ra/fsp/src/bsp/mcu/all/*.c
     ${PROJECT_ROOT}/fsp/ra/board/ra4m3_ek/*.c
     ${PROJECT_ROOT}/fsp/ra/fsp/src/r_ioport/*.c
     ${PROJECT_ROOT}/fsp/ra/fsp/src/r_sci_uart/*.c
