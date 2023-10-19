@@ -1,17 +1,17 @@
 /* generated HAL source file - do not edit */
 #include "hal_data.h"
-sci_spi_instance_ctrl_t g_spi0_ctrl;
+sci_spi_instance_ctrl_t g_spi2_ctrl;
 
 /** SPI extended configuration */
-const sci_spi_extended_cfg_t g_spi0_cfg_extend = {
+const sci_spi_extended_cfg_t g_spi2_cfg_extend = {
     .clk_div = {
         /* Actual calculated bitrate: 6250000. */ .cks = 0,
         .brr = 3,
         .mddr = 0,
     }};
 
-const spi_cfg_t g_spi0_cfg = {
-    .channel = 0,
+const spi_cfg_t g_spi2_cfg = {
+    .channel = 2,
     .operating_mode = SPI_MODE_MASTER,
     .clk_phase = SPI_CLK_PHASE_EDGE_ODD,
     .clk_polarity = SPI_CLK_POLARITY_LOW,
@@ -31,19 +31,19 @@ const spi_cfg_t g_spi0_cfg = {
 #undef RA_NOT_DEFINED
     .p_callback = sci_spi_callback,
     .p_context = NULL,
-    .rxi_irq = VECTOR_NUMBER_SCI0_RXI,
-    .txi_irq = VECTOR_NUMBER_SCI0_TXI,
-    .tei_irq = VECTOR_NUMBER_SCI0_TEI,
-    .eri_irq = VECTOR_NUMBER_SCI0_ERI,
+    .rxi_irq = VECTOR_NUMBER_SCI2_RXI,
+    .txi_irq = VECTOR_NUMBER_SCI2_TXI,
+    .tei_irq = VECTOR_NUMBER_SCI2_TEI,
+    .eri_irq = VECTOR_NUMBER_SCI2_ERI,
     .rxi_ipl = (12),
     .txi_ipl = (12),
     .tei_ipl = (12),
     .eri_ipl = (12),
-    .p_extend = &g_spi0_cfg_extend,
+    .p_extend = &g_spi2_cfg_extend,
 };
 /* Instance structure to use this module. */
-const spi_instance_t g_spi0 = {
-    .p_ctrl = &g_spi0_ctrl, .p_cfg = &g_spi0_cfg, .p_api = &g_spi_on_sci};
+const spi_instance_t g_spi2 = {
+    .p_ctrl = &g_spi2_ctrl, .p_cfg = &g_spi2_cfg, .p_api = &g_spi_on_sci};
 sci_uart_instance_ctrl_t g_uart0_ctrl;
 
 baud_setting_t g_uart0_baud_setting = {
@@ -87,7 +87,7 @@ const uart_cfg_t g_uart0_cfg = {
     .data_bits = UART_DATA_BITS_8,
     .parity = UART_PARITY_OFF,
     .stop_bits = UART_STOP_BITS_1,
-    .p_callback = user_uart_callback,
+    .p_callback = uartRxIntHandler,
     .p_context = NULL,
     .p_extend = &g_uart0_cfg_extend,
 #define RA_NOT_DEFINED (1)

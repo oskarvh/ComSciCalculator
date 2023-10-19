@@ -10,12 +10,12 @@
 #include <stdint.h>
 FSP_HEADER
 /** SPI on SCI Instance. */
-extern const spi_instance_t g_spi0;
+extern const spi_instance_t g_spi2;
 
 /** Access the SCI_SPI instance using these structures when calling API
  * functions directly (::p_api is not used). */
-extern sci_spi_instance_ctrl_t g_spi0_ctrl;
-extern const spi_cfg_t g_spi0_cfg;
+extern sci_spi_instance_ctrl_t g_spi2_ctrl;
+extern const spi_cfg_t g_spi2_cfg;
 
 /** Called by the driver when a transfer has completed or an error has occurred
  * (Must be implemented by the user). */
@@ -31,8 +31,8 @@ extern sci_uart_instance_ctrl_t g_uart0_ctrl;
 extern const uart_cfg_t g_uart0_cfg;
 extern const sci_uart_extended_cfg_t g_uart0_cfg_extend;
 
-#ifndef user_uart_callback
-void user_uart_callback(uart_callback_args_t *p_args);
+#ifndef uartRxIntHandler
+void uartRxIntHandler(uart_callback_args_t *p_args);
 #endif
 void hal_entry(void);
 void g_hal_init(void);

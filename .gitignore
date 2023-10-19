@@ -16,3 +16,5 @@ software/test_coverage
 utils/fontConverter/output_files/
 utils/fontConverter/input_files/
 firmware/renesas/config.cmake
+firmware/renesas/ek-ra4m3/build
+software/unit_tests/build

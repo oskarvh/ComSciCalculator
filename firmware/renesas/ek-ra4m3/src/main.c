@@ -37,6 +37,7 @@
 #include "r_sci_spi.h"
 #include "r_sci_uart.h"
 
+
 //! Display state - holding shared variables between calc core thread and display thread
 displayState_t displayState;
 //! Semaphore protecting the display state
@@ -90,7 +91,9 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char * pcTaskName)
 
 /*-------------------------MCU SPECIFIC DRIVERS-------------------------------*/
 // TODO
+void sci_spi_callback(spi_callback_args_t *p_args){
 
+}
 void uartRxIntHandler(uart_callback_args_t *p_args){
     
 
@@ -100,17 +103,18 @@ void uartRxIntHandler(uart_callback_args_t *p_args){
     if(UART_EVENT_RX_CHAR == p_args->event)
     {
         uartRxChar = (uint8_t ) p_args->data;
-    }
     
-    // Handle escape char sequence.
-    // Ideally, this should be handled by something else than the ISR,
-    // since we don't want to wait in the ISR.yy
-    if(uartRxChar != 255 && uartRxChar != 27){
-        // hooray, there is a character in the rx buffer
-        // which is now read!
-        // Push that to the queue.
-        if(!xQueueSendToBackFromISR(uartReceiveQueue, (void*)&uartRxChar, (TickType_t)0)){
-            while(1);
+        
+        // Handle escape char sequence.
+        // Ideally, this should be handled by something else than the ISR,
+        // since we don't want to wait in the ISR.yy
+        if(uartRxChar != 255 && uartRxChar != 27){
+            // hooray, there is a character in the rx buffer
+            // which is now read!
+            // Push that to the queue.
+            if(!xQueueSendToBack(uartReceiveQueue, (void*)&uartRxChar, (TickType_t)0)){
+                while(1);
+            }
         }
     }
 }
@@ -122,95 +126,21 @@ void Timer0AIntHandler(void){
 }
 
 
-#define RESET_VALUE             (0x00)
-/* Macro definition */
-#define CARRIAGE_ASCII            (13u)     /* Carriage return */
-#define ZERO_ASCII                (48u)     /* ASCII value of zero */
-#define NINE_ASCII                (57u)     /* ASCII value for nine */
-#define DATA_LENGTH               (4u)      /* Expected Input Data length */
-#define UART_ERROR_EVENTS         (UART_EVENT_BREAK_DETECT | UART_EVENT_ERR_OVERFLOW | UART_EVENT_ERR_FRAMING | \
-                                    UART_EVENT_ERR_PARITY)    
-static volatile uint8_t g_uart_event = RESET_VALUE;
-fsp_err_t uart_initialize(void)
-{
-    fsp_err_t err = FSP_SUCCESS;
 
-    /* Initialize UART channel with baud rate 115200 */
-    err = R_SCI_UART_Open (&g_uart0_ctrl, &g_uart0_cfg);
+
+void ConfigureUART(void){
+    // Initialize UART channel with baud rate 115200 
+    fsp_err_t err = R_SCI_UART_Open (&g_uart0_ctrl, &g_uart0_cfg);
     if (FSP_SUCCESS != err)
     {
         while(1);
     }
-    return err;
 }
-
-/*****************************************************************************************************************
- *  @brief       print user message to terminal
- *  @param[in]   p_msg
- *  @retval      FSP_SUCCESS                Upon success
- *  @retval      FSP_ERR_TRANSFER_ABORTED   Upon event failure
- *  @retval      Any Other Error code apart from FSP_SUCCESS,  Unsuccessful write operation
- ****************************************************************************************************************/
-fsp_err_t uart_print_user_msg(uint8_t *p_msg)
-{
-    fsp_err_t err   = FSP_SUCCESS;
-    uint8_t msg_len = RESET_VALUE;
-    uint32_t local_timeout = (DATA_LENGTH * UINT16_MAX);
-    char *p_temp_ptr = (char *)p_msg;
-
-    /* Calculate length of message received */
-    msg_len = ((uint8_t)(strlen(p_temp_ptr)));
-
-    /* Reset callback capture variable */
-    g_uart_event = RESET_VALUE;
-
-    /* Writing to terminal */
-    err = R_SCI_UART_Write (&g_uart0_ctrl, p_msg, msg_len);
-    if (FSP_SUCCESS != err)
-    {
-        //APP_ERR_PRINT ("\r\n**  R_SCI_UART_Write API Failed  **\r\n");
-        return err;
-    }
-
-    /* Check for event transfer complete */
-    while ((UART_EVENT_TX_COMPLETE != g_uart_event) && (--local_timeout))
-    {
-        /* Check if any error event occurred */
-        if (UART_ERROR_EVENTS == g_uart_event)
-        {
-            //APP_ERR_PRINT ("\r\n**  UART Error Event Received  **\r\n");
-            return FSP_ERR_TRANSFER_ABORTED;
-        }
-    }
-    if(RESET_VALUE == local_timeout)
-    {
-        err = FSP_ERR_TIMEOUT;
-    }
-    return err;
-}
-void user_uart_callback(uart_callback_args_t *p_args)
-{
-    /* Logged the event in global variable */
-    g_uart_event = (uint8_t)p_args->event;
-
-   
-}
-#define UART_TX_PIN BSP_IO_PORT_01_PIN_01
-#define UART_RX_PIN BSP_IO_PORT_01_PIN_00
-void ConfigureUART(void){
- 
-    uart_initialize();
-    while(1){
-        uart_print_user_msg("Testing\r\n");
-    }
-}
-void initTimer(){
+void        initTimer(){
 
 }
 
 void initDisplay(void){
-    // TODO: Enable the GPIO peripherals for PDN and software CSn
-
     // Initialize the SPI and subsequently the display
     EVE_SPI_Init();
     EVE_init();
@@ -365,9 +295,22 @@ main(void)
 // TODO: Init the MCU here! 
 
 #endif
-
+    //vPortDefineHeapRegions();
+    // Create the queue used by the display and UART
+    // 100 elements of chars is way more than needed for
+    // human input, but for HIL test execution, this might be
+    // necessary
+    uartReceiveQueue = xQueueCreate(100, sizeof(char));
+    if( uartReceiveQueue == NULL )
+    {
+        while(1);
+    }
     // Initialize the UART and configure it for 115,200, 8-N-1 operation.
     ConfigureUART();
+
+    //R_SCI_UART_Write(&g_uart0_ctrl, "test/r/n", 6);
+    logger("UART init'd\r\n"); 
+
     initDisplay();
     initDisplayState(&displayState);
 
@@ -382,15 +325,10 @@ main(void)
     // and the display task
     displayTriggerEvent = xEventGroupCreate();
 
-    // Create the queue used by the display and UART
-    // 100 elements of chars is way more than needed for
-    // human input, but for HIL test execution, this might be
-    // necessary
-    uartReceiveQueue = xQueueCreate(100, sizeof(char));
+    
 
     TaskHandle_t screenTaskHandle = NULL;
     TaskHandle_t calcCoreTaskHandle = NULL;
-
     // Create the task, storing the handle.
     xTaskCreate(
             displayTask, // Function that implements the task.

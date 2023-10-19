@@ -39,16 +39,31 @@ SOFTWARE.
 #include "uart_logger.h"
 
 // FreeRTOS, if tivaware is used
-#ifdef TIVAWARE
+#if defined(TIVAWARE)
 #include "FreeRTOS.h"
+#include "task.h"
+#elif defined(EK_RA4M3)
+#include "FreeRTOS.h"
+#include "renesas_utils.h"
 #include "task.h"
 #else
 #include <stdio.h>
 #endif
 
 void logger(char *msg, ...) {
+    // Enter critical section
+    // taskENTER_CRITICAL();
+
+    // Print using UART instead
+    va_list vaArgP;
+    va_start(vaArgP, msg);
+    UARTvprintf(msg, vaArgP);
+    va_end(vaArgP);
+
+    // Exit critical section.
+    // taskEXIT_CRITICAL();
 #ifdef VERBOSE
-#ifdef TIVAWARE
+#if defined(TIVAWARE)
     // Enter critical section
     taskENTER_CRITICAL();
 
@@ -60,6 +75,8 @@ void logger(char *msg, ...) {
 
     // Exit critical section.
     taskEXIT_CRITICAL();
+#elif defined(EK_RA4M3)
+
 #else
     va_list argp;
     va_start(argp, msg);

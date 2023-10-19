@@ -1,6 +1,6 @@
 /* generated configuration header file - do not edit */
-#ifndef FREERTOSCONFIG_H_
-#define FREERTOSCONFIG_H_
+//#ifndef FREERTOSCONFIG_H_
+//#define FREERTOSCONFIG_H_
 /*-----------------------------------------------------------
  * Application specific definitions.
  *
@@ -101,7 +101,7 @@ interpreter.  See the FreeRTOS+CLI documentation for more information:
 http://www.FreeRTOS.org/FreeRTOS-Plus/FreeRTOS_Plus_CLI/ */
 #define configCOMMAND_INT_MAX_OUTPUT_SIZE 2048
 
-//#define configSUPPORT_DYNAMIC_ALLOCATION (1)
+#define configSUPPORT_DYNAMIC_ALLOCATION (1)
 
 /* Device specific defines*/
 #define configLIBRARY_LOWEST_INTERRUPT_PRIORITY ((1 << __NVIC_PRIO_BITS) - 1)
@@ -113,6 +113,7 @@ http://www.FreeRTOS.org/FreeRTOS-Plus/FreeRTOS_Plus_CLI/ */
 #define configENABLE_FPU (1)
 #define configENABLE_MPU (0)
 #define configENABLE_TRUSTZONE (0)
+
 /*-----------------------------------------------------------------*/
 
 /*
@@ -185,4 +186,4 @@ http://www.FreeRTOS.org/FreeRTOS-Plus/FreeRTOS_Plus_CLI/ */
 #endif
 */
 
-#endif /* FREERTOSCONFIG_H_ */
+//#endif /* FREERTOSCONFIG_H_ */
