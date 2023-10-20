@@ -71,6 +71,7 @@ add_definitions(-DEVE_FT810CB_ADAFRUIT_1680)
 # Add definition for RA4M3 for FT810 driver
 add_definitions(-D__RA4M3__)
 add_definitions(-DEK_RA4M3)
+add_definitions(-DVERBOSE)
 
 target_include_directories(${PROJECT_NAME}.elf PUBLIC
     # Firmware

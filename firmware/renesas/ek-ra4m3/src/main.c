@@ -94,11 +94,12 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char * pcTaskName)
 void sci_spi_callback(spi_callback_args_t *p_args){
 
 }
+char uartRxChar = 0; 
 void uartRxIntHandler(uart_callback_args_t *p_args){
     
 
     // Read the FIFO and put in a queue.
-    char uartRxChar = 0; 
+    uartRxChar = 0; 
 
     if(UART_EVENT_RX_CHAR == p_args->event)
     {
@@ -112,7 +113,7 @@ void uartRxIntHandler(uart_callback_args_t *p_args){
             // hooray, there is a character in the rx buffer
             // which is now read!
             // Push that to the queue.
-            if(!xQueueSendToBack(uartReceiveQueue, (void*)&uartRxChar, (TickType_t)0)){
+            if(!xQueueSendToBackFromISR (uartReceiveQueue, (void*)&uartRxChar, (TickType_t)0)){
                 while(1);
             }
         }
@@ -125,9 +126,6 @@ void Timer0AIntHandler(void){
 
 }
 
-
-
-
 void ConfigureUART(void){
     // Initialize UART channel with baud rate 115200 
     fsp_err_t err = R_SCI_UART_Open (&g_uart0_ctrl, &g_uart0_cfg);
@@ -136,7 +134,8 @@ void ConfigureUART(void){
         while(1);
     }
 }
-void        initTimer(){
+
+void initTimer(){
 
 }
 
@@ -311,8 +310,8 @@ main(void)
     //R_SCI_UART_Write(&g_uart0_ctrl, "test/r/n", 6);
     logger("UART init'd\r\n"); 
 
-    initDisplay();
-    initDisplayState(&displayState);
+    //initDisplay();
+    //initDisplayState(&displayState);
 
     // Create the binary semaphore to protect the display state
     displayStateSemaphore = xSemaphoreCreateBinary();
@@ -330,6 +329,7 @@ main(void)
     TaskHandle_t screenTaskHandle = NULL;
     TaskHandle_t calcCoreTaskHandle = NULL;
     // Create the task, storing the handle.
+    /*
     xTaskCreate(
             displayTask, // Function that implements the task.
             "DISPLAY",               // Text name for the task.
@@ -337,6 +337,8 @@ main(void)
             ( void * ) 1,            // Parameter passed into the task.
             tskIDLE_PRIORITY,        // Priority at which the task is created.
             &screenTaskHandle );              // Used to pass out the created task's handle.
+            
+    */
     xTaskCreate(
             calcCoreTask, // Function that implements the task.
             "CALCCORE",               // Text name for the task.
