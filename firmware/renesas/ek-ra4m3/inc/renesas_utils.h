@@ -23,4 +23,11 @@ SOFTWARE.
 */
 
 #include <stdarg.h>
+#include "FreeRTOS.h"
+#include "queue.h"
+#include "r_uart_api.h"
+
+extern QueueHandle_t uartReceiveQueue;
+
 void UARTvprintf(const char *pcString, va_list vaArgP);
+void uartRxIntHandler(uart_callback_args_t *p_args);

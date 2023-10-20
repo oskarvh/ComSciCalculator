@@ -94,16 +94,14 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char * pcTaskName)
 void sci_spi_callback(spi_callback_args_t *p_args){
 
 }
-char uartRxChar = 0; 
+/*
 void uartRxIntHandler(uart_callback_args_t *p_args){
     
 
     // Read the FIFO and put in a queue.
-    uartRxChar = 0; 
-
     if(UART_EVENT_RX_CHAR == p_args->event)
     {
-        uartRxChar = (uint8_t ) p_args->data;
+        char uartRxChar = (uint8_t ) p_args->data;
     
         
         // Handle escape char sequence.
@@ -118,7 +116,12 @@ void uartRxIntHandler(uart_callback_args_t *p_args){
             }
         }
     }
+    if(UART_EVENT_TX_COMPLETE  == p_args->event){
+
+    }
 }
+*/
+
 void Timer0BIntHandler(void){
 
 }

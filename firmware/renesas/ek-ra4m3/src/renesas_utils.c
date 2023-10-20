@@ -36,6 +36,50 @@ SOFTWARE.
 #include "hal_data.h"
 #include "renesas_utils.h"
 
+
+// This is a nasty hack but I'm too lazy. 
+// Have a global variable to pend on until the 
+// UART TX has been completed. Would be nice
+// to have that in hardware, but Renesas doesn't do that.
+bool uartTxComplete = false;
+
+void uartRxIntHandler(uart_callback_args_t *p_args){
+    // Read the FIFO and put in a queue.
+    if(UART_EVENT_RX_CHAR == p_args->event)
+    {
+        char uartRxChar = (uint8_t ) p_args->data;
+    
+        
+        // Handle escape char sequence.
+        // Ideally, this should be handled by something else than the ISR,
+        // since we don't want to wait in the ISR.yy
+        if(uartRxChar != 255 && uartRxChar != 27){
+            // hooray, there is a character in the rx buffer
+            // which is now read!
+            // Push that to the queue.
+            if(!xQueueSendToBackFromISR (uartReceiveQueue, (void*)&uartRxChar, (TickType_t)0)){
+                while(1);
+            }
+        }
+    }
+    if(UART_EVENT_TX_COMPLETE  == p_args->event){
+        uartTxComplete = true;
+    }
+}
+
+static void uartSend(uart_ctrl_t * const p_api_ctrl, uint8_t const * const p_src, uint32_t const bytes){
+    // Enter critical section as to not overwrite a variable set 
+    // in an interrupt. 
+    sci_uart_instance_ctrl_t * p_ctrl = (sci_uart_instance_ctrl_t *) p_api_ctrl;
+    R_BSP_IrqDisable(p_ctrl->p_cfg->tei_irq);
+    uartTxComplete = false;
+    R_BSP_IrqEnable(p_ctrl->p_cfg->tei_irq);
+    R_SCI_UART_Write(p_api_ctrl, p_src, bytes);
+    
+    //Wait until TX is complete.
+    while(!uartTxComplete);
+}
+
 static const char * const g_pcHex = "0123456789abcdef";
 
 void
@@ -57,7 +101,7 @@ UARTvprintf(const char *pcString, va_list vaArgP)
         }
 
         // Write this portion of the string.
-        R_SCI_UART_Write(&g_uart0_ctrl, pcString, ui32Idx);
+        uartSend(&g_uart0_ctrl, pcString, ui32Idx);
 
         //
         // Skip the portion of the string that was written.
@@ -141,7 +185,7 @@ again:
                     //
                     // Print out the character.
                     //
-                    R_SCI_UART_Write(&g_uart0_ctrl,(char *)&ui32Value, 1);
+                    uartSend(&g_uart0_ctrl,(char *)&ui32Value, 1);
 
                     //
                     // This command has been handled.
@@ -221,7 +265,7 @@ again:
                     //
                     // Write the string.
                     //
-                    R_SCI_UART_Write(&g_uart0_ctrl,pcStr, ui32Idx);
+                    uartSend(&g_uart0_ctrl,pcStr, ui32Idx);
 
                     //
                     // Write any required padding spaces
@@ -231,7 +275,7 @@ again:
                         ui32Count -= ui32Idx;
                         while(ui32Count--)
                         {
-                            R_SCI_UART_Write(&g_uart0_ctrl," ", 1);
+                            uartSend(&g_uart0_ctrl," ", 1);
                         }
                     }
 
@@ -379,7 +423,7 @@ convert:
                     //
                     // Write the string.
                     //
-                    R_SCI_UART_Write(&g_uart0_ctrl,pcBuf, ui32Pos);
+                    uartSend(&g_uart0_ctrl,pcBuf, ui32Pos);
 
                     //
                     // This command has been handled.
@@ -395,7 +439,7 @@ convert:
                     //
                     // Simply write a single %.
                     //
-                    R_SCI_UART_Write(&g_uart0_ctrl,pcString - 1, 1);
+                    uartSend(&g_uart0_ctrl,pcString - 1, 1);
 
                     //
                     // This command has been handled.
@@ -411,7 +455,7 @@ convert:
                     //
                     // Indicate an error.
                     //
-                    R_SCI_UART_Write(&g_uart0_ctrl,"ERROR", 5);
+                    uartSend(&g_uart0_ctrl,"ERROR", 5);
 
                     //
                     // This command has been handled.
