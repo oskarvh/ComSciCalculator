@@ -440,6 +440,13 @@ void printResult(displayState_t *pDisplayState) {
         pCurrentFont->ft81x_font_index, INPUT_TEXT_OPTIONS, pHexRes);
 }
 
+// HACK: temporary function just to check that the display works
+void displaySanityCheck() {
+    startDisplaylist();
+    displayOutline();
+    endDisplayList();
+}
+
 // TODO:
 // 1. Support different color output + freeze output if
 //    calculation was unsuccessful. DONE

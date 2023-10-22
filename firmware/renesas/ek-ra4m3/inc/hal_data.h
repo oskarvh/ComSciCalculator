@@ -3,12 +3,36 @@
 #define HAL_DATA_H_
 #include "bsp_api.h"
 #include "common_data.h"
+#include "r_gpt.h"
 #include "r_sci_spi.h"
 #include "r_sci_uart.h"
 #include "r_spi_api.h"
+#include "r_timer_api.h"
 #include "r_uart_api.h"
 #include <stdint.h>
 FSP_HEADER
+/** Timer on GPT Instance. */
+extern const timer_instance_t g_timer1;
+
+/** Access the GPT instance using these structures when calling API functions
+ * directly (::p_api is not used). */
+extern gpt_instance_ctrl_t g_timer1_ctrl;
+extern const timer_cfg_t g_timer1_cfg;
+
+#ifndef Timer0BIntHandler
+void Timer0BIntHandler(timer_callback_args_t *p_args);
+#endif
+/** Timer on GPT Instance. */
+extern const timer_instance_t g_timer0;
+
+/** Access the GPT instance using these structures when calling API functions
+ * directly (::p_api is not used). */
+extern gpt_instance_ctrl_t g_timer0_ctrl;
+extern const timer_cfg_t g_timer0_cfg;
+
+#ifndef Timer0AIntHandler
+void Timer0AIntHandler(timer_callback_args_t *p_args);
+#endif
 /** SPI on SCI Instance. */
 extern const spi_instance_t g_spi2;
 

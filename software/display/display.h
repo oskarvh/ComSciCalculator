@@ -238,4 +238,5 @@ void initDisplayState(displayState_t *pDisplayState);
  */
 void displayTask(void *p);
 
+void displaySanityCheck();
 #endif /* DISPLAY_H_ */

@@ -43,6 +43,7 @@ file(GLOB fsp_files
     ${PROJECT_ROOT}/fsp/ra/fsp/src/r_ioport/*.c
     ${PROJECT_ROOT}/fsp/ra/fsp/src/r_sci_uart/*.c
     ${PROJECT_ROOT}/fsp/ra/fsp/src/r_sci_spi/*.c
+    ${PROJECT_ROOT}/fsp/ra/fsp/src/r_gpt/*.c
     # Include the FreeRTOS port file to properly config the interrupts
     #${PROJECT_ROOT}/fsp/ra/fsp/src/rm_freertos_port/*.c
 )
@@ -91,6 +92,7 @@ target_include_directories(${PROJECT_NAME}.elf PUBLIC
     ${PROJECT_ROOT}/fsp/ra/fsp/src/r_ioport/
     ${PROJECT_ROOT}/fsp/ra/fsp/src/r_sci_uart/
     ${PROJECT_ROOT}/fsp/ra/fsp/src/r_sci_spi/
+    ${PROJECT_ROOT}/fsp/ra/fsp/src/r_gpt/
     # Display:
     ${GIT_ROOT}/software/display/
     ${GIT_ROOT}/software/display/fonts/

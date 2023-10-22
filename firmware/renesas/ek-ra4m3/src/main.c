@@ -91,41 +91,14 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char * pcTaskName)
 
 /*-------------------------MCU SPECIFIC DRIVERS-------------------------------*/
 // TODO
-void sci_spi_callback(spi_callback_args_t *p_args){
 
+
+void Timer0BIntHandler(timer_callback_args_t *p_args){
+    //while(1);
 }
-/*
-void uartRxIntHandler(uart_callback_args_t *p_args){
-    
-
-    // Read the FIFO and put in a queue.
-    if(UART_EVENT_RX_CHAR == p_args->event)
-    {
-        char uartRxChar = (uint8_t ) p_args->data;
-    
-        
-        // Handle escape char sequence.
-        // Ideally, this should be handled by something else than the ISR,
-        // since we don't want to wait in the ISR.yy
-        if(uartRxChar != 255 && uartRxChar != 27){
-            // hooray, there is a character in the rx buffer
-            // which is now read!
-            // Push that to the queue.
-            if(!xQueueSendToBackFromISR (uartReceiveQueue, (void*)&uartRxChar, (TickType_t)0)){
-                while(1);
-            }
-        }
-    }
-    if(UART_EVENT_TX_COMPLETE  == p_args->event){
-
-    }
-}
-*/
-
-void Timer0BIntHandler(void){
-
-}
-void Timer0AIntHandler(void){
+void Timer0AIntHandler(timer_callback_args_t *p_args){
+// Set the cursor event.
+    xEventGroupSetBitsFromISR(displayTriggerEvent, DISPLAY_EVENT_CURSOR, NULL);
 
 }
 
@@ -139,14 +112,31 @@ void ConfigureUART(void){
 }
 
 void initTimer(){
-
+    // TImer A needs 1 Hz, Timer B needs 60 Hz
+    
+    if (FSP_SUCCESS != R_GPT_Open(&g_timer0_ctrl, &g_timer0_cfg))
+    {
+        while(1);
+    }
+    if (FSP_SUCCESS != R_GPT_Start(&g_timer0_ctrl))
+    {
+        while(1);
+    }
+    if (FSP_SUCCESS != R_GPT_Open(&g_timer1_ctrl, &g_timer1_cfg))
+    {
+        while(1);
+    }
+    if (FSP_SUCCESS != R_GPT_Start(&g_timer1_ctrl))
+    {
+        while(1);
+    }
 }
 
 void initDisplay(void){
     // Initialize the SPI and subsequently the display
-    EVE_SPI_Init();
-    EVE_init();
-    while (EVE_busy());
+    EVE_SPI_Init(); // We clear this one no probs.
+    EVE_init(); // THis also passes. 
+    while(EVE_busy()); // But for some reason this never returns. 
 
 }
 
@@ -311,10 +301,15 @@ main(void)
     ConfigureUART();
 
     //R_SCI_UART_Write(&g_uart0_ctrl, "test/r/n", 6);
-    logger("UART init'd\r\n"); 
+    //logger("UART init'd\r\n"); 
+    R_BSP_SoftwareDelay(200, 1000);
+    initDisplay();
+    R_BSP_SoftwareDelay(200, 1000);
+    initDisplayState(&displayState);
+    R_BSP_SoftwareDelay(200, 1000);
+    void displaySanityCheck();
 
-    //initDisplay();
-    //initDisplayState(&displayState);
+    while(1);
 
     // Create the binary semaphore to protect the display state
     displayStateSemaphore = xSemaphoreCreateBinary();
@@ -327,12 +322,9 @@ main(void)
     // and the display task
     displayTriggerEvent = xEventGroupCreate();
 
-    
-
     TaskHandle_t screenTaskHandle = NULL;
     TaskHandle_t calcCoreTaskHandle = NULL;
     // Create the task, storing the handle.
-    /*
     xTaskCreate(
             displayTask, // Function that implements the task.
             "DISPLAY",               // Text name for the task.
@@ -341,7 +333,6 @@ main(void)
             tskIDLE_PRIORITY,        // Priority at which the task is created.
             &screenTaskHandle );              // Used to pass out the created task's handle.
             
-    */
     xTaskCreate(
             calcCoreTask, // Function that implements the task.
             "CALCCORE",               // Text name for the task.

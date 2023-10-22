@@ -37,6 +37,84 @@ SOFTWARE.
 #include "renesas_utils.h"
 
 
+static volatile spi_event_t g_master_event_flag;    // Master Transfer Event completion flag
+bool spiTxComplete = false;
+// Nasty hack for the SPI as well. 
+void sci_spi_callback(spi_callback_args_t *p_args)
+{
+	if (SPI_EVENT_TRANSFER_COMPLETE == p_args->event)
+	{
+		g_master_event_flag = SPI_EVENT_TRANSFER_COMPLETE;
+        spiTxComplete = true;
+	}
+	else
+	{
+		/* Updating the flag here to capture and handle all other error events */
+		g_master_event_flag = SPI_EVENT_TRANSFER_ABORTED;
+        spiTxComplete = false;
+	}
+}
+static volatile int32_t g_wait_count = INT32_MAX;
+static void sci_spi_event_check(void)
+{
+	while(!spiTxComplete)
+	{
+		g_wait_count--;
+		if (0 >= g_wait_count)
+		{
+			return;
+		}
+	}
+}
+void spiSend(spi_ctrl_t * const    p_api_ctrl,
+                    void const          * p_src,
+                    uint32_t const        length,
+                    spi_bit_width_t const bit_width)
+{
+    // Enter critical section as to not overwrite a variable set 
+    // in an interrupt. 
+    sci_spi_instance_ctrl_t * p_ctrl = (sci_spi_instance_ctrl_t *) p_api_ctrl;
+    R_BSP_IrqDisable(p_ctrl->p_cfg->tei_irq);
+    spiTxComplete = false;
+    R_BSP_IrqEnable(p_ctrl->p_cfg->tei_irq);
+    R_SCI_SPI_Write(p_api_ctrl,p_src,length,bit_width);
+    
+    //Wait until TX is complete.
+    sci_spi_event_check();
+}
+void spiReceive(spi_ctrl_t * const    p_api_ctrl,
+                void                * p_dest,
+                uint32_t const        length,
+                spi_bit_width_t const bit_width)
+{
+    // Enter critical section as to not overwrite a variable set 
+    // in an interrupt. 
+    sci_spi_instance_ctrl_t * p_ctrl = (sci_spi_instance_ctrl_t *) p_api_ctrl;
+    R_BSP_IrqDisable(p_ctrl->p_cfg->tei_irq);
+    spiTxComplete = false;
+    R_BSP_IrqEnable(p_ctrl->p_cfg->tei_irq);
+    R_SCI_SPI_Read(p_api_ctrl,p_dest,length,bit_width);
+    
+    //Wait until RX is complete.
+    sci_spi_event_check();
+}
+
+void spiSendReceive(spi_ctrl_t * const    p_api_ctrl,
+                    void const          * p_src,
+                    void                * p_dest,
+                    uint32_t const        length,
+                    spi_bit_width_t const bit_width)
+{
+    sci_spi_instance_ctrl_t * p_ctrl = (sci_spi_instance_ctrl_t *) p_api_ctrl;
+    R_BSP_IrqDisable(p_ctrl->p_cfg->tei_irq);
+    spiTxComplete = false;
+    R_BSP_IrqEnable(p_ctrl->p_cfg->tei_irq);
+    R_SCI_SPI_WriteRead(p_api_ctrl,p_src,p_dest,length,bit_width);
+    
+    //Wait until RX is complete.
+    sci_spi_event_check();
+}
+
 // This is a nasty hack but I'm too lazy. 
 // Have a global variable to pend on until the 
 // UART TX has been completed. Would be nice

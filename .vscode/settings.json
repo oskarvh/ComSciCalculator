@@ -5,7 +5,9 @@
         "r_sci_spi.h": "c",
         "uart_logger.h": "c",
         "bsp_api.h": "c",
-        "stdlib.h": "c"
+        "stdlib.h": "c",
+        "renesas_utils.h": "c",
+        "r_gpt.h": "c"
     },
     "cmake.sourceDirectory": "C:/git/ComSciCalculator/firmware/renesas/ek-ra4m3",
     "cmake.buildDirectory": "C:/git/ComSciCalculator/firmware/renesas/ek-ra4m3/build",

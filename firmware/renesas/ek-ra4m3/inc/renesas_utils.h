@@ -22,12 +22,21 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include <stdarg.h>
 #include "FreeRTOS.h"
 #include "queue.h"
+#include "r_sci_spi.h"
 #include "r_uart_api.h"
+#include <stdarg.h>
 
 extern QueueHandle_t uartReceiveQueue;
 
 void UARTvprintf(const char *pcString, va_list vaArgP);
 void uartRxIntHandler(uart_callback_args_t *p_args);
+void spiSendReceive(spi_ctrl_t *const p_api_ctrl, void const *p_src,
+                    void *p_dest, uint32_t const length,
+                    spi_bit_width_t const bit_width);
+void spiReceive(spi_ctrl_t *const p_api_ctrl, void *p_dest,
+                uint32_t const length, spi_bit_width_t const bit_width);
+void spiSend(spi_ctrl_t *const p_api_ctrl, void const *p_src,
+             uint32_t const length, spi_bit_width_t const bit_width);
+void sci_spi_callback(spi_callback_args_t *p_args);
