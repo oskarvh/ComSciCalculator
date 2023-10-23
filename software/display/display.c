@@ -154,7 +154,7 @@ void programFont(font_t *pFont, uint8_t fontIndex) {
         uint32_t offset = ram_g_address_offset % 4;
         ram_g_address_offset += offset;
     } else {
-        logger("\r\nERROR: Font not programmed!\r\n\r\n");
+        logger(LOGGER_LEVEL_ERROR, "\r\nERROR: Font not programmed!\r\n\r\n");
         return;
     }
     // This must be in a display list to register the new font

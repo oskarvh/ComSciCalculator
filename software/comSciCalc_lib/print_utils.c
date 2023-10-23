@@ -76,7 +76,8 @@ uint64_t strtofp(const char *pString, bool sign, uint16_t decimalPlace,
         if (*pDecimalPlace == '.') {
             pDecimalPlace++;
         } else {
-            logger("Error: Expected a . in the fixed point string %s\r\n",
+            logger(LOGGER_LEVEL_ERROR,
+                   "Error: Expected a . in the fixed point string %s\r\n",
                    pLocalPtr);
         }
         decimalPart = strtoull(pDecimalPlace, &pEndPtr, radix);
@@ -99,7 +100,8 @@ uint64_t strtofp(const char *pString, bool sign, uint16_t decimalPlace,
         if (*pDecimalPlace == '.') {
             pDecimalPlace++;
         } else {
-            logger("Error: Expected a . in the fixed point string %s\r\n",
+            logger(LOGGER_LEVEL_ERROR,
+                   "Error: Expected a . in the fixed point string %s\r\n",
                    pLocalPtr);
         }
         // Here, loop through the number of decimal places
@@ -130,7 +132,8 @@ uint64_t strtofp(const char *pString, bool sign, uint16_t decimalPlace,
         if (*pDecimalPlace == '.') {
             pDecimalPlace++;
         } else {
-            logger("Error: Expected a . in the fixed point string %s\r\n",
+            logger(LOGGER_LEVEL_ERROR,
+                   "Error: Expected a . in the fixed point string %s\r\n",
                    pLocalPtr);
         }
         // Here, loop through the number of decimal places

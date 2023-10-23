@@ -21,31 +21,30 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-#ifndef RENESAS_UTILS_H_
-#define RENESAS_UTILS_H_
-#include "FreeRTOS.h"
-#include "queue.h"
-#include "r_sci_spi.h"
-#include "r_uart_api.h"
-#include <stdarg.h>
+#ifndef FIRMWARE_COMMON_H_
+#define FIRMWARE_COMMON_H_
+// Standard libraries
+#include <stdint.h>
 
-extern QueueHandle_t uartReceiveQueue;
 
 /**
- * @brief Initializes UART.
- * @return True if successful, otherwise false
+ * @brief Main thread. Calls init functions and starts
+ * the other threads. 
+ * @param p Pointer to arguments
+ * @return Nothing
  */
-bool initUart(void);
+void mainThread(void *p);
 
-void UARTvprintf(const char *pcString, va_list vaArgP);
-void uartRxIntHandler(uart_callback_args_t *p_args);
-void spiSendReceive(spi_ctrl_t *const p_api_ctrl, void const *p_src,
-                    void *p_dest, uint32_t const length,
-                    spi_bit_width_t const bit_width);
-void spiReceive(spi_ctrl_t *const p_api_ctrl, void *p_dest,
-                uint32_t const length, spi_bit_width_t const bit_width);
-void spiSend(spi_ctrl_t *const p_api_ctrl, void const *p_src,
-             uint32_t const length, spi_bit_width_t const bit_width);
-void sci_spi_callback(spi_callback_args_t *p_args);
+/**
+ * @brief ISR for 1 Hz timer
+ * @return Nothing
+ */
+void Timer1HzIntHandler(void);
 
-#endif // RENESAS_UTILS_H_
+/**
+ * @brief ISR for 60 Hz timer
+ * @return Nothing
+ */
+void Timer60HzIntHandler(void);
+
+#endif //FIRMWARE_COMMON_H_

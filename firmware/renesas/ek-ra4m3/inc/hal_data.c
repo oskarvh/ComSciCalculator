@@ -80,7 +80,7 @@ const timer_cfg_t g_timer1_cfg = {
     .duty_cycle_counts = 0xcb735,
     .source_div = (timer_source_div_t)0,
     .channel = 1,
-    .p_callback = Timer0BIntHandler,
+    .p_callback = Timer1IntHandler,
 /** If NULL then do not add & */
 #if defined(NULL)
     .p_context = NULL,
@@ -177,7 +177,7 @@ const timer_cfg_t g_timer0_cfg = {
     .duty_cycle_counts = 0x2faf080,
     .source_div = (timer_source_div_t)0,
     .channel = 0,
-    .p_callback = Timer0AIntHandler,
+    .p_callback = Timer0IntHandler,
 /** If NULL then do not add & */
 #if defined(NULL)
     .p_context = NULL,

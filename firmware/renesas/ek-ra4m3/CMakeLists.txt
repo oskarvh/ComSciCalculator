@@ -54,7 +54,8 @@ file(GLOB fsp_files
 file(GLOB_RECURSE source_files 
     # Firmware source files, incl. generated sources
     ${CMAKE_CURRENT_LIST_DIR}/src/*.c
-    ${CMAKE_CURRENT_LIST_DIR}/inc/*.c  
+    ${CMAKE_CURRENT_LIST_DIR}/inc/*.c
+    ${GIT_ROOT}/firmware/common/*.c
 )
 SET(ALL_FILES 
     ${source_files}
@@ -73,9 +74,11 @@ add_definitions(-DEVE_FT810CB_ADAFRUIT_1680)
 add_definitions(-D__RA4M3__)
 add_definitions(-DEK_RA4M3)
 add_definitions(-DVERBOSE)
+add_definitions(-DLOG_LEVEL=1)
 
 target_include_directories(${PROJECT_NAME}.elf PUBLIC
     # Firmware
+    ${GIT_ROOT}/firmware/common/
     ${CMAKE_CURRENT_LIST_DIR}/inc/
     ${CMAKE_CURRENT_LIST_DIR}/inc/fsp_cfg/
     ${CMAKE_CURRENT_LIST_DIR}/inc/fsp_cfg/bsp/

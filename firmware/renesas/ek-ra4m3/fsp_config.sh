@@ -52,4 +52,6 @@ echo "Removing the temporary directory"
 rm -r tmp_fsp_config
 
 # Finally, make everything look neat
-find inc/ -iname *.c -o -iname *.h | xargs clang-format -i
+cd ../../..
+find firmware/renesas/ek-ra4m3/inc/ -iname *.c -o -iname *.h | xargs clang-format -i
+cd -

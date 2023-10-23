@@ -36,6 +36,7 @@ SOFTWARE.
 // Standard library
 #include <stdarg.h>
 
+// Logger header
 #include "uart_logger.h"
 
 // FreeRTOS, if tivaware is used
@@ -50,22 +51,24 @@ SOFTWARE.
 #include <stdio.h>
 #endif
 
-void logger(char *msg, ...) {
-    // Enter critical section
-    // taskENTER_CRITICAL();
-
-    // Print using UART instead
-    va_list vaArgP;
-    va_start(vaArgP, msg);
-    UARTvprintf(msg, vaArgP);
-    va_end(vaArgP);
-
-    // Exit critical section.
-    // taskEXIT_CRITICAL();
-#ifdef VERBOSE
+void logger(int8_t log_level, char *msg, ...) {
+#if defined(LOG_LEVEL)
+    // 0 is the highest prio log level.
+    // Only print statements that are at or under the
+    // LOG_LEVEL, given by the build.
+#else
+    // LOG_LEVEL has not been defined, always ignore then.
+#define LOG_LEVEL LOGGER_LEVEL_NONE
+#warning "WARNING: LOGGER NOT USED"
+#endif // defined(LOG_LEVEL)
+    if (log_level > LOG_LEVEL) {
+        return;
+    }
+#if (defined(TIVAWARE) || defined(EK_RA4M3))
 #if defined(TIVAWARE)
-    // Enter critical section
-    taskENTER_CRITICAL();
+    // Enter critical section, only if non-ISR UART is used.
+    // taskENTER_CRITICAL();
+#endif
 
     // Print using UART instead
     va_list vaArgP;
@@ -73,15 +76,14 @@ void logger(char *msg, ...) {
     UARTvprintf(msg, vaArgP);
     va_end(vaArgP);
 
-    // Exit critical section.
-    taskEXIT_CRITICAL();
-#elif defined(EK_RA4M3)
-
+#if defined(TIVAWARE)
+    // Exit critical section, only if non-ISR UART is used.
+    // taskEXIT_CRITICAL();
+#endif
 #else
     va_list argp;
     va_start(argp, msg);
     vprintf(msg, argp);
     va_end(argp);
-#endif
-#endif
+#endif //(defined(TIVAWARE) || defined(EK_RA4M3))
 }

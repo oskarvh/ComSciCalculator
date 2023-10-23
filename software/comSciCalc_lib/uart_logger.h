@@ -25,17 +25,29 @@ SOFTWARE.
 #ifndef UART_LOGGER_H_
 #define UART_LOGGER_H_
 
+#include <stdint.h>
+
+//! Disable logger
+#define LOGGER_LEVEL_NONE (-1)
+//! Error logger level. Always printed if logger is enabled.
+#define LOGGER_LEVEL_ERROR (0x00)
+//! Info logger level. Prints when LOGGER_LEVEL is defined as >= 1
+#define LOGGER_LEVEL_INFO (0x01)
+//! Debug logger level. Prints when LOGGER_LEVEL is defined as >= 2
+#define LOGGER_LEVEL_DEBUG (0x02)
+
 /**
  * @brief Prints logger statements to stdout, or UART if TIVAWARE is defined.
  *
  * @note The UART printing uses a FreeRTOS critical section protection.
  *
  * @param pCalcCoreState Pointer to an allocated core state variable.
+ * @param LOG_LEVEL The log level of this message.
  * @return None.
  * @warning This uses critical section to protect the shared resources,
  * hence it should not be used in project with critical interrupt timings.
  * For that, the critical section should be replaced with a semaphore.
  */
-void logger(char *msg, ...);
+void logger(int8_t log_level, char *msg, ...);
 
 #endif /* UART_LOGGER_H_ */

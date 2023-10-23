@@ -363,7 +363,8 @@ int8_t calc_add(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
             memcpy(&b, &(pArgs[1].subresult), sizeof(float));
             float result = a + b;
             memcpy(pResult, &result, sizeof(float));
-            logger("Solved %f + %f to be %f\r\n", a, b, result);
+            logger(LOGGER_LEVEL_INFO, "Solved %f + %f to be %f\r\n", a, b,
+                   result);
         } else if (numberFormat.numBits == 64) {
             // Solve for double
             double a, b;
@@ -371,7 +372,8 @@ int8_t calc_add(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
             memcpy(&b, &(pArgs[1].subresult), sizeof(double));
             double result = a + b;
             memcpy(pResult, &result, sizeof(double));
-            logger("Solved %d + %d to be %d\r\n", a, b, result);
+            logger(LOGGER_LEVEL_INFO, "Solved %d + %d to be %d\r\n", a, b,
+                   result);
         } else {
             // Format is not supporteds
             return format_not_supported;
