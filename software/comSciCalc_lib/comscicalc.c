@@ -552,11 +552,11 @@ void convertResult(char *pString, SUBRESULT_INT result,
             // on integer format as well.
             // Simply print long long.
             if (base == inputBase_DEC) {
-                sprintf(pString, "%1lli", result);
+                sprintf(pString, "%lli", result);
             } else if (base == inputBase_BIN) {
                 printToBinary(pString, result, false, pNumberFormat->numBits);
             } else if (base == inputBase_HEX) {
-                sprintf(pString, "0x%1llX", result);
+                sprintf(pString, "0x%llX", result);
             }
         } else if (pNumberFormat->inputFormat == INPUT_FMT_FLOAT) {
             // Floating point format. First convert to either float or double,

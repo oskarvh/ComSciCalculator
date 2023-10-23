@@ -516,11 +516,7 @@ void displayTask(void *p) {
         UARTprintf("HEX: [%s]\r\n", pHexRes);
 #endif
 #endif
-        // The result is now in calcResult, print to the different types
-        sprintf(pDecRes, "%1i", localDisplayState.result);
-        printToBinary(pBinRes, localDisplayState.result, false,
-                      localDisplayState.inputOptions.numBits);
-        sprintf(pHexRes, "0x%1X", localDisplayState.result);
+
         // Update the screen:
         startDisplaylist();
         displayOutline();
@@ -539,7 +535,7 @@ void displayTask(void *p) {
         }
         printResult(&localDisplayState),
 
-            endDisplayList();
+        endDisplayList();
         // Screen has been updated, set update variable to false
         // updateScreen = false;
         //}

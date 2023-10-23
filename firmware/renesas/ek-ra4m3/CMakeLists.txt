@@ -151,8 +151,8 @@ target_link_options(
     -Xlinker
     --gc-sections 
     -Wl,-Map=${PROJECT_NAME}.map 
-    --specs=nano.specs 
-    --specs=rdimon.specs
+    #--specs=nano.specs 
+    #--specs=rdimon.specs
     ${COMPILER_WARNINGS}
     #-u_printf_float
     #-u_scanf_float
