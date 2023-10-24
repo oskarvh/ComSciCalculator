@@ -215,9 +215,8 @@ extern "C" {
 
 /* Security attribution for NMI registers. */
 #ifndef BSP_TZ_CFG_ICUSARB
-#define BSP_TZ_CFG_ICUSARB                                                     \
-    (0 | 0xFFFFFFFEU) /* Should match AIRCR.BFHFNMINS.                         \
-                       */
+#define BSP_TZ_CFG_ICUSARB (0 | 0xFFFFFFFEU) /* Should match AIRCR.BFHFNMINS.  \
+                                              */
 #endif
 
 /* Security attribution for registers for DMAC channels */

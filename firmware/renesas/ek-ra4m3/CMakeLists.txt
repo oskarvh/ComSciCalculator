@@ -74,7 +74,7 @@ add_definitions(-DEVE_FT810CB_ADAFRUIT_1680)
 add_definitions(-D__RA4M3__)
 add_definitions(-DEK_RA4M3)
 add_definitions(-DVERBOSE)
-add_definitions(-DLOG_LEVEL=1)
+add_definitions(-DLOG_LEVEL=3)
 
 target_include_directories(${PROJECT_NAME}.elf PUBLIC
     # Firmware
@@ -111,52 +111,14 @@ target_include_directories(${PROJECT_NAME}.elf PUBLIC
     
 )
 
-set(ARM_OPTIONS -mcpu=cortex-m33 -O0 -mfloat-abi=hard -mfpu=fpv5-sp-d16)
-set(COMPILER_WARNINGS -Wall)
-target_compile_options(
-    ${PROJECT_NAME}.elf
-    PUBLIC
-    -g
-    ${ARM_OPTIONS}
-    -fmessage-length=0
-    -funsigned-char
-    -ffunction-sections
-    -fdata-sections
-    -mthumb
-    ${COMPILER_WARNINGS}
-    -MMD
-    -MP
-)
-
-# Add the script subdirectory to the linked directory:
-target_link_directories(
-    ${PROJECT_NAME}.elf
-    PUBLIC
-    ${CMAKE_CURRENT_LIST_DIR}/script/
-)
 # Set the linker script path:
+set(FSP_LINKER_SCRIPT_PATH ${CMAKE_CURRENT_LIST_DIR}/script/)
 set(FSP_LINKER_SCRIPT ${CMAKE_CURRENT_LIST_DIR}/script/fsp.ld)
 
-# Link options:
+# Add the specific linker script
 target_link_options(
     ${PROJECT_NAME}.elf
     PUBLIC
-    -g
-    ${ARM_OPTIONS}
-    -fmessage-length=0
-    -funsigned-char
-    -ffunction-sections
-    -fdata-sections
-    -mthumb
-    -Xlinker
-    --gc-sections 
-    -Wl,-Map=${PROJECT_NAME}.map 
-    #--specs=nano.specs 
-    #--specs=rdimon.specs
-    ${COMPILER_WARNINGS}
-    #-u_printf_float
-    #-u_scanf_float
-    #-nostartfiles
     -T ${FSP_LINKER_SCRIPT}
-    -L ${CMAKE_CURRENT_SOURCE_DIR}/script
+    -L ${FSP_LINKER_SCRIPT_PATH}
 )

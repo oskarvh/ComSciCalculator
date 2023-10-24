@@ -48,3 +48,33 @@ set(CMAKE_SIZE ${CMAKE_FIND_ROOT_PATH}/${TOOLCHAIN_PREFIX}-size${BINARY_FILE_EXT
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM     NEVER)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY     ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE     ONLY)
+
+set(ARM_OPTIONS -mcpu=cortex-m33 -O0 -mfloat-abi=hard -mfpu=fpv5-sp-d16)
+set(COMPILER_WARNINGS -Wall)
+add_compile_options(
+    -g
+    ${ARM_OPTIONS}
+    -fmessage-length=0
+    -funsigned-char
+    -ffunction-sections
+    -fdata-sections
+    -mthumb
+    ${COMPILER_WARNINGS}
+    -MMD
+    -MP
+)
+
+# Link options:
+add_link_options(
+    -g
+    ${ARM_OPTIONS}
+    -fmessage-length=0
+    -funsigned-char
+    -ffunction-sections
+    -fdata-sections
+    -mthumb
+    -Xlinker
+    --gc-sections 
+    -Wl,-Map=${PROJECT_NAME}.map 
+    ${COMPILER_WARNINGS}
+)

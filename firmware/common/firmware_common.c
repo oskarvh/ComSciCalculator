@@ -210,10 +210,32 @@ static void calcCoreTask(void *p){
 static void initDisplay(void){
     // Initialize the SPI and subsequently the display
     EVE_SPI_Init(); 
+    // Delay a small while. TBD is needed. 
     EVE_init(); 
+    // Delay a small while. TBD is needed. 
     while(EVE_busy());
+    // Delay a small while. TBD is needed. 
 }
 
+void displayTestThread(void *p){ 
+    // Init UART to enable the logger
+    if(!initUart()){
+        // Something went wrong with initializing UART. 
+        while(1);
+    }
+    logger(LOGGER_LEVEL_DEBUG, "DISPLAY TEST: UART STARTED\r\n");
+    // Init the SPI
+    if(!initSpi()){
+        // Something went wrong with initializing UART. 
+        while(1);
+    }
+    logger(LOGGER_LEVEL_DEBUG, "DISPLAY TEST: SPI STARTED\r\n");
+    // Initialize the display driver
+    initDisplay();
+    logger(LOGGER_LEVEL_DEBUG, "DEBUG: DISPLAYED INITIALIZED\r\n");
+    // Call the display test function.
+    testDisplay();
+}
 
 
 
@@ -247,6 +269,7 @@ void mainThread(void *p) {
         while(1);
     }
     logger(LOGGER_LEVEL_DEBUG, "DEBUG: UART INIT'D\r\n");
+
     // Initialize SPI.
     // NOTE: This is MCU specific, so the initSpi function must be
     // linked in based on which MCU is built. 
@@ -280,7 +303,7 @@ void mainThread(void *p) {
         "DISPLAY",               // Text name for the task.
         700,                    // Stack size in words, not bytes.
         ( void * ) 1,            // Parameter passed into the task.
-        tskIDLE_PRIORITY,        // Priority at which the task is created.
+        tskIDLE_PRIORITY + 1,        // Priority at which the task is created.
         &screenTaskHandle // Used to pass out the created task's handle.
     );
     logger(LOGGER_LEVEL_DEBUG, "DEBUG: DISPLAY TASK CREATED\r\n");
@@ -297,6 +320,9 @@ void mainThread(void *p) {
     
     // Start by giving the semaphore, as the semaphore needs to initialize once
     xSemaphoreGive(displayStateSemaphore);
+
+    // Wait 1 second before starting the timers. 
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
 
     // Now that the tasks have been created, start the timers. 
     startTimer();

@@ -36,6 +36,13 @@ SOFTWARE.
 void mainThread(void *p);
 
 /**
+ * @brief Task for testing the display.
+ * @param p Pointer to arguments
+ * @return Nothing
+ */
+void displayTestThread(void *p);
+
+/**
  * @brief ISR for 1 Hz timer
  * @return Nothing
  */

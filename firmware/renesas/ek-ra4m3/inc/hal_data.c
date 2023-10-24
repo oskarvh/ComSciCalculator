@@ -232,7 +232,7 @@ const spi_cfg_t g_spi2_cfg = {
     .eri_irq = VECTOR_NUMBER_SCI2_ERI,
     .rxi_ipl = (12),
     .txi_ipl = (12),
-    .tei_ipl = (12),
+    .tei_ipl = (6),
     .eri_ipl = (12),
     .p_extend = &g_spi2_cfg_extend,
 };

@@ -25,6 +25,7 @@ SOFTWARE.
 #define RENESAS_UTILS_H_
 #include "FreeRTOS.h"
 #include "queue.h"
+#include "r_gpt.h"
 #include "r_sci_spi.h"
 #include "r_uart_api.h"
 #include <stdarg.h>
@@ -37,6 +38,14 @@ extern QueueHandle_t uartReceiveQueue;
  */
 bool initUart(void);
 
+/**
+ * @brief Initializes MCU functions outside of RTOS context
+ * @return None
+ */
+void mcuInit(void);
+bool initSpi(void);
+bool initTimer(void);
+
 void UARTvprintf(const char *pcString, va_list vaArgP);
 void uartRxIntHandler(uart_callback_args_t *p_args);
 void spiSendReceive(spi_ctrl_t *const p_api_ctrl, void const *p_src,
@@ -47,5 +56,8 @@ void spiReceive(spi_ctrl_t *const p_api_ctrl, void *p_dest,
 void spiSend(spi_ctrl_t *const p_api_ctrl, void const *p_src,
              uint32_t const length, spi_bit_width_t const bit_width);
 void sci_spi_callback(spi_callback_args_t *p_args);
+
+void Timer1IntHandler(timer_callback_args_t *p_args);
+void Timer0IntHandler(timer_callback_args_t *p_args);
 
 #endif // RENESAS_UTILS_H_

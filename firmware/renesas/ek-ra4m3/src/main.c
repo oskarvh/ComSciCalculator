@@ -103,11 +103,19 @@ int main(void) {
     // MCU specfic functions to be initialized out of thread context
     mcuInit();
 
+//#define TEST_DISPLAY
+#ifdef TEST_DISPLAY
+    // Start the display test task
+    TaskHandle_t displayTestTask = NULL;
+    xTaskCreate(displayTestThread, "DISPLAY_TEST_THREAD", 1000, (void *)1, tskIDLE_PRIORITY,
+                &displayTestTask);
+
+#else
     // Start the main thread
     TaskHandle_t mainThreadHandle = NULL;
     xTaskCreate(mainThread, "MAIN_TASK", 200, (void *)1, tskIDLE_PRIORITY,
                 &mainThreadHandle);
-
+#endif
     // Start scheduler
     vTaskStartScheduler();
 

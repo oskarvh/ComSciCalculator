@@ -12,6 +12,6 @@
     "cmake.sourceDirectory": "C:/git/ComSciCalculator/firmware/renesas/ek-ra4m3",
     "cmake.buildDirectory": "C:/git/ComSciCalculator/firmware/renesas/ek-ra4m3/build",
     "cmake.configureArgs": [
-        "-DCMAKE_TOOLCHAIN_FILE=C:/git/ComSciCalculator/firmware/renesas/toolchain/gcc-arm-none-eabi.cmake",
+        "-DCMAKE_TOOLCHAIN_FILE=C:/git/ComSciCalculator/firmware/renesas/toolchain/gcc-arm-none-eabi-ra4m3.cmake",
     ],
 }

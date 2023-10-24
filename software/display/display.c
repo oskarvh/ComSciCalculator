@@ -440,12 +440,7 @@ void printResult(displayState_t *pDisplayState) {
         pCurrentFont->ft81x_font_index, INPUT_TEXT_OPTIONS, pHexRes);
 }
 
-// HACK: temporary function just to check that the display works
-void displaySanityCheck() {
-    startDisplaylist();
-    displayOutline();
-    endDisplayList();
-}
+
 
 // TODO:
 // 1. Support different color output + freeze output if
@@ -536,8 +531,21 @@ void displayTask(void *p) {
         printResult(&localDisplayState),
 
         endDisplayList();
+        vTaskDelay(10 / portTICK_PERIOD_MS);
         // Screen has been updated, set update variable to false
         // updateScreen = false;
         //}
+    }
+}
+
+
+void testDisplay(){
+    while(1){
+        logger(LOGGER_LEVEL_DEBUG, "DISPLAY TEST: DISPLAY THE OUTLINE\r\n");
+        // HACK: temporary function just to check that the display works
+        startDisplaylist();
+        displayOutline();
+        endDisplayList();
+        vTaskDelay(1000/portTICK_PERIOD_MS);
     }
 }
