@@ -201,7 +201,7 @@ static void uartSend(uart_ctrl_t *const p_api_ctrl, uint8_t const *const p_src,
     // taskENTER_CRITICAL();
     R_BSP_IrqDisable(p_ctrl->p_cfg->tei_irq);
     uartTxComplete = false;
-    R_BSP_IrqEnable(p_ctrl->p_cfg->tei_irq);
+    R_BSP_IrqEnableNoClear(p_ctrl->p_cfg->tei_irq);
     // taskEXIT_CRITICAL();
 
     // Use the FSP function to transmit the UART message:
@@ -222,5 +222,6 @@ void UARTvprintf(const char *pcString, va_list vaArgP) {
             vsprintf (strBuf, pcString, vaArgP);
             uartSend(&g_uart0_ctrl, strBuf, stringLen);
         }
+        free(strBuf);
     }
 }

@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "type": "renesas",
+            "type": "renesas-hardware",
             "request": "launch",
             "name": "Renesas GDB Debugging",
             "target": {
@@ -16,4 +16,5 @@
             }
         }
     ]
+
 }

@@ -210,11 +210,8 @@ static void calcCoreTask(void *p){
 static void initDisplay(void){
     // Initialize the SPI and subsequently the display
     EVE_SPI_Init(); 
-    // Delay a small while. TBD is needed. 
     EVE_init(); 
-    // Delay a small while. TBD is needed. 
     while(EVE_busy());
-    // Delay a small while. TBD is needed. 
 }
 
 void displayTestThread(void *p){ 
@@ -322,14 +319,11 @@ void mainThread(void *p) {
     xSemaphoreGive(displayStateSemaphore);
 
     // Wait 1 second before starting the timers. 
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    vTaskDelay(100 / portTICK_PERIOD_MS);
 
     // Now that the tasks have been created, start the timers. 
     startTimer();
 
-    while(1){
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
-    }
 
     // Suspend this thread
     vTaskSuspend(NULL);

@@ -77,6 +77,7 @@ uint32_t allocatedPointers[ALLOC_TABLE_SZ] = {0};
 inputListEntry_t *overloaded_malloc(size_t size) {
     void *ptr = malloc(size);
     if (ptr == NULL) {
+        logger(LOGGER_LEVEL_ERROR, "Malloc returned NULL");
         while (1)
             ;
     }
@@ -105,7 +106,7 @@ void overloaded_free(inputListEntry_t *ptr) {
         }
     }
     if (!okToFree) {
-        logger(LOGGER_LEVEL_INFO,
+        logger(LOGGER_LEVEL_ERROR,
                "Could not find that 0x%08x was allocated! \r\n", ptr);
 
         while (1)
@@ -1994,11 +1995,11 @@ void calc_updateBase(calcCoreState_t *pCalcCoreState) {
         // repoint, and free the old entries.
         if (newEntryInputBase == inputBase_HEX) {
             // TBD: Do these support 64 bit?
-            sprintf(pTempCharBuffer, "%lx", stringInInt);
+            sprintf(pTempCharBuffer, "%llx", stringInInt);
         } else if (newEntryInputBase == inputBase_BIN) {
             intToBin(pTempCharBuffer, stringInInt);
         } else if (newEntryInputBase == inputBase_DEC) {
-            sprintf(pTempCharBuffer, "%li", stringInInt);
+            sprintf(pTempCharBuffer, "%lli", stringInInt);
         }
     } else if (inputFormat == INPUT_FMT_FLOAT) {
         // TODO
