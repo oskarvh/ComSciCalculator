@@ -20,8 +20,9 @@ void sci_spi_eri_isr(void);
 void gpt_counter_overflow_isr(void);
 
 /* Vector table allocations */
-#define VECTOR_NUMBER_SCI0_RXI ((IRQn_Type)0) /* SCI0 RXI (Receive data full)  \
-                                               */
+#define VECTOR_NUMBER_SCI0_RXI                                                 \
+    ((IRQn_Type)0) /* SCI0 RXI (Receive data full)                             \
+                    */
 #define SCI0_RXI_IRQn ((IRQn_Type)0) /* SCI0 RXI (Receive data full) */
 #define VECTOR_NUMBER_SCI0_TXI                                                 \
     ((IRQn_Type)1) /* SCI0 TXI (Transmit data empty) */

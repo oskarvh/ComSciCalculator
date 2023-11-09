@@ -107,8 +107,8 @@ int main(void) {
 #ifdef TEST_DISPLAY
     // Start the display test task
     TaskHandle_t displayTestTask = NULL;
-    xTaskCreate(displayTestThread, "DISPLAY_TEST_THREAD", 1000, (void *)1, tskIDLE_PRIORITY,
-                &displayTestTask);
+    xTaskCreate(displayTestThread, "DISPLAY_TEST_THREAD", 1000, (void *)1,
+                tskIDLE_PRIORITY, &displayTestTask);
 
 #else
     // Start the main thread

@@ -28,10 +28,10 @@ SOFTWARE.
  */
 
 // Standard library
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdio.h> 
-#include <stdarg.h>
+#include <stdio.h>
 
 // Renesas files
 #include "hal_data.h"
@@ -126,8 +126,9 @@ void spiSend(spi_ctrl_t *const p_api_ctrl, void const *p_src,
     R_BSP_IrqDisable(p_ctrl->p_cfg->tei_irq);
     spiTxComplete = false;
     R_BSP_IrqEnable(p_ctrl->p_cfg->tei_irq);
-    if(FSP_SUCCESS != R_SCI_SPI_Write(p_api_ctrl, p_src, length, bit_width)){
-        while(1);
+    if (FSP_SUCCESS != R_SCI_SPI_Write(p_api_ctrl, p_src, length, bit_width)) {
+        while (1)
+            ;
     }
 
     // Wait until TX is complete.
@@ -142,8 +143,9 @@ void spiReceive(spi_ctrl_t *const p_api_ctrl, void *p_dest,
     R_BSP_IrqDisable(p_ctrl->p_cfg->tei_irq);
     spiTxComplete = false;
     R_BSP_IrqEnable(p_ctrl->p_cfg->tei_irq);
-    if(FSP_SUCCESS != R_SCI_SPI_Read(p_api_ctrl, p_dest, length, bit_width)){
-        while(1);
+    if (FSP_SUCCESS != R_SCI_SPI_Read(p_api_ctrl, p_dest, length, bit_width)) {
+        while (1)
+            ;
     }
 
     // Wait until RX is complete.
@@ -215,11 +217,11 @@ static void uartSend(uart_ctrl_t *const p_api_ctrl, uint8_t const *const p_src,
 static const char *const g_pcHex = "0123456789abcdef";
 
 void UARTvprintf(const char *pcString, va_list vaArgP) {
-    int stringLen = vsnprintf (NULL, 0, pcString, vaArgP);
-    if(stringLen > 0){
-        char* strBuf = malloc(stringLen*sizeof(char));
-        if(strBuf != NULL){
-            vsprintf (strBuf, pcString, vaArgP);
+    int stringLen = vsnprintf(NULL, 0, pcString, vaArgP);
+    if (stringLen > 0) {
+        char *strBuf = malloc(stringLen * sizeof(char));
+        if (strBuf != NULL) {
+            vsprintf(strBuf, pcString, vaArgP);
             uartSend(&g_uart0_ctrl, strBuf, stringLen);
         }
         free(strBuf);
