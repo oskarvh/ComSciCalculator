@@ -91,20 +91,26 @@ SOFTWARE.
     (EVE_VSIZE / 2 - font_height - font_height / 2)
 
 //! Decimal output X start coordinate.
-#define OUTPUT_DEC_XC0 (EVE_HSIZE - 5)
+#define OUTPUT_DEC_XC0 5 //(EVE_HSIZE - 5)
 //! Decimal output Y coordinate, depends on fond height
 #define OUTPUT_DEC_YC0(font_height) (EVE_VSIZE - font_height - font_height / 2)
+//! Decimal output maximum X length
+#define OUTPUT_DEC_X_LEN (EVE_HSIZE/2 - 10)
 
 //! Binary output X start coordinate
-#define OUTPUT_BIN_XC0 (EVE_HSIZE - 5)
+#define OUTPUT_BIN_XC0 5 //(EVE_HSIZE - 5)
 //! Binary Y coordinate, depends on font height
 #define OUTPUT_BIN_YC0(font_height)                                            \
     (EVE_VSIZE * 3 / 4 - font_height - font_height / 2)
+//! Binary output maximum X length
+#define OUTPUT_BIN_X_LEN (EVE_HSIZE - 10)
 
 //! Hexadecimal X start coordinate
 #define OUTPUT_HEX_XC0 (EVE_HSIZE / 2 - 5)
 //! Hexadecimal Y coordinate. Depends on font height
 #define OUTPUT_HEX_YC0(font_height) (EVE_VSIZE - font_height - font_height / 2)
+//! Hexadecimal output maximum X length
+#define OUTPUT_HEX_X_LEN (EVE_HSIZE/2 - 10)
 
 //! Status bar X offset
 #define OUTPUT_STATUS_X0 (5)

@@ -318,8 +318,7 @@ void displayInputText(displayState_t *pDisplayState, bool writeCursor) {
     }
     charIter = 0;                  // Reset before using again.
     uint8_t displayWrapOffset = 0; // Track how many lines have been written.
-    uint16_t currentLineWidth =
-        VISIBLE_INPUT_X_BUFFER; // Tracks the current line width
+    uint16_t currentLineWidth = VISIBLE_INPUT_X_BUFFER; // Tracks the current line width
     while (pDisplayState->printedInputBuffer[charIter] != '\0') {
         // Increase color index if opening bracket
         if (pDisplayState->printedInputBuffer[charIter] == '(') {
@@ -409,6 +408,74 @@ void initDisplayState(displayState_t *pDisplayState) {
     pDisplayState->syntaxIssueIndex = -1;
 }
 
+/**
+ * @brief Function to print 
+ * @param pString Pointer to string to be printed
+ * @param yStart Y start pixel
+ * @param xStart X start pixel
+ * @param xMax Maximum length of bounding box
+ * @param pFont Poiinter to font
+ * @return Nothing
+ */
+static void displayResultWithinBounds(
+    char* pString, 
+    uint16_t yStart,
+    uint16_t xStart, 
+    uint16_t xMax,
+    font_t *pFont){
+        
+    //EVE_cmd_text_burst(xStart, yStart, pFont->ft81x_font_index, INPUT_TEXT_OPTIONS, pString);
+
+    // Iterate through each char until null pointer
+    uint16_t charIter = 0;
+    // Width of the cumulative characters now written
+    uint32_t widthWrittenChars = 0;
+
+    // Calculate if the input display should be wrapped, and by how many lines
+    uint32_t widthAllChars = VISIBLE_INPUT_X_BUFFER;
+    uint16_t numLinesWrap = 0;
+    while (pString[charIter] != '\0') {
+        widthAllChars += getFontCharWidth(pFont, pString[charIter]);
+        // If the current line width is larger than visible area, then that
+        // means a new line should be made
+        if (widthAllChars >= xMax) {
+            widthAllChars = VISIBLE_INPUT_X_BUFFER +getFontCharWidth(pFont, pString[charIter]);
+            numLinesWrap++;
+        }
+        charIter++;
+    }
+    charIter = 0;                  // Reset before using again.
+    uint8_t displayWrapOffset = 0; // Track how many lines have been written.
+    uint16_t currentLineWidth = VISIBLE_INPUT_X_BUFFER; // Tracks the current line width
+
+    while (pString[charIter] != '\0') {
+
+
+        // Add the width of the char to be written:
+        uint8_t currentCharWidth = getFontCharWidth(pFont, pString[charIter]);
+        widthWrittenChars += currentCharWidth;
+        currentLineWidth += currentCharWidth;
+        // If the current line width is larger than visible area, then that
+        // means a new line should be made
+        if (currentLineWidth >= xMax) {
+            currentLineWidth =VISIBLE_INPUT_X_BUFFER +currentCharWidth;
+            displayWrapOffset++;
+        }
+        // Have a temporary buffer to be able to print in different colors. Null
+        // terminated
+        char pTmpRxBuf[2] = {pString[charIter], '\0'};
+
+        uint32_t yOffset = yStart - (numLinesWrap - displayWrapOffset) * (pFont->font_caps_height + 5);
+        // Print one colored char
+        EVE_cmd_text_burst(
+            xStart + currentLineWidth,
+            yOffset, // INPUT_TEXT_YC0(pCurrentFont->font_caps_height),
+            pFont->ft81x_font_index, INPUT_TEXT_OPTIONS, pTmpRxBuf);
+
+        charIter++;
+    }
+}
+
 void printResult(displayState_t *pDisplayState) {
     // Get the result and output formats
     SUBRESULT_INT result = pDisplayState->result;
@@ -429,15 +496,9 @@ void printResult(displayState_t *pDisplayState) {
     // Get the current font:
     font_t *pCurrentFont =
         pFontLibraryTable[pDisplayState->fontIdx]->pLargeFont;
-    EVE_cmd_text_burst(
-        OUTPUT_DEC_XC0, OUTPUT_DEC_YC0(pCurrentFont->font_caps_height),
-        pCurrentFont->ft81x_font_index, INPUT_TEXT_OPTIONS, pDecRes);
-    EVE_cmd_text_burst(
-        OUTPUT_BIN_XC0, OUTPUT_BIN_YC0(pCurrentFont->font_caps_height),
-        pCurrentFont->ft81x_font_index, INPUT_TEXT_OPTIONS, pBinRes);
-    EVE_cmd_text_burst(
-        OUTPUT_HEX_XC0, OUTPUT_HEX_YC0(pCurrentFont->font_caps_height),
-        pCurrentFont->ft81x_font_index, INPUT_TEXT_OPTIONS, pHexRes);
+    displayResultWithinBounds(pDecRes, OUTPUT_DEC_YC0(pCurrentFont->font_caps_height), 5, OUTPUT_DEC_X_LEN, pCurrentFont);
+    displayResultWithinBounds(pBinRes, OUTPUT_BIN_YC0(pCurrentFont->font_caps_height), 5, OUTPUT_BIN_X_LEN, pCurrentFont);
+    displayResultWithinBounds(pHexRes, OUTPUT_HEX_YC0(pCurrentFont->font_caps_height), OUTPUT_HEX_XC0, OUTPUT_HEX_X_LEN, pCurrentFont);
 }
 
 
@@ -452,7 +513,7 @@ void printResult(displayState_t *pDisplayState) {
 //      Blinking done but I need the font spacing to be completed before I can
 //      set this as done.DONE
 // 4. For non-monospaced operators (e.g. SUM), the cursor is at the incorrect
-// location.
+// location. DONE
 void displayTask(void *p) {
 
     // Program the font library
