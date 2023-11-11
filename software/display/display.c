@@ -441,12 +441,12 @@ static void displayResultWithinBounds(char *pString, uint16_t yStart,
         }
         charIter++;
     }
-    charIter = 0;                  // Reset before using again.
+
     uint8_t displayWrapOffset = 0; // Track how many lines have been written.
     uint16_t currentLineWidth =
         VISIBLE_INPUT_X_BUFFER; // Tracks the current line width
 
-    while (pString[charIter] != '\0') {
+    while (charIter-- > 0) {
 
         // Add the width of the char to be written:
         uint8_t currentCharWidth = getFontCharWidth(pFont, pString[charIter]);
@@ -462,15 +462,13 @@ static void displayResultWithinBounds(char *pString, uint16_t yStart,
         // terminated
         char pTmpRxBuf[2] = {pString[charIter], '\0'};
 
-        uint32_t yOffset = yStart - (numLinesWrap - displayWrapOffset) *
+        uint32_t yOffset = yStart + (numLinesWrap - displayWrapOffset) *
                                         (pFont->font_caps_height + 5);
         // Print one colored char
         EVE_cmd_text_burst(
-            xStart + currentLineWidth,
+            xStart + xMax - currentLineWidth + currentCharWidth,
             yOffset, // INPUT_TEXT_YC0(pCurrentFont->font_caps_height),
             pFont->ft81x_font_index, INPUT_TEXT_OPTIONS, pTmpRxBuf);
-
-        charIter++;
     }
 }
 
