@@ -945,7 +945,7 @@ testParams_t output_formatting[] = {
         .numberFormat.outputFormat = INPUT_FMT_INT,
         .pResultStringDec = "123\0",
         .pResultStringHex = "0x7B\0",
-        .pResultStringBin = "0b1111011\0",
+        .pResultStringBin = "0b111 1011\0",
     },
     // Integer input, fixed point output
     {
@@ -963,7 +963,7 @@ testParams_t output_formatting[] = {
         .numberFormat.outputFormat = INPUT_FMT_FIXED,
         .pResultStringDec = "123.0\0",
         .pResultStringHex = "0x7B.0\0",
-        .pResultStringBin = "0b1111011.0\0",
+        .pResultStringBin = "0b111 1011.0\0",
     },
     // Integer input, IEEE 754 floating point output
     // See https://www.h-schmidt.net/FloatConverter/IEEE754.html
@@ -982,7 +982,7 @@ testParams_t output_formatting[] = {
         .numberFormat.outputFormat = INPUT_FMT_FLOAT,
         .pResultStringDec = "123.0\0",
         .pResultStringHex = "0x42F60000\0",
-        .pResultStringBin = "0b01000010111101100000000000000000\0",
+        .pResultStringBin = "0b0100 0010 1111 0110 0000 0000 0000 0000\0",
     },
     // Integer input, double precision floating point output
     // see https://www.binaryconvert.com/convert_double.html
@@ -1001,8 +1001,9 @@ testParams_t output_formatting[] = {
         .numberFormat.outputFormat = INPUT_FMT_FLOAT,
         .pResultStringDec = "123.0\0",
         .pResultStringHex = "0x405EC00000000000\0",
-        .pResultStringBin = "0b010000000101111011000000000000000000000000000000"
-                            "0000000000000000\0",
+        .pResultStringBin =
+            "0b0100 0000 0101 1110 1100 0000 0000 0000 0000 0000 0000 0000"
+            " 0000 0000 0000 0000\0",
     },
     //==========================FLOATING POINT INPUT==========================
     // float input, Integer output
@@ -1022,7 +1023,7 @@ testParams_t output_formatting[] = {
         .numberFormat.outputFormat = INPUT_FMT_INT,
         .pResultStringDec = "123\0",
         .pResultStringHex = "0x7B\0",
-        .pResultStringBin = "0b1111011\0",
+        .pResultStringBin = "0b111 1011\0",
     },
     // double precision float input, Integer output
     {
@@ -1041,7 +1042,7 @@ testParams_t output_formatting[] = {
         .numberFormat.outputFormat = INPUT_FMT_INT,
         .pResultStringDec = "123\0",
         .pResultStringHex = "0x7B\0",
-        .pResultStringBin = "0b1111011\0",
+        .pResultStringBin = "0b111 1011\0",
     },
     // float input, float output
     {
@@ -1060,7 +1061,7 @@ testParams_t output_formatting[] = {
         .numberFormat.outputFormat = INPUT_FMT_FLOAT,
         .pResultStringDec = "123.12\0",
         .pResultStringHex = "0x42F63D71\0",
-        .pResultStringBin = "0b01000010111101100011110101110001\0",
+        .pResultStringBin = "0b0100 0010 1111 0110 0011 1101 0111 0001\0",
     },
     // double precision float input, double precision float output
     {
@@ -1079,8 +1080,9 @@ testParams_t output_formatting[] = {
         .numberFormat.outputFormat = INPUT_FMT_FLOAT,
         .pResultStringDec = "123.12\0",
         .pResultStringHex = "0x405EC7AE147AE148\0",
-        .pResultStringBin = "0b010000000101111011000111101011100001010001111010"
-                            "1110000101001000\0",
+        .pResultStringBin =
+            "0b0100 0000 0101 1110 1100 0111 1010 1110 0001 0100 0111 1010"
+            " 1110 0001 0100 1000\0",
     },
     // float input, fixed point 16.16 output
     {
@@ -1099,7 +1101,7 @@ testParams_t output_formatting[] = {
         .numberFormat.outputFormat = INPUT_FMT_FIXED,
         .pResultStringDec = "123.12\0",
         .pResultStringHex = "0x7B.1EB8\0",
-        .pResultStringBin = "0b1111011.0001111010111\0",
+        .pResultStringBin = "0b111 1011.0001111010111\0",
     },
     // double precision floating point input, fixed point 32.32 output
     {
@@ -1118,7 +1120,7 @@ testParams_t output_formatting[] = {
         .numberFormat.outputFormat = INPUT_FMT_FIXED,
         .pResultStringDec = "123.12\0",
         .pResultStringHex = "0x7B.1EB851EB\0",
-        .pResultStringBin = "0b1111011.00011110101110000101000111101011\0",
+        .pResultStringBin = "0b111 1011.00011110101110000101000111101011\0",
     },
 
 };

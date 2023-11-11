@@ -4,6 +4,26 @@ This directory contains helper function that are useful for the comSciCalc, but 
 Generally, tools that are used to generate temporary data or pre-compile data. 
 An example of this is generating C-compatible font files from the files that the EVE Asset Builder generates. 
 
+## Exporting fonts from .tff file
+
+To generate a font from a .tff file into a fileformat that is usable for the C file generator, the EVE Asset Builder (v2.8.0) is used.
+
+To set this up, aquire the .tff file format of the font you want to convert, open the EVE asset builder an navigate to the font converter function at the top of the program. 
+
+Select your input .tff file, and set the `utils/fontConverter/input_files` as output directory. 
+
+Select the font size you want to convert to. There is some scaling available, but it's generally a good thing to try out several different font sizes to find one that fit's the purpose well. 
+
+Select `Legacy Format`, bitformat = `L2`, EVE chip = `FT81x`, EVE command = `CMD_SETFONT2`, first character = `32`. For input character, select range and printable ASCII, or if you want extended support select any other ranges, although UTF-8 isn't currently supported as a valid output format so your mileage may vary. 
+
+Click "Convert" on the bottom right. If this is not clickable your settings aren't correct. 
+
+From here, one subfolder in the `utils/fontConverter/input_files` per font and size are created. The files we're interested in are the `<font_size>.json`, `<font_size>.raw`, and `<font_size>.rawh` files. 
+So these needs to be moved from each sub-dir up to the `utils/fontConverter/input_files` directory. 
+
+This can easily be done using the following commands: `mv */L2/*.json . ; mv */L2/*.raw . ; mv */L2/*.rawh .`, or just do it manually. 
+
+
 ## Font C file generator
 The EVE Asset Builder (v2.8) spits out a C file which is being used by the internal, quite secret API that Bridgetek 
 uses. However, these are no good for the file structure that the comSciCalc is built on. 
@@ -15,10 +35,10 @@ The script uses these dependencies
 * Python 3.7
 * TBD
 
-The script generates .h files located in the utils/fontConverter/output_files directory, and uses files located in the utils/fontConverter/input_files
-directory. Note that these files are not checked in, and needs to be temporarily populated by the user. 
-To check in the generated file, that file needs to be moved to the software/firmware_workspace/tm4c123_freertos_comscicalc/fonts directory and
-subsequently checked in there. 
+To run the script, `cd` into the `utils/fontConverter` directory, and run `python fontConverter.py`. 
+
+The script generates .h files located in the `utils/fontConverter/output_files` directory. Note that these files are not checked in, and needs to be temporarily populated by the user. 
+To add the files to the font library, copy the content of the output directory to the font library using the following command: `cp output_files/* ../../software/display/fonts/.`
 
 From there, the files can be used in the firmware project. 
 

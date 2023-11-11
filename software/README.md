@@ -124,7 +124,7 @@ doxygen doxygen_config
 And the docs can be found in software/html/index.html
 
 ## Adding new fonts
-The FT81x IC supports custom fonts. To convert the .tff file to the supported raw format, use the EVE asset builder (https://brtchip.com/eab/), and add this to the custom fonts file. More details to come as I iron this out. 
+The FT81x IC supports custom fonts. To convert the .tff file to the supported raw format, use the EVE asset builder (https://brtchip.com/eab/), and add this to the custom fonts file. See more details in `utils/README.md`. 
 
 ## TODO list:
 There is a lot.. And even more since I need to add this here as well. 

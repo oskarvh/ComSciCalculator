@@ -248,9 +248,9 @@ void fptostr(char *pString, uint64_t fp, bool sign, uint16_t decimalPlace,
 
 void printToBinary(char *pBuf, uint64_t num, bool printAllBits,
                    uint8_t numBits) {
-    // First, reset the buffer
-    pBuf[0] = '0';
-    pBuf[1] = 'b';
+    // Allocate a temporary buffer to hold the converted
+    // chars:
+    char *pTempBuf = malloc(numBits + 2);
 
     // In order to print the buffer with non-leading zeros,
     // the last index must be the least significant bit.
@@ -258,7 +258,7 @@ void printToBinary(char *pBuf, uint64_t num, bool printAllBits,
     // the MSB, find the first non-zero bit and start printing
     // that.
     bool firstBitFound = printAllBits;
-    uint8_t index = 2;
+    int16_t index = 0;
     if (num != 0) {
         for (int i = numBits - 1; i >= 0; i--) {
             // Get the bit at the current index.
@@ -271,13 +271,53 @@ void printToBinary(char *pBuf, uint64_t num, bool printAllBits,
                 firstBitFound = true;
             }
             if (firstBitFound) {
-                pBuf[index++] = currentBit + '0';
+                pTempBuf[index++] = currentBit + '0';
             }
         }
     } else {
         // If the result is 0, then print a 0
-        pBuf[index++] = '0';
+        pTempBuf[index++] = '0';
     }
-    // Set the last index to a null terminator
-    pBuf[index] = '\0';
+    // Reduce the index by one since we didn't write the last one
+    index--;
+
+    // Go through the tempbuf backwards and add a space
+    // every for chars, along with copying over the temporary
+    // buffer to the final buffer.
+
+    // Find the final buffer size, to find the starting index.
+    // This is then the number of chars written, plus '0b' and
+    // all spaces
+    int16_t bufIdx = index + 2 + 1; // chars, spaces, "0b" and \0.
+    // Add due to spaces:
+    uint8_t charsWritten = 0;
+    for (int16_t i = index; i >= 0; i--) {
+        if ((charsWritten % 4 == 0) && (charsWritten > 1)) {
+            bufIdx++;
+        }
+        charsWritten++;
+    }
+
+    // First, set the null terminator:
+    pBuf[bufIdx--] = '\0';
+    charsWritten = 0;
+    for (; index >= 0; index--) {
+        if (((charsWritten) % 4 == 0) && (charsWritten > 1)) {
+            pBuf[bufIdx--] = ' ';
+        }
+        pBuf[bufIdx--] = pTempBuf[index];
+
+        charsWritten++;
+    }
+    // bufIds should now be 1, meaning there are two
+    // spaces left for "0b". Check that it's true, and then add '0b'
+    if (bufIdx != 1) {
+        logger(LOGGER_LEVEL_ERROR,
+               "ERROR: binary conversion didn't add up. bufIdx: %i\r\n",
+               bufIdx);
+    }
+    pBuf[0] = '0';
+    pBuf[1] = 'b';
+
+    free(pTempBuf);
 }

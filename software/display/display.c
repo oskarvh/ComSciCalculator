@@ -415,15 +415,12 @@ void initDisplayState(displayState_t *pDisplayState) {
  * @param yStart Y start pixel
  * @param xStart X start pixel
  * @param xMax Maximum length of bounding box
- * @param pFont Poiinter to font
+ * @param pFont Pointer to font
  * @return Nothing
  */
 static void displayResultWithinBounds(char *pString, uint16_t yStart,
                                       uint16_t xStart, uint16_t xMax,
                                       font_t *pFont) {
-
-    // EVE_cmd_text_burst(xStart, yStart, pFont->ft81x_font_index,
-    // INPUT_TEXT_OPTIONS, pString);
 
     // Iterate through each char until null pointer
     uint16_t charIter = 0;

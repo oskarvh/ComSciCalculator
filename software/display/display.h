@@ -146,8 +146,8 @@ SOFTWARE.
 //! -9,223,372,036,854,775,808 with a decimal (and \0)
 #define MAX_PRINTED_BUFFER_LEN_DEC 21
 //! Maximum length of printed input buffer in binary. Maximum is 64 bits with
-//! decimal point (and \0)
-#define MAX_PRINTED_BUFFER_LEN_BIN 66
+//! decimal point, null pointer and spaces every 4 bits
+#define MAX_PRINTED_BUFFER_LEN_BIN (64 + 2 + 16)
 //! Maximum length of printed input buffer in hexadecimal. Maximum looks like 16
 //! bits with decimal point but it's 2 extra with decimal (and \0)
 #define MAX_PRINTED_BUFFER_LEN_HEX 20
