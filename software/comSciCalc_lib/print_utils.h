@@ -64,7 +64,8 @@ void fptostr(char *pString, uint64_t fp, bool sign, uint16_t decimalPlace,
  * @param num 64 bit number that is converted to string.
  * @param printAllBits Prints leading zeros as well.
  * @param numBits Number of bits
+ * @param print0b Print pre-pending "0b" if true.
  * @note This function does *not* print leading zeros
  */
-void printToBinary(char *pBuf, uint64_t num, bool printAllBits,
-                   uint8_t numBits);
+void printToBinary(char *pBuf, uint64_t num, bool printAllBits, uint8_t numBits,
+                   bool print0b);

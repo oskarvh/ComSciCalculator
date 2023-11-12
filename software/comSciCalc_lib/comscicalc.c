@@ -555,7 +555,8 @@ void convertResult(char *pString, SUBRESULT_INT result,
             if (base == inputBase_DEC) {
                 sprintf(pString, "%lli", result);
             } else if (base == inputBase_BIN) {
-                printToBinary(pString, result, false, pNumberFormat->numBits);
+                printToBinary(pString, result, false, pNumberFormat->numBits,
+                              true);
             } else if (base == inputBase_HEX) {
                 sprintf(pString, "0x%llX", result);
             }
@@ -579,8 +580,8 @@ void convertResult(char *pString, SUBRESULT_INT result,
             if (base == inputBase_DEC) {
                 sprintf(pString, "%1lli", tmpResInt);
             } else if (base == inputBase_BIN) {
-                printToBinary(pString, tmpResInt, false,
-                              pNumberFormat->numBits);
+                printToBinary(pString, tmpResInt, false, pNumberFormat->numBits,
+                              true);
             } else if (base == inputBase_HEX) {
                 sprintf(pString, "0x%1llX", tmpResInt);
             }
@@ -592,7 +593,8 @@ void convertResult(char *pString, SUBRESULT_INT result,
             if (base == inputBase_DEC) {
                 sprintf(pString, "%1lli", tmpRes);
             } else if (base == inputBase_BIN) {
-                printToBinary(pString, tmpRes, false, pNumberFormat->numBits);
+                printToBinary(pString, tmpRes, false, pNumberFormat->numBits,
+                              true);
             } else if (base == inputBase_HEX) {
                 sprintf(pString, "0x%1llX", tmpRes);
             }
@@ -622,7 +624,8 @@ void convertResult(char *pString, SUBRESULT_INT result,
                     double tmpResd = (double)result;
                     memcpy(&tmpRes, &tmpResd, sizeof(double));
                 }
-                printToBinary(pString, tmpRes, true, pNumberFormat->numBits);
+                printToBinary(pString, tmpRes, true, pNumberFormat->numBits,
+                              true);
             } else if (base == inputBase_HEX) {
                 if (pNumberFormat->numBits == 32) {
                     float tmpResf = (float)result;
@@ -651,7 +654,8 @@ void convertResult(char *pString, SUBRESULT_INT result,
                 }
             } else if (base == inputBase_BIN) {
                 // Nothing special, just print as is.
-                printToBinary(pString, result, true, pNumberFormat->numBits);
+                printToBinary(pString, result, true, pNumberFormat->numBits,
+                              true);
             } else if (base == inputBase_HEX) {
                 // Nothing special, just print as is.
                 sprintf(pString, "0x%1llX", result);
@@ -700,8 +704,8 @@ void convertResult(char *pString, SUBRESULT_INT result,
                     memcpy(&tmpRes, &res, sizeof(double));
                 }
                 if (base == inputBase_BIN) {
-                    printToBinary(pString, tmpRes, true,
-                                  pNumberFormat->numBits);
+                    printToBinary(pString, tmpRes, true, pNumberFormat->numBits,
+                                  true);
                 } else if (base == inputBase_HEX) {
                     sprintf(pString, "0x%1llX", tmpRes);
                 }
@@ -717,7 +721,8 @@ void convertResult(char *pString, SUBRESULT_INT result,
                 // Hack: integer to fixed point will always result in xxx.0
                 sprintf(pString, "%1lli.0", result);
             } else if (base == inputBase_BIN) {
-                printToBinary(pString, result, false, pNumberFormat->numBits);
+                printToBinary(pString, result, false, pNumberFormat->numBits,
+                              true);
                 strcat(pString, ".0\0");
             } else if (base == inputBase_HEX) {
                 sprintf(pString, "0x%1llX.0", result);
@@ -1585,9 +1590,6 @@ calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
     // Add one as as we need a null terminator at the end.
     uint16_t numCharsWritten = 1;
 
-    // A variable to keep track of the depth of the current entry based
-    // only on depth increasing functions
-    uint8_t depthDueToFunction = 0;
     // Save the previous input type of checking if 0x or 0b should be printed
     uint8_t previousInputType = INPUT_TYPE_EMPTY;
     // Loop through all buffers
@@ -1599,7 +1601,8 @@ calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
         if (currentInputType == INPUT_TYPE_NUMBER) {
             // If the previous input type wasn't a number,
             // then print the precursor. For hex it's 0x, for bin it's 0b
-            if (previousInputType != currentInputType) {
+            if (previousInputType != currentInputType &&
+                previousInputType != INPUT_TYPE_DECIMAL_POINT) {
                 // Check if we are allowed to print a numerical
                 // entry if the previous one was not a number.
                 // The only operation not allowing a number after
@@ -1649,7 +1652,7 @@ calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
             // Write the operator.
             uint8_t tmpStrLen = strlen(pOperator->opString);
             if (numCharsWritten < stringLen - tmpStrLen) {
-                numCharsWritten += sprintf(pString, pOperator->opString);
+                numCharsWritten += sprintf(pString, "%s", pOperator->opString);
                 pString += tmpStrLen;
             } else {
                 return calc_funStatus_STRING_BUFFER_ERROR;

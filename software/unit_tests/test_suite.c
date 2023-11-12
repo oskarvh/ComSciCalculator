@@ -815,7 +815,7 @@ testParams_t leading_zeros_test_params[] = {
     {
         .pInputString = "012.8000+07e.ab85\0",
         .pCursor = {0, 0, 0, 0},
-        .pExpectedString = "0x012.0x8000+0x07e.0xab85\0",
+        .pExpectedString = "0x012.8000+0x07e.ab85\0",
         .pOutputString = {0},
         .expectedResult =
             0x912b85, // See
@@ -1101,7 +1101,7 @@ testParams_t output_formatting[] = {
         .numberFormat.outputFormat = INPUT_FMT_FIXED,
         .pResultStringDec = "123.12\0",
         .pResultStringHex = "0x7B.1EB8\0",
-        .pResultStringBin = "0b111 1011.0001111010111\0",
+        .pResultStringBin = "0b111 1011.0001 1110 1011 1\0",
     },
     // double precision floating point input, fixed point 32.32 output
     {
@@ -1120,7 +1120,8 @@ testParams_t output_formatting[] = {
         .numberFormat.outputFormat = INPUT_FMT_FIXED,
         .pResultStringDec = "123.12\0",
         .pResultStringHex = "0x7B.1EB851EB\0",
-        .pResultStringBin = "0b111 1011.00011110101110000101000111101011\0",
+        .pResultStringBin =
+            "0b111 1011.0001 1110 1011 1000 0101 0001 1110 1011\0",
     },
 
 };

@@ -184,7 +184,7 @@ void fptostr(char *pString, uint64_t fp, bool sign, uint16_t decimalPlace,
         uint64_t mask = (1ULL << decimalPlace) - 1;
         uint64_t fractPart = fp & mask;
         // Print the decimal part. Note, this removes leading zeros.
-        printToBinary(pString, decPart, false, 64);
+        printToBinary(pString, decPart, false, 64, true);
         // Cannot reuse the printToBinary due to removing leading zeros,
         // so just run through the rest.
         // First, find where the pString ends:
@@ -194,8 +194,12 @@ void fptostr(char *pString, uint64_t fp, bool sign, uint16_t decimalPlace,
         }
         *pStringFractPart++ = '.';
         if (fractPart != 0) {
+            uint8_t numFractWritten = 0;
             for (int i = decimalPlace - 1; i >= 0; i--) {
                 // Get the bit at the current index.
+                if (numFractWritten > 1 && numFractWritten % 4 == 0) {
+                    *pStringFractPart++ = ' ';
+                }
                 uint64_t mask = 1ULL << i;
                 uint64_t currentBit = (fractPart & mask) >> (i);
                 uint64_t bitsLeftMask = (1ULL << i) - 1;
@@ -203,13 +207,15 @@ void fptostr(char *pString, uint64_t fp, bool sign, uint16_t decimalPlace,
                 if ((fractPart & bitsLeftMask) == 0) {
                     break;
                 }
+                numFractWritten++;
             }
+            *pStringFractPart = '\0';
         } else {
             // If the result is 0, then print a 0
             *pStringFractPart++ = '0';
+            // Top it off with a null char:
+            *pStringFractPart = '\0';
         }
-        // Top it off with a null char:
-        *pStringFractPart = '\0';
     }
     if (radix == 16) {
         uint64_t decPart = fp >> decimalPlace;
@@ -246,8 +252,8 @@ void fptostr(char *pString, uint64_t fp, bool sign, uint16_t decimalPlace,
     }
 }
 
-void printToBinary(char *pBuf, uint64_t num, bool printAllBits,
-                   uint8_t numBits) {
+void printToBinary(char *pBuf, uint64_t num, bool printAllBits, uint8_t numBits,
+                   bool print0b) {
     // Allocate a temporary buffer to hold the converted
     // chars:
     char *pTempBuf = malloc(numBits + 2);
@@ -288,7 +294,11 @@ void printToBinary(char *pBuf, uint64_t num, bool printAllBits,
     // Find the final buffer size, to find the starting index.
     // This is then the number of chars written, plus '0b' and
     // all spaces
-    int16_t bufIdx = index + 2 + 1; // chars, spaces, "0b" and \0.
+    int16_t bufIdx = index + 1; // all 0,1 chars and \0.
+    if (print0b) {
+        // Add two slots for "0b"
+        bufIdx += 2;
+    }
     // Add due to spaces:
     uint8_t charsWritten = 0;
     for (int16_t i = index; i >= 0; i--) {
@@ -311,13 +321,14 @@ void printToBinary(char *pBuf, uint64_t num, bool printAllBits,
     }
     // bufIds should now be 1, meaning there are two
     // spaces left for "0b". Check that it's true, and then add '0b'
-    if (bufIdx != 1) {
-        logger(LOGGER_LEVEL_ERROR,
-               "ERROR: binary conversion didn't add up. bufIdx: %i\r\n",
-               bufIdx);
+    if (print0b) {
+        if (bufIdx != 1) {
+            logger(LOGGER_LEVEL_ERROR,
+                   "ERROR: binary conversion didn't add up. bufIdx: %i\r\n",
+                   bufIdx);
+        }
+        pBuf[0] = '0';
+        pBuf[1] = 'b';
     }
-    pBuf[0] = '0';
-    pBuf[1] = 'b';
-
     free(pTempBuf);
 }
