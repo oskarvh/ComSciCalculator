@@ -90,7 +90,7 @@
       <property id="config.bsp.common.c_runtime_init" value="config.bsp.common.c_runtime_init.enabled"/>
       <property id="config.bsp.common.early_init" value="config.bsp.common.early_init.disabled"/>
       <property id="config.bsp.common.main_osc_clock_source" value="config.bsp.common.main_osc_clock_source.crystal"/>
-      <property id="config.bsp.common.subclock_populated" value="config.bsp.common.subclock_populated.enabled"/>
+      <property id="config.bsp.common.subclock_populated" value="config.bsp.common.subclock_populated.disabled"/>
       <property id="config.bsp.common.subclock_drive" value="config.bsp.common.subclock_drive.standard"/>
       <property id="config.bsp.common.subclock_stabilization_ms" value="1000"/>
     </config>
@@ -109,7 +109,7 @@
     <node id="board.clock.pll2.div" option="board.clock.pll2.div.2"/>
     <node id="board.clock.pll2.mul" option="board.clock.pll2.mul.240"/>
     <node id="board.clock.pll2.display" option="board.clock.pll2.display.value"/>
-    <node id="board.clock.clock.source" option="board.clock.clock.source.hoco"/>
+    <node id="board.clock.clock.source" option="board.clock.clock.source.pll"/>
     <node id="board.clock.clkout.source" option="board.clock.clkout.source.disabled"/>
     <node id="board.clock.uclk.source" option="board.clock.uclk.source.disabled"/>
     <node id="board.clock.iclk.div" option="board.clock.iclk.div.2"/>

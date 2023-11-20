@@ -81,7 +81,7 @@ const gpt_extended_cfg_t g_timer1_extend =
 const timer_cfg_t g_timer1_cfg =
 {
     .mode                = TIMER_MODE_PERIODIC,
-    /* Actual period: 0.0166666 seconds. Actual duty: 50%. */ .period_counts = (uint32_t) 0x28b0a, .duty_cycle_counts = 0x14585, .source_div = (timer_source_div_t)0,
+    /* Actual period: 0.016666658823529412 seconds. Actual duty: 50%. */ .period_counts = (uint32_t) 0x159dda, .duty_cycle_counts = 0xaceed, .source_div = (timer_source_div_t)0,
     .channel             = 1,
     .p_callback          = Timer1IntHandler,
     /** If NULL then do not add & */
@@ -185,7 +185,7 @@ const gpt_extended_cfg_t g_timer0_extend =
 const timer_cfg_t g_timer0_cfg =
 {
     .mode                = TIMER_MODE_PERIODIC,
-    /* Actual period: 1 seconds. Actual duty: 50%. */ .period_counts = (uint32_t) 0x989680, .duty_cycle_counts = 0x4c4b40, .source_div = (timer_source_div_t)0,
+    /* Actual period: 1 seconds. Actual duty: 50%. */ .period_counts = (uint32_t) 0x510ff40, .duty_cycle_counts = 0x2887fa0, .source_div = (timer_source_div_t)0,
     .channel             = 0,
     .p_callback          = Timer0IntHandler,
     /** If NULL then do not add & */
@@ -215,7 +215,7 @@ sci_spi_instance_ctrl_t g_spi2_ctrl;
 const sci_spi_extended_cfg_t g_spi2_cfg_extend =
 {
     .clk_div = {
-        /* Actual calculated bitrate: 2500000. */ .cks = 0, .brr = 0, .mddr = 0,
+        /* Actual calculated bitrate: 7083333. */ .cks = 0, .brr = 2, .mddr = 0,
     }
 };
 
@@ -262,7 +262,7 @@ sci_uart_instance_ctrl_t     g_uart0_ctrl;
 
             baud_setting_t               g_uart0_baud_setting =
             {
-                /* Baud rate calculated with 3.340% error. */ .semr_baudrate_bits_b.abcse = 1, .semr_baudrate_bits_b.abcs = 0, .semr_baudrate_bits_b.bgdm = 0, .cks = 0, .brr = 13, .mddr = (uint8_t) 256, .semr_baudrate_bits_b.brme = false
+                /* Baud rate calculated with 0.251% error. */ .semr_baudrate_bits_b.abcse = 0, .semr_baudrate_bits_b.abcs = 0, .semr_baudrate_bits_b.bgdm = 1, .cks = 0, .brr = 45, .mddr = (uint8_t) 256, .semr_baudrate_bits_b.brme = false
             };
 
             /** UART extended configuration for UARTonSCI HAL driver */
