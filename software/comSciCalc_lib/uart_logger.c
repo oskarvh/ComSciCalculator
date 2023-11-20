@@ -43,7 +43,7 @@ SOFTWARE.
 #if defined(TIVAWARE)
 #include "FreeRTOS.h"
 #include "task.h"
-#elif defined(EK_RA4M3)
+#elif defined(EK_RA4M3) || defined(COMSCICALC_CM_V0)
 #include "FreeRTOS.h"
 #include "renesas_utils.h"
 #include "task.h"
@@ -64,7 +64,7 @@ void logger(int8_t log_level, char *msg, ...) {
     if (log_level > LOG_LEVEL) {
         return;
     }
-#if (defined(TIVAWARE) || defined(EK_RA4M3))
+#if (defined(TIVAWARE) || defined(EK_RA4M3) || defined(COMSCICALC_CM_V0))
 #if defined(TIVAWARE)
     // Enter critical section, only if non-ISR UART is used.
     // taskENTER_CRITICAL();
@@ -85,5 +85,5 @@ void logger(int8_t log_level, char *msg, ...) {
     va_start(argp, msg);
     vprintf(msg, argp);
     va_end(argp);
-#endif //(defined(TIVAWARE) || defined(EK_RA4M3))
+#endif //(defined(TIVAWARE) || defined(EK_RA4M3) || defined(COMSCICALC_CM_V0))
 }
