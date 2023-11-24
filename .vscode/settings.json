@@ -9,7 +9,8 @@
         "renesas_utils.h": "c",
         "r_gpt.h": "c",
         "bsp_clocks.h": "c",
-        "bsp_clock_cfg.h": "c"
+        "bsp_clock_cfg.h": "c",
+        "r_sci_uart_cfg.h": "c"
     },
     "cmake.sourceDirectory": "C:/git/ComSciCalculator/firmware/renesas/computeModule_v0",
     "cmake.buildDirectory": "C:/git/ComSciCalculator/firmware/renesas/computeModule_v0/build",

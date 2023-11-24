@@ -349,11 +349,6 @@
     </config>
   </raModuleConfiguration>
   <raPinConfiguration>
-    <symbolicName propertyId="p000.symbolic_name" value="ARDUINO_A0_MIKROBUS_AN"/>
-    <symbolicName propertyId="p001.symbolic_name" value="ARDUINO_A1"/>
-    <symbolicName propertyId="p003.symbolic_name" value="ARDUINO_A2"/>
-    <symbolicName propertyId="p014.symbolic_name" value="ARDUINO_A4"/>
-    <symbolicName propertyId="p015.symbolic_name" value="ARDUINO_A5"/>
     <symbolicName propertyId="p100.symbolic_name" value="SCI_MISO_0"/>
     <symbolicName propertyId="p101.symbolic_name" value="SCI_MOSI_0"/>
     <symbolicName propertyId="p102.symbolic_name" value="SCI_SCK_0"/>

@@ -75,7 +75,8 @@ add_definitions(-D__RA4M3__)
 #add_definitions(-DEK_RA4M3)
 add_definitions(-DCOMSCICALC_CM_V0)
 #add_definitions(-DVERBOSE)
-add_definitions(-DLOG_LEVEL=0)
+add_definitions(-DLOG_LEVEL=3)
+add_definitions(-DEVE_BACKLIGHT_PWM=127)
 
 target_include_directories(${PROJECT_NAME}.elf PUBLIC
     # Firmware
