@@ -64,6 +64,12 @@ const char *formatDisplayStrings[] = {
     [INPUT_FMT_FLOAT] = float_display_string,
 };
 
+const menuOption_t menuOptionList[] = {
+    "Integer bits",
+    "Fractional bits",
+    NULL,
+};
+
 /**
  * @brief Print the outline of graphics
  *
@@ -183,6 +189,7 @@ void programFontLibrary(void) {
         }
     }
 }
+
 /**
  * @brief Find the width of the font, in pixels
  * @param pFont Pointer to the font struct
@@ -199,7 +206,7 @@ uint8_t getFontCharWidth(font_t *pFont, char c) {
     if (!pFont->rom_font) {
         return pFont->pFontTable[(uint8_t)c];
     } else {
-        // TODO!!
+        // TODO: How to find the width of a ROM font?
         return pFont->font_x_width;
     }
 }
@@ -407,6 +414,9 @@ void initDisplayState(displayState_t *pDisplayState) {
     pDisplayState->fontIdx = 0; // Try the custom RAM font
     memset(pDisplayState->printedInputBuffer, '\0', MAX_PRINTED_BUFFER_LEN);
     pDisplayState->syntaxIssueIndex = -1;
+    pDisplayState->inMenu = false;
+    pDisplayState->pMenuState->pMenuOptionList = menuOptionList;
+    pDisplayState->pMenuState->currentItemIndex = 0;
 }
 
 /**
@@ -503,6 +513,32 @@ void printResult(displayState_t *pDisplayState) {
                               OUTPUT_HEX_XC0, OUTPUT_HEX_X_LEN, pCurrentFont);
 }
 
+/**
+ * @brief Function to print the menu
+ * @param pDisplayState Pointer to displayState
+ * @return Nothing
+ */
+static void displayMenu(displayState_t *pDisplayState){
+    // display list is already started, will be ended outside of this function. 
+
+    // Get the small font, which is what is to be used in the menu.
+    font_t *pCurrentFont = pFontLibraryTable[pDisplayState->fontIdx]->pSmallFont;
+    
+    // Find the offset based on font size
+    // Take the size of the caps, plus 10 pixels
+    uint8_t menuOptionOffsetY = pCurrentFont->font_caps_height + 10;
+    
+    // Print the whole menu:
+    menuState_t *pMenuState = pDisplayState->pMenuState;
+    menuOption_t *pCurrentMenuOption = pMenuState->pMenuOptionList;
+    uint8_t menuItemCount = 0;
+    while(pCurrentMenuOption++ != NULL){
+        // Print the menu option
+
+        menuItemCount++; 
+    }
+}
+
 // TODO:
 // 1. Support different color output + freeze output if
 //    calculation was unsuccessful. DONE
@@ -558,9 +594,7 @@ void displayTask(void *p) {
             // global variable
             xSemaphoreGive(displayStateSemaphore);
             // Trigger a screen update
-            // updateScreen = true;
         }
-        // if(updateScreen){
 #ifdef PRINT_RESULT_TO_UART
 #ifdef VERBOSE
 #error Cannot print result to UART and have VERBOSE UART logging at the same time!
@@ -575,27 +609,31 @@ void displayTask(void *p) {
 
         // Update the screen:
         startDisplaylist();
-        displayOutline();
-        // Write the calculator setting state:
-        displayCalcState(&localDisplayState);
-        // Write the input text
-        displayInputText(&localDisplayState, writeCursor);
-        // EVE_cmd_text_burst(INPUT_TEXT_XC0, INPUT_TEXT_YC0, FONT,
-        // INPUT_TEXT_OPTIONS, pRxBuf);
+        if(localDisplayState.inMenu){
+            // Display the menu
+            displayMenu(&localDisplayState);
+        } else { 
+            // Display the outline
+            displayOutline();
+            // Write the calculator setting state:
+            displayCalcState(&localDisplayState);
+            // Write the input text
+            displayInputText(&localDisplayState, writeCursor);
+            // EVE_cmd_text_burst(INPUT_TEXT_XC0, INPUT_TEXT_YC0, FONT,
+            // INPUT_TEXT_OPTIONS, pRxBuf);
 
-        // Let the color reflect if the operation was OK or not.
-        if (localDisplayState.solveStatus == calc_solveStatus_SUCCESS) {
-            EVE_cmd_dl_burst(DL_COLOR_RGB | WHITE);
-        } else {
-            EVE_cmd_dl_burst(DL_COLOR_RGB | GRAY);
+            // Let the color reflect if the operation was OK or not.
+            if (localDisplayState.solveStatus == calc_solveStatus_SUCCESS) {
+                EVE_cmd_dl_burst(DL_COLOR_RGB | WHITE);
+            } else {
+                EVE_cmd_dl_burst(DL_COLOR_RGB | GRAY);
+            }
+            // Print the results
+            printResult(&localDisplayState);
         }
-        printResult(&localDisplayState),
-
-            endDisplayList();
+        // End the display list
+        endDisplayList();
         vTaskDelay(10 / portTICK_PERIOD_MS);
-        // Screen has been updated, set update variable to false
-        // updateScreen = false;
-        //}
     }
 }
 

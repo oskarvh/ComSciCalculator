@@ -152,6 +152,18 @@ SOFTWARE.
 #define MAX_PRINTED_BUFFER_LEN_HEX 20
 //! Maximum length of results buffer
 #define MAX_PRINTED_BUFFER_LEN 100
+
+/**
+ * @brief Type to handle the menu options
+ */
+typedef struct menuOption {
+    /**
+     * @param pOptionString Pointer to the string for this option
+     */
+    char *pOptionString;
+
+} menuOption_t;
+
 /**
  * @brief Struct holding the state of the options shown
  * at the top of the screen
@@ -172,6 +184,20 @@ typedef struct inputState {
     uint8_t currentInputBase;
 
 } inputState_t;
+
+/**
+ * @brief Struct holding the menu state. 
+ */
+typedef struct menuState {
+    /**
+     * @param pMenuOptionList Pointer to the list of menu options
+     */
+    menuOption_t *pMenuOptionList;
+    /**
+     * @param currentItemIndex Index of the current menu item
+     */
+    uint8_t currentItemIndex;
+} menuState_t;
 
 /**
  * @brief Struct holding the display state, along with calculator
@@ -212,6 +238,14 @@ typedef struct displayState {
      * @param cursorLoc Cursor location, copied from the corestate
      */
     uint8_t cursorLoc;
+    /**
+     * @param inMenu Boolean to indicate if we're currently in the menu
+     */
+    bool inMenu;
+    /**
+     * @param pMenuState Pointer to menu state. 
+     */
+    menuState_t *pMenuState;
     /**
      * @param printedInputBuffer Input buffer printed by calc core.
      */
