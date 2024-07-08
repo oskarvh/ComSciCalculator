@@ -529,8 +529,8 @@
     (path "/70db04c6-8f54-4426-9072-21e5e31c08c1/5509e6c1-d18c-4669-b87f-2ce5777511f6"
       (reference "S1") (unit 1) (value "EVQ-P7J01P") (footprint "EVQP7J01P")
     )
-    (path "/70db04c6-8f54-4426-9072-21e5e31c08c1/1cc1fd1b-8f6f-4c99-abce-a5a4c8841fda"
-      (reference "SW1") (unit 1) (value "JS202011JAQN") (footprint "JS202011JAQN:JS202011JAQN")
+    (path "/70db04c6-8f54-4426-9072-21e5e31c08c1/c05c976b-1ed4-430c-aa71-ee5c6fb1a5ed"
+      (reference "S2") (unit 1) (value "EVQ-P7J01P") (footprint "EVQP7J01P")
     )
     (path "/f270d8a6-e08f-4b2d-a610-059adebe89be/d5fa812e-3bb0-4a9b-bc59-11a65c85bc51"
       (reference "SW2") (unit 1) (value "JS202011JAQN") (footprint "JS202011JAQN:JS202011JAQN")
