@@ -16,6 +16,12 @@ endif()
 
 set(FREERTOS_CFG_DIRECTORY "${CMAKE_SOURCE_DIR}/inc")
 set(FREERTOS_SRC_DIRECTORY "${CMAKE_SOURCE_DIR}/../../software/FreeRTOS-Kernel")
+set(FT81X_SRC_DIRECTORY "${CMAKE_SOURCE_DIR}/../../software/FT800-FT813")
+set(COMMON_SRC_DIRECTORY "${CMAKE_SOURCE_DIR}/../common")
+set(COMSCICALC_SRC_DIRECTORY "${CMAKE_SOURCE_DIR}/../../software/comSciCalc_lib")
+set(DISPLAY_SRC_DIRECTORY "${CMAKE_SOURCE_DIR}/../../software/display")
+set(HW_SRC_DIRECTORY "${CMAKE_SOURCE_DIR}/hardware")
+
 
 # Initialize the SDK
 pico_sdk_init()
@@ -39,23 +45,90 @@ target_include_directories(FreeRTOS PUBLIC
     ${FREERTOS_SRC_DIRECTORY}/portable/GCC/ARM_CM0
 )
 
-# add_executable(comscicalc
-#     src/main.c
-#     )
+# Add FT81x/EVE display driver as a library
+add_compile_definitions(RP2040)
+add_compile_definitions(EVE_FT810CB_ADAFRUIT_1680)
+add_library(FT81X STATIC 
+    ${FT81X_SRC_DIRECTORY}/EVE_commands.c
+    ${FT81X_SRC_DIRECTORY}/EVE_target.c
+)
+target_link_libraries(
+    FT81X 
+    PUBLIC 
+    pico_stdlib
+    hardware_spi
+)
+target_include_directories(FT81X PUBLIC 
+    ${FT81X_SRC_DIRECTORY}/
+    ${FT81X_SRC_DIRECTORY}/EVE_target/
+)
 
-# # pull in common dependencies
-# target_link_libraries(
-#     comscicalc 
-#     PUBLIC 
-#     pico_stdlib
-#     FreeRTOS
-# )
-# # Enable/disable STDIO via USB and UART
-# pico_enable_stdio_usb(comscicalc 1)
-# pico_enable_stdio_uart(comscicalc 1)
+# Import comscicalc_lib
+add_library(comscicalc_lib STATIC 
+    ${COMSCICALC_SRC_DIRECTORY}/comscicalc.c
+    ${COMSCICALC_SRC_DIRECTORY}/comscicalc_operators.c
+    ${COMSCICALC_SRC_DIRECTORY}/print_utils.c
+    ${COMSCICALC_SRC_DIRECTORY}/uart_logger.c
+)
+target_link_libraries(
+    comscicalc_lib
+    PUBLIC 
+    pico_stdlib # Used for uart
+)
+target_include_directories(comscicalc_lib PUBLIC 
+    ${COMSCICALC_SRC_DIRECTORY}/
+)
 
-# # Enable extra build products
-# pico_add_extra_outputs(comscicalc)
+# Add hardware specific libs:
+add_library(RP2040_HW STATIC 
+    ${HW_SRC_DIRECTORY}/rp2040_utils.c
+)
+target_link_libraries(
+    RP2040_HW 
+    PUBLIC 
+    pico_stdlib
+    hardware_spi
+)
+target_include_directories(RP2040_HW PUBLIC 
+    ${HW_SRC_DIRECTORY}/
+)
+
+
+# Add target for the display library:
+add_library(DISPLAY STATIC 
+    ${DISPLAY_SRC_DIRECTORY}/display.c
+    ${DISPLAY_SRC_DIRECTORY}/fonts/font_library.c
+)
+target_link_libraries(
+    DISPLAY 
+    PUBLIC 
+    FT81X
+    comscicalc_lib
+    FreeRTOS
+)
+target_include_directories(DISPLAY PUBLIC 
+    ${DISPLAY_SRC_DIRECTORY}/
+    ${DISPLAY_SRC_DIRECTORY}/fonts/
+)
+
+# Add Firmware common as a library
+# This is the entry point for the FreeRTOS links to EVE and ComSciCalcLibs
+add_library(FIRMWARE_COMMON STATIC 
+    ${COMMON_SRC_DIRECTORY}/firmware_common.c
+)
+target_link_libraries(
+    FIRMWARE_COMMON 
+    PUBLIC 
+    comscicalc_lib
+    FreeRTOS
+    FT81X
+    DISPLAY
+    RP2040_HW
+)
+target_include_directories(FIRMWARE_COMMON PUBLIC 
+    ${COMMON_SRC_DIRECTORY}/
+    ${COMSCICALC_SRC_DIRECTORY}/
+)
 
 add_subdirectory(src)
 

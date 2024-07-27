@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2023 Oskar von Heideken
+Copyright (c) 2024 Oskar von Heideken
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -21,36 +21,31 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-#ifndef FIRMWARE_COMMON_H_
-#define FIRMWARE_COMMON_H_
-// Standard libraries
+
+/*
+ * This file includes function mappings used by firmware_common, 
+ * which are specific to the RP2040 comSciCalc rev 1 board.
+ */
+
+// Standard library
+#include <stdarg.h>
+#include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 
-/**
- * @brief Main thread. Calls init functions and starts
- * the other threads. 
- * @param p Pointer to arguments
- * @return Nothing
- */
-void mainThread(void *p);
+// Hardware specific
+#include "pin_map.h"
 
-/**
- * @brief Task for testing the display.
- * @param p Pointer to arguments
- * @return Nothing
- */
-void displayTestThread(void *p);
+bool initUart(void){
+    
+}
 
-/**
- * @brief ISR for 1 Hz timer
- * @return Nothing
- */
-void Timer1HzIntHandler(void);
+bool initSpi(void){
 
-/**
- * @brief ISR for 60 Hz timer
- * @return Nothing
- */
-void Timer60HzIntHandler(void);
+}
 
-#endif //FIRMWARE_COMMON_H_
+bool initTimer(void) {
+}
+
+void startTimer(void) {
+}

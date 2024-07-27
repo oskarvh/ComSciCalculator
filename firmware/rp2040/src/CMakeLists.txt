@@ -5,16 +5,17 @@ add_compile_definitions(APP_VERSION="0")
 add_compile_definitions(BUILD_NUM="${BUILD_NUMBER}")
 add_compile_definitions(DEBUG=true)
 
+
 add_executable(
     main
     main.c
-    )
+)
 
 # pull in common dependencies
 target_link_libraries(
     main 
     PUBLIC 
-    pico_stdlib
+    FIRMWARE_COMMON
     FreeRTOS
 )
 

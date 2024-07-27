@@ -43,6 +43,14 @@ SOFTWARE.
 #include "display.h"
 #include "uart_logger.h"
 
+// C includes
+#include <string.h>
+
+// Hardware dependent includes
+#if defined (RP2040)
+#include "rp2040_utils.h"
+#endif
+
 //! Queue for handling UART input
 QueueHandle_t uartReceiveQueue;
 //! Display state - holding shared variables between calc core thread and display thread
@@ -209,7 +217,7 @@ static void calcCoreTask(void *p){
  */
 static void initDisplay(void){
     // Initialize the SPI and subsequently the display
-    EVE_SPI_Init(); 
+    EVE_init_spi(); 
     EVE_init(); 
     while(EVE_busy());
 }
