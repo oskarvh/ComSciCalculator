@@ -192,7 +192,7 @@ typedef struct menuState {
     /**
      * @param pMenuOptionList Pointer to the list of menu options
      */
-    menuOption_t *pMenuOptionList;
+    const menuOption_t *pMenuOptionList;
     /**
      * @param currentItemIndex Index of the current menu item
      */

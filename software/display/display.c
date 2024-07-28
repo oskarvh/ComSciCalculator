@@ -22,10 +22,16 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+// stdlib
+#include <string.h>
+#include <stdio.h>
+
+
 #include "display.h"
 #include "EVE.h"
 #include "print_utils.h"
 #include "uart_logger.h"
+
 
 //! Binary result string buffer
 char pBinRes[MAX_PRINTED_BUFFER_LEN_BIN] = {0};
@@ -403,6 +409,10 @@ void displayInputText(displayState_t *pDisplayState, bool writeCursor) {
 }
 
 void initDisplayState(displayState_t *pDisplayState) {
+    if(pDisplayState == NULL){
+        while(1);
+    }
+    
     pDisplayState->inputOptions.fixedPointDecimalPlace = 32; // TBD
     pDisplayState->inputOptions.inputFormat = 0;             // TBD
     pDisplayState->inputOptions.outputFormat = 0;            // TBD
@@ -415,6 +425,10 @@ void initDisplayState(displayState_t *pDisplayState) {
     memset(pDisplayState->printedInputBuffer, '\0', MAX_PRINTED_BUFFER_LEN);
     pDisplayState->syntaxIssueIndex = -1;
     pDisplayState->inMenu = false;
+    if(pDisplayState->pMenuState == NULL){
+        menuState_t* pMenuState = malloc(sizeof(menuState_t));
+        pDisplayState->pMenuState = pMenuState;
+    }
     pDisplayState->pMenuState->pMenuOptionList = menuOptionList;
     pDisplayState->pMenuState->currentItemIndex = 0;
 }
@@ -559,6 +573,8 @@ void displayTask(void *p) {
     bool updateScreen = true;
     bool writeCursor = true;
     displayState_t localDisplayState;
+    menuState_t menuState;
+    localDisplayState.pMenuState = &menuState;
     initDisplayState(&localDisplayState);
 
     // Write the outlines:

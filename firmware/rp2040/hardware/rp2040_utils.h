@@ -30,11 +30,38 @@ SOFTWARE.
 // Standard library
 #include <stdbool.h>
 
+// RP2040 stdlib
+#include "pico/stdlib.h"
 
+/**
+ * @brief Init the RP2040 HW
+ */
+bool mcuInit(void);
+
+/**
+ * @brief Init the UART(s) on the RP2040
+ */
 bool initUart(void);
 
+/**
+ * @brief Init the offboard SPI. 
+ * @note The FT81x SPI interface is initialized in the EVE driver.
+ */
 bool initSpi(void);
 
+/**
+ * @brief Init the HW timer used for cursor blinking etc.
+ */
 bool initTimer(void);
 
+/**
+ * @brief Start the HW timer used for cursor blinking etc.
+ */
 void startTimer(void);
+
+/**
+ * @brief printf function used for UART logging with the RP2040
+ * @param pcString Pointer string, must be null terminated.
+ * @param vaArgP String formatting string
+ */
+void UARTvprintf(const char *pcString, va_list vaArgP);

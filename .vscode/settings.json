@@ -23,7 +23,9 @@
         "eve.h": "c",
         "firmware_common.h": "c",
         "spi.h": "c",
-        "eve_target_rp2040.h": "c"
+        "eve_target_rp2040.h": "c",
+        "pin_map.h": "c",
+        "uart_logger.h": "c"
     },
     "cmake.configureOnOpen": true
 }

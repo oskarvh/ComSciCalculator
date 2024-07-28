@@ -17,6 +17,7 @@ target_link_libraries(
     PUBLIC 
     FIRMWARE_COMMON
     FreeRTOS
+    RP2040_HW
 )
 
 # Enable/disable STDIO via USB and UART

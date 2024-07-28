@@ -54,7 +54,7 @@ int main() {
 #include "firmware_common.h"
 
 // RP2040
-#include "pico/stdlib.h"
+#include "rp2040_utils.h"
 
 /**
  * @brief Show basic device info.
@@ -78,6 +78,21 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName) {
     // UARTprintf("\n\n===================================================\n");
     while (1) {}
 }
+
+/**
+ * @brief This hook is called by FreeRTOS when an stack overflow error is detected.
+ */
+void vApplicationMallocFailedHook(void) {
+    //
+    // This function can not return, so loop forever.  Interrupts are disabled
+    // on entry to this function, so no processor interrupts will interrupt
+    // this loop.
+    //
+    // UARTprintf("\n\n======================WARNING======================\n");
+    // UARTprintf("Task %s had a stack overflow :(", pcTaskName);
+    // UARTprintf("\n\n===================================================\n");
+    while (1) {}
+}
 /*
  * RUNTIME START
  */
@@ -85,12 +100,13 @@ int main() {
 
     // Enable STDIO
 #ifdef DEBUG
-    stdio_usb_init();
-    // Pause to allow the USB path to initialize
-    sleep_ms(2000);
+    // stdio_usb_init();
+    // // Pause to allow the USB path to initialize
+    // sleep_ms(2000);
 
-    // Log app info
-    log_device_info();
+    // // Log app info
+    // log_device_info();
+    mcuInit();
 #endif
 //#define TEST_DISPLAY
 #ifdef TEST_DISPLAY

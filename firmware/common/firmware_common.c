@@ -279,7 +279,7 @@ void mainThread(void *p) {
     // NOTE: This is MCU specific, so the initSpi function must be
     // linked in based on which MCU is built. 
     if(!initSpi()){
-        // Something went wrong with initializing UART. 
+        // Something went wrong with initializing offboard SPI. 
         while(1);
     }
     logger(LOGGER_LEVEL_DEBUG, "DEBUG: SPI INIT'D\r\n");

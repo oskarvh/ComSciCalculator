@@ -3,6 +3,7 @@
 
 #include "pico/stdlib.h"
 #include "hardware/spi.h"
+#include "hardware/uart.h"
 
 /* ------------ DEVICE MAPPINGS ------------ */
 // SPI0, used for connecting to LED
@@ -50,12 +51,15 @@
 
 /* ------------ FUNCTION MAPPINGS ------------ */
 // SPI mappings to FT81x/EVE driver:
-#define EVE_CS SPI0_CSn_PIN
-#define EVE_PDN FT81X_PDn_PIN
-#define EVE_SCK SPI0_SCLK_PIN
-#define EVE_MOSI SPI0_MOSI_PIN
-#define EVE_MISO SPI0_MISO_PIN
-#define EVE_SPI spi0
+// #define EVE_CS SPI0_CSn_PIN
+// #define EVE_PDN FT81X_PDn_PIN
+// #define EVE_SCK SPI0_SCLK_PIN
+// #define EVE_MOSI SPI0_MOSI_PIN
+// #define EVE_MISO SPI0_MISO_PIN
+// #define EVE_SPI spi0
 
+// UART0 mappings and settings
+#define UART0_BR 115200
+#define UART0 uart0
 
 #endif

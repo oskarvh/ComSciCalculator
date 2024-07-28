@@ -13,6 +13,9 @@ if (PICO_SDK_VERSION_STRING VERSION_LESS "1.3.0")
     message(FATAL_ERROR "Raspberry Pi Pico SDK version 1.3.0 (or later) required. Your version is ${PICO_SDK_VERSION_STRING}")
 endif()
 
+add_compile_definitions(RP2040)
+add_compile_definitions(EVE_FT810CB_ADAFRUIT_1680)
+add_compile_definitions(LOG_LEVEL=0) # 0 is the highest level of logging
 
 set(FREERTOS_CFG_DIRECTORY "${CMAKE_SOURCE_DIR}/inc")
 set(FREERTOS_SRC_DIRECTORY "${CMAKE_SOURCE_DIR}/../../software/FreeRTOS-Kernel")
@@ -36,6 +39,7 @@ add_library(FreeRTOS STATIC
     ${FREERTOS_SRC_DIRECTORY}/timers.c
     ${FREERTOS_SRC_DIRECTORY}/portable/MemMang/heap_3.c
     ${FREERTOS_SRC_DIRECTORY}/portable/GCC/ARM_CM0/port.c
+    #${FREERTOS_SRC_DIRECTORY}/portable/ThirdParty/GCC/RP2040/port.c
 )
 
 # Build FreeRTOS
@@ -43,11 +47,24 @@ target_include_directories(FreeRTOS PUBLIC
     ${FREERTOS_CFG_DIRECTORY}/
     ${FREERTOS_SRC_DIRECTORY}/include
     ${FREERTOS_SRC_DIRECTORY}/portable/GCC/ARM_CM0
+    #${FREERTOS_SRC_DIRECTORY}/portable/ThirdParty/GCC/RP2040/include
 )
+# target_link_libraries(
+#     FreeRTOS 
+#     PUBLIC 
+#     pico_stdlib
+#     hardware
+# )
+
+# FT81x Pin mapping, done here instead of in pin mapping file to link properly
+add_compile_definitions(EVE_CS=1)
+add_compile_definitions(EVE_PDN=17)
+add_compile_definitions(EVE_SCK=2)
+add_compile_definitions(EVE_MOSI=3)
+add_compile_definitions(EVE_MISO=0)
+add_compile_definitions(EVE_BACKLIGHT_PWM=127)
 
 # Add FT81x/EVE display driver as a library
-add_compile_definitions(RP2040)
-add_compile_definitions(EVE_FT810CB_ADAFRUIT_1680)
 add_library(FT81X STATIC 
     ${FT81X_SRC_DIRECTORY}/EVE_commands.c
     ${FT81X_SRC_DIRECTORY}/EVE_target.c
@@ -61,6 +78,23 @@ target_link_libraries(
 target_include_directories(FT81X PUBLIC 
     ${FT81X_SRC_DIRECTORY}/
     ${FT81X_SRC_DIRECTORY}/EVE_target/
+    ${HW_SRC_DIRECTORY}/
+)
+
+# Add hardware specific libs:
+add_library(RP2040_HW STATIC 
+    ${HW_SRC_DIRECTORY}/rp2040_utils.c
+)
+target_link_libraries(
+    RP2040_HW 
+    PUBLIC 
+    pico_stdlib
+    hardware_spi
+    hardware_uart
+)
+target_include_directories(RP2040_HW PUBLIC 
+    ${HW_SRC_DIRECTORY}/
+    ${COMMON_SRC_DIRECTORY}/
 )
 
 # Import comscicalc_lib
@@ -73,25 +107,13 @@ add_library(comscicalc_lib STATIC
 target_link_libraries(
     comscicalc_lib
     PUBLIC 
-    pico_stdlib # Used for uart
+    RP2040_HW # Used for uart
 )
 target_include_directories(comscicalc_lib PUBLIC 
     ${COMSCICALC_SRC_DIRECTORY}/
 )
 
-# Add hardware specific libs:
-add_library(RP2040_HW STATIC 
-    ${HW_SRC_DIRECTORY}/rp2040_utils.c
-)
-target_link_libraries(
-    RP2040_HW 
-    PUBLIC 
-    pico_stdlib
-    hardware_spi
-)
-target_include_directories(RP2040_HW PUBLIC 
-    ${HW_SRC_DIRECTORY}/
-)
+
 
 
 # Add target for the display library:
