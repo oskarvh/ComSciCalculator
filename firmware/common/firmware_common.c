@@ -31,12 +31,7 @@ SOFTWARE.
 #include "firmware_common.h"
 #include "EVE.h"
 
-// FreeRTOS includes
-#include "FreeRTOS.h"
-#include "task.h"
-#include "queue.h"
-#include "semphr.h"
-#include "event_groups.h" 
+
 
 // Comscicalc includes
 #include "comscicalc.h"
@@ -51,10 +46,17 @@ SOFTWARE.
 #include "rp2040_utils.h"
 #endif
 
-//! Queue for handling UART input
-QueueHandle_t uartReceiveQueue;
+// FreeRTOS includes
+#include "FreeRTOS.h"
+#include "task.h"
+#include "queue.h"
+#include "semphr.h"
+#include "event_groups.h" 
+
 //! Display state - holding shared variables between calc core thread and display thread
 displayState_t displayState;
+//! Queue for handling UART input
+QueueHandle_t uartReceiveQueue;
 //! Semaphore protecting the display state
 xSemaphoreHandle displayStateSemaphore;
 //! Event group which triggers a display update.

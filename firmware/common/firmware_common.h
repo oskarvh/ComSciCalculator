@@ -26,6 +26,19 @@ SOFTWARE.
 // Standard libraries
 #include <stdint.h>
 
+// FreeRTOS includes
+#include "FreeRTOS.h"
+#include "queue.h"
+#include "semphr.h"
+#include "event_groups.h" 
+
+//! Queue for handling UART input
+extern QueueHandle_t uartReceiveQueue;
+//! Semaphore protecting the display state
+extern xSemaphoreHandle displayStateSemaphore;
+//! Event group which triggers a display update.
+extern EventGroupHandle_t displayTriggerEvent;
+
 /**
  * @brief Main thread. Calls init functions and starts
  * the other threads. 

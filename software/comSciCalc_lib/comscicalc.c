@@ -607,10 +607,10 @@ void convertResult(char *pString, SUBRESULT_INT result,
             if (base == inputBase_DEC) {
                 if (pNumberFormat->numBits == 32) {
                     float tmpRes = (float)result;
-                    sprintf(pString, "%g.0", tmpRes);
+                    sprintf(pString, "%g", tmpRes);
                 } else if (pNumberFormat->numBits == 64) {
                     double tmpRes = (double)result;
-                    sprintf(pString, "%lg.0", tmpRes);
+                    sprintf(pString, "%lg", tmpRes);
                 }
             } else if (base == inputBase_BIN) {
                 SUBRESULT_INT tmpRes = 0;

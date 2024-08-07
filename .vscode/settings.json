@@ -25,7 +25,13 @@
         "spi.h": "c",
         "eve_target_rp2040.h": "c",
         "pin_map.h": "c",
-        "uart_logger.h": "c"
+        "uart_logger.h": "c",
+        "stdio_uart.h": "c",
+        "stdio.h": "c",
+        "driver.h": "c",
+        "freertos.h": "c",
+        "event_groups.h": "c",
+        "stdint.h": "c"
     },
     "cmake.configureOnOpen": true
 }

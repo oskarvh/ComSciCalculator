@@ -21,16 +21,25 @@ add_library(comscicalc_lib STATIC
 
 target_include_directories(comscicalc_lib PUBLIC
     ${CMAKE_CURRENT_LIST_DIR}/../comSciCalc_lib/
+    m
 )
 
 # Add the unity library
+include_directories(${CMAKE_CURRENT_LIST_DIR}/../Unity)
+# add_subdirectory(
+#     ${CMAKE_CURRENT_LIST_DIR}/../Unity
+#     .
+# )
 add_library(unity STATIC
-    ${CMAKE_CURRENT_LIST_DIR}/../unity/src/unity.c
+    ${CMAKE_CURRENT_LIST_DIR}/../Unity/src/unity.c
 )
 
 target_include_directories(unity PUBLIC
-    ${CMAKE_CURRENT_LIST_DIR}/../unity/src/
+    ${CMAKE_CURRENT_LIST_DIR}/../Unity/src/
 )
+
+
+
 
 # Add test source files
 file(GLOB src_files
@@ -40,14 +49,19 @@ file(GLOB src_files
 
 #add_definitions("-DVERBOSE")
 add_compile_options("-finput-charset=ascii")
-add_executable(comscicalc_unit_tests ${src_files})
+add_executable(comscicalc_unit_tests
+    ${src_files}
+)
 target_include_directories(
     comscicalc_unit_tests PUBLIC
     ${CMAKE_CURRENT_LIST_DIR}/
+    ${CMAKE_CURRENT_LIST_DIR}/../Unity
+    ${CMAKE_CURRENT_LIST_DIR}/../Unity/src/
 )
 
 target_link_libraries(
     comscicalc_unit_tests
     comscicalc_lib
     unity
+    m
 )

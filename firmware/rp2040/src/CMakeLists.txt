@@ -3,13 +3,15 @@ cmake_minimum_required(VERSION 3.14)
 add_compile_definitions(APP_NAME="comscicalc")
 add_compile_definitions(APP_VERSION="0")
 add_compile_definitions(BUILD_NUM="${BUILD_NUMBER}")
-add_compile_definitions(DEBUG=true)
 
 
 add_executable(
     main
     main.c
 )
+# Enable/disable STDIO via USB and UART
+pico_enable_stdio_usb(main 1)
+pico_enable_stdio_uart(main 0)
 
 # pull in common dependencies
 target_link_libraries(
@@ -19,10 +21,6 @@ target_link_libraries(
     FreeRTOS
     RP2040_HW
 )
-
-# Enable/disable STDIO via USB and UART
-pico_enable_stdio_usb(main 1)
-pico_enable_stdio_uart(main 1)
 
 # Enable extra build products
 pico_add_extra_outputs(main)

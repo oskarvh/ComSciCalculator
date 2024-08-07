@@ -22,26 +22,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#if false
-#include "pico/stdlib.h"
-
-int main() {
-#ifndef PICO_DEFAULT_LED_PIN
-#warning blink example requires a board with a regular LED
-#else
-    const uint LED_PIN = PICO_DEFAULT_LED_PIN;
-    gpio_init(LED_PIN);
-    gpio_set_dir(LED_PIN, GPIO_OUT);
-    while (true) {
-        gpio_put(LED_PIN, 1);
-        sleep_ms(250);
-        gpio_put(LED_PIN, 0);
-        sleep_ms(250);
-    }
-#endif
-}
-#else
-
 // C
 #include <stdlib.h>
 #include <stdio.h>
@@ -53,16 +33,10 @@ int main() {
 // Comscicalc entry points
 #include "firmware_common.h"
 
+#if defined(RP2040)
 // RP2040
 #include "rp2040_utils.h"
-
-/**
- * @brief Show basic device info.
- */
-void log_device_info(void) {
-
-    printf("App: %s %s (%i)\n", APP_NAME, APP_VERSION, BUILD_NUM);
-}
+#endif
 
 /**
  * @brief This hook is called by FreeRTOS when an stack overflow error is detected.
@@ -97,17 +71,9 @@ void vApplicationMallocFailedHook(void) {
  * RUNTIME START
  */
 int main() {
-
-    // Enable STDIO
-#ifdef DEBUG
-    // stdio_usb_init();
-    // // Pause to allow the USB path to initialize
-    // sleep_ms(2000);
-
-    // // Log app info
-    // log_device_info();
+    // Init MCU hardware
     mcuInit();
-#endif
+    
 //#define TEST_DISPLAY
 #ifdef TEST_DISPLAY
     // Start the display test task
@@ -124,5 +90,3 @@ int main() {
     // Start scheduler
     vTaskStartScheduler();
 }
-
-#endif

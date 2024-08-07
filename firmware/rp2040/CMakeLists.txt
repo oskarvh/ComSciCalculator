@@ -13,9 +13,13 @@ if (PICO_SDK_VERSION_STRING VERSION_LESS "1.3.0")
     message(FATAL_ERROR "Raspberry Pi Pico SDK version 1.3.0 (or later) required. Your version is ${PICO_SDK_VERSION_STRING}")
 endif()
 
+# NOTE: DEBUG requires a connection to a valid USB host. 
+# Comment this out if the device is to be used elsewhere. 
+add_compile_definitions(DEBUG)
+
 add_compile_definitions(RP2040)
 add_compile_definitions(EVE_FT810CB_ADAFRUIT_1680)
-add_compile_definitions(LOG_LEVEL=0) # 0 is the highest level of logging
+add_compile_definitions(LOG_LEVEL=5) # 0 is the least logging
 
 set(FREERTOS_CFG_DIRECTORY "${CMAKE_SOURCE_DIR}/inc")
 set(FREERTOS_SRC_DIRECTORY "${CMAKE_SOURCE_DIR}/../../software/FreeRTOS-Kernel")
@@ -29,6 +33,7 @@ set(HW_SRC_DIRECTORY "${CMAKE_SOURCE_DIR}/hardware")
 # Initialize the SDK
 pico_sdk_init()
 
+
 # Add FreeRTOS as a library
 add_library(FreeRTOS STATIC
     ${FREERTOS_SRC_DIRECTORY}/event_groups.c
@@ -39,7 +44,6 @@ add_library(FreeRTOS STATIC
     ${FREERTOS_SRC_DIRECTORY}/timers.c
     ${FREERTOS_SRC_DIRECTORY}/portable/MemMang/heap_3.c
     ${FREERTOS_SRC_DIRECTORY}/portable/GCC/ARM_CM0/port.c
-    #${FREERTOS_SRC_DIRECTORY}/portable/ThirdParty/GCC/RP2040/port.c
 )
 
 # Build FreeRTOS
@@ -47,14 +51,8 @@ target_include_directories(FreeRTOS PUBLIC
     ${FREERTOS_CFG_DIRECTORY}/
     ${FREERTOS_SRC_DIRECTORY}/include
     ${FREERTOS_SRC_DIRECTORY}/portable/GCC/ARM_CM0
-    #${FREERTOS_SRC_DIRECTORY}/portable/ThirdParty/GCC/RP2040/include
 )
-# target_link_libraries(
-#     FreeRTOS 
-#     PUBLIC 
-#     pico_stdlib
-#     hardware
-# )
+
 
 # FT81x Pin mapping, done here instead of in pin mapping file to link properly
 add_compile_definitions(EVE_CS=1)
@@ -80,6 +78,8 @@ target_include_directories(FT81X PUBLIC
     ${FT81X_SRC_DIRECTORY}/EVE_target/
     ${HW_SRC_DIRECTORY}/
 )
+pico_enable_stdio_usb(FT81X 1)
+pico_enable_stdio_uart(FT81X 0)
 
 # Add hardware specific libs:
 add_library(RP2040_HW STATIC 
@@ -91,11 +91,16 @@ target_link_libraries(
     pico_stdlib
     hardware_spi
     hardware_uart
+    FreeRTOS
 )
 target_include_directories(RP2040_HW PUBLIC 
     ${HW_SRC_DIRECTORY}/
     ${COMMON_SRC_DIRECTORY}/
+    ${COMSCICALC_SRC_DIRECTORY}/
 )
+pico_enable_stdio_usb(RP2040_HW 1)
+pico_enable_stdio_uart(RP2040_HW 0)
+
 
 # Import comscicalc_lib
 add_library(comscicalc_lib STATIC 
@@ -107,11 +112,14 @@ add_library(comscicalc_lib STATIC
 target_link_libraries(
     comscicalc_lib
     PUBLIC 
-    RP2040_HW # Used for uart
+    RP2040_HW
+    FreeRTOS
 )
 target_include_directories(comscicalc_lib PUBLIC 
     ${COMSCICALC_SRC_DIRECTORY}/
 )
+pico_enable_stdio_usb(comscicalc_lib 1)
+pico_enable_stdio_uart(comscicalc_lib 0)
 
 
 
@@ -132,6 +140,8 @@ target_include_directories(DISPLAY PUBLIC
     ${DISPLAY_SRC_DIRECTORY}/
     ${DISPLAY_SRC_DIRECTORY}/fonts/
 )
+pico_enable_stdio_usb(DISPLAY 1)
+pico_enable_stdio_uart(DISPLAY 0)
 
 # Add Firmware common as a library
 # This is the entry point for the FreeRTOS links to EVE and ComSciCalcLibs
@@ -141,8 +151,8 @@ add_library(FIRMWARE_COMMON STATIC
 target_link_libraries(
     FIRMWARE_COMMON 
     PUBLIC 
-    comscicalc_lib
     FreeRTOS
+    comscicalc_lib
     FT81X
     DISPLAY
     RP2040_HW
@@ -151,6 +161,8 @@ target_include_directories(FIRMWARE_COMMON PUBLIC
     ${COMMON_SRC_DIRECTORY}/
     ${COMSCICALC_SRC_DIRECTORY}/
 )
+pico_enable_stdio_usb(FIRMWARE_COMMON 1)
+pico_enable_stdio_uart(FIRMWARE_COMMON 0)
 
 add_subdirectory(src)
 
