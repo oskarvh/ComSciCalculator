@@ -612,8 +612,8 @@ void convertResult(char *pString, SUBRESULT_INT result,
                     double tmpRes = (double)result;
                     sprintf(pString, "%lg", tmpRes);
                 }
-                // Check if trailing zeros should be added. 
-                if(strchr(pString, '.') == NULL){
+                // Check if trailing zeros should be added.
+                if (strchr(pString, '.') == NULL) {
                     sprintf(pString, "%s.0", pString);
                 }
             } else if (base == inputBase_BIN) {

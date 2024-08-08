@@ -186,7 +186,7 @@ typedef struct inputState {
 } inputState_t;
 
 /**
- * @brief Struct holding the menu state. 
+ * @brief Struct holding the menu state.
  */
 typedef struct menuState {
     /**
@@ -243,7 +243,7 @@ typedef struct displayState {
      */
     bool inMenu;
     /**
-     * @param pMenuState Pointer to menu state. 
+     * @param pMenuState Pointer to menu state.
      */
     menuState_t *pMenuState;
     /**

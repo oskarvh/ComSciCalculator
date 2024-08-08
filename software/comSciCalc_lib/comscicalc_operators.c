@@ -443,22 +443,22 @@ int8_t calc_multiply(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
         // TODO: return overflow detection
         break;
     case INPUT_FMT_FLOAT:
-        if(numberFormat.numBits == 32){
+        if (numberFormat.numBits == 32) {
             float f_a, f_b, f_res;
             memcpy(&f_a, &a, sizeof(float));
             memcpy(&f_b, &b, sizeof(float));
-            f_res = f_a*f_b;
+            f_res = f_a * f_b;
             memcpy(pResult, &f_res, sizeof(float));
             if (f_a != 0 && f_res / f_a != f_b) {
                 // overflow handling
                 logger(LOGGER_LEVEL_ERROR, "MULTIPLICATION OVERFLOW");
-                return function_overflow;  
+                return function_overflow;
             }
-        } else if(numberFormat.numBits == 64){
+        } else if (numberFormat.numBits == 64) {
             double f_a, f_b, f_res;
             memcpy(&f_a, &a, sizeof(double));
             memcpy(&f_b, &b, sizeof(double));
-            f_res = f_a*f_b;
+            f_res = f_a * f_b;
             memcpy(pResult, &f_res, sizeof(double));
             if (f_a != 0 && f_res / f_a != f_b) {
                 // overflow handling
@@ -466,7 +466,8 @@ int8_t calc_multiply(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
                 return function_overflow;
             }
         } else {
-            logger(LOGGER_LEVEL_ERROR, "FLOAT only supports 32 or 64 bits!\r\n");
+            logger(LOGGER_LEVEL_ERROR,
+                   "FLOAT only supports 32 or 64 bits!\r\n");
             return format_not_supported;
         }
         break;

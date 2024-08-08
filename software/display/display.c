@@ -23,15 +23,13 @@ SOFTWARE.
 */
 
 // stdlib
-#include <string.h>
 #include <stdio.h>
+#include <string.h>
 
-
-#include "display.h"
 #include "EVE.h"
+#include "display.h"
 #include "print_utils.h"
 #include "uart_logger.h"
-
 
 //! Binary result string buffer
 char pBinRes[MAX_PRINTED_BUFFER_LEN_BIN] = {0};
@@ -409,10 +407,11 @@ void displayInputText(displayState_t *pDisplayState, bool writeCursor) {
 }
 
 void initDisplayState(displayState_t *pDisplayState) {
-    if(pDisplayState == NULL){
-        while(1);
+    if (pDisplayState == NULL) {
+        while (1)
+            ;
     }
-    
+
     pDisplayState->inputOptions.fixedPointDecimalPlace = 32; // TBD
     pDisplayState->inputOptions.inputFormat = 0;             // TBD
     pDisplayState->inputOptions.outputFormat = 0;            // TBD
@@ -425,8 +424,8 @@ void initDisplayState(displayState_t *pDisplayState) {
     memset(pDisplayState->printedInputBuffer, '\0', MAX_PRINTED_BUFFER_LEN);
     pDisplayState->syntaxIssueIndex = -1;
     pDisplayState->inMenu = false;
-    if(pDisplayState->pMenuState == NULL){
-        menuState_t* pMenuState = malloc(sizeof(menuState_t));
+    if (pDisplayState->pMenuState == NULL) {
+        menuState_t *pMenuState = malloc(sizeof(menuState_t));
         pDisplayState->pMenuState = pMenuState;
     }
     pDisplayState->pMenuState->pMenuOptionList = menuOptionList;
@@ -532,24 +531,25 @@ void printResult(displayState_t *pDisplayState) {
  * @param pDisplayState Pointer to displayState
  * @return Nothing
  */
-static void displayMenu(displayState_t *pDisplayState){
-    // display list is already started, will be ended outside of this function. 
+static void displayMenu(displayState_t *pDisplayState) {
+    // display list is already started, will be ended outside of this function.
 
     // Get the small font, which is what is to be used in the menu.
-    font_t *pCurrentFont = pFontLibraryTable[pDisplayState->fontIdx]->pSmallFont;
-    
+    font_t *pCurrentFont =
+        pFontLibraryTable[pDisplayState->fontIdx]->pSmallFont;
+
     // Find the offset based on font size
     // Take the size of the caps, plus 10 pixels
     uint8_t menuOptionOffsetY = pCurrentFont->font_caps_height + 10;
-    
+
     // Print the whole menu:
     menuState_t *pMenuState = pDisplayState->pMenuState;
     menuOption_t *pCurrentMenuOption = pMenuState->pMenuOptionList;
     uint8_t menuItemCount = 0;
-    while(pCurrentMenuOption++ != NULL){
+    while (pCurrentMenuOption++ != NULL) {
         // Print the menu option
 
-        menuItemCount++; 
+        menuItemCount++;
     }
 }
 
@@ -625,10 +625,10 @@ void displayTask(void *p) {
 
         // Update the screen:
         startDisplaylist();
-        if(localDisplayState.inMenu){
+        if (localDisplayState.inMenu) {
             // Display the menu
             displayMenu(&localDisplayState);
-        } else { 
+        } else {
             // Display the outline
             displayOutline();
             // Write the calculator setting state:

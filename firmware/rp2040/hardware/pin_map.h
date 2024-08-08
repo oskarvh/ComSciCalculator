@@ -1,9 +1,9 @@
 #ifndef PIN_MAP_H
 #define PIN_MAP_H
 
-#include "pico/stdlib.h"
 #include "hardware/spi.h"
 #include "hardware/uart.h"
+#include "pico/stdlib.h"
 
 /* ------------ DEVICE MAPPINGS ------------ */
 // SPI0, used for connecting to LED
@@ -47,7 +47,6 @@
 #define GPIO27_PIN 27
 #define GPIO28_PIN 28
 #define GPIO29_PIN 29
-
 
 /* ------------ FUNCTION MAPPINGS ------------ */
 // SPI mappings to FT81x/EVE driver:

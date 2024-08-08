@@ -1144,7 +1144,7 @@ testParams_t output_formatting[] = {
             "0b0100 0000 0101 1110 1100 0111 1010 1110 0001 0100 0111 1010"
             " 1110 0001 0100 1000\0",
     },
-    {   
+    {
         // THIS CURRENTLY FAILS!!!
         .pInputString = "12.312*10.0\0",
         .pCursor = {0, 0, 0},

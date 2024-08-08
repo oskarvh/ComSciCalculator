@@ -23,8 +23,8 @@ SOFTWARE.
 */
 
 // C
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 // Freertos:
 #include "FreeRTOS.h"
@@ -39,7 +39,8 @@ SOFTWARE.
 #endif
 
 /**
- * @brief This hook is called by FreeRTOS when an stack overflow error is detected.
+ * @brief This hook is called by FreeRTOS when an stack overflow error is
+ * detected.
  */
 void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName) {
     //
@@ -50,11 +51,13 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName) {
     // UARTprintf("\n\n======================WARNING======================\n");
     // UARTprintf("Task %s had a stack overflow :(", pcTaskName);
     // UARTprintf("\n\n===================================================\n");
-    while (1) {}
+    while (1) {
+    }
 }
 
 /**
- * @brief This hook is called by FreeRTOS when an stack overflow error is detected.
+ * @brief This hook is called by FreeRTOS when an stack overflow error is
+ * detected.
  */
 void vApplicationMallocFailedHook(void) {
     //
@@ -65,7 +68,8 @@ void vApplicationMallocFailedHook(void) {
     // UARTprintf("\n\n======================WARNING======================\n");
     // UARTprintf("Task %s had a stack overflow :(", pcTaskName);
     // UARTprintf("\n\n===================================================\n");
-    while (1) {}
+    while (1) {
+    }
 }
 /*
  * RUNTIME START
@@ -73,7 +77,7 @@ void vApplicationMallocFailedHook(void) {
 int main() {
     // Init MCU hardware
     mcuInit();
-    
+
 //#define TEST_DISPLAY
 #ifdef TEST_DISPLAY
     // Start the display test task

@@ -23,7 +23,7 @@ SOFTWARE.
 */
 
 /*
- * This file includes function mappings used by firmware_common, 
+ * This file includes function mappings used by firmware_common,
  * which are specific to the RP2040 comSciCalc rev 1 board.
  */
 
@@ -44,7 +44,7 @@ bool mcuInit(void);
 bool initUart(void);
 
 /**
- * @brief Init the offboard SPI. 
+ * @brief Init the offboard SPI.
  * @note The FT81x SPI interface is initialized in the EVE driver.
  */
 bool initSpi(void);
