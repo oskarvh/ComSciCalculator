@@ -427,8 +427,7 @@ int8_t calc_multiply(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
         return incorrect_args;
     }
 
-    // Read out the args as uint32_t. Will be casted later on
-
+    // Read out the args as SUBRESULT_INT. Will be casted later on
     SUBRESULT_INT a = pArgs[0].subresult;
     SUBRESULT_INT b = pArgs[1].subresult;
     // Make calculation based on format
@@ -436,12 +435,40 @@ int8_t calc_multiply(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
     case INPUT_FMT_INT:
         // Solve for 32 bit signed integer
         (*((SUBRESULT_INT *)pResult)) = a * b;
-        // TODO: add overflow detection
+        if (a != 0 && *pResult / a != b) {
+            // overflow handling
+            logger(LOGGER_LEVEL_ERROR, "MULTIPLICATION OVERFLOW");
+            return function_overflow;
+        }
+        // TODO: return overflow detection
         break;
     case INPUT_FMT_FLOAT:
-        // Solve for 32bit float
-        (*((SUBRESULT_INT *)pResult)) = a * b;
-        // TODO: add overflow detection
+        if(numberFormat.numBits == 32){
+            float f_a, f_b, f_res;
+            memcpy(&f_a, &a, sizeof(float));
+            memcpy(&f_b, &b, sizeof(float));
+            f_res = f_a*f_b;
+            memcpy(pResult, &f_res, sizeof(float));
+            if (f_a != 0 && f_res / f_a != f_b) {
+                // overflow handling
+                logger(LOGGER_LEVEL_ERROR, "MULTIPLICATION OVERFLOW");
+                return function_overflow;  
+            }
+        } else if(numberFormat.numBits == 64){
+            double f_a, f_b, f_res;
+            memcpy(&f_a, &a, sizeof(double));
+            memcpy(&f_b, &b, sizeof(double));
+            f_res = f_a*f_b;
+            memcpy(pResult, &f_res, sizeof(double));
+            if (f_a != 0 && f_res / f_a != f_b) {
+                // overflow handling
+                logger(LOGGER_LEVEL_ERROR, "MULTIPLICATION OVERFLOW");
+                return function_overflow;
+            }
+        } else {
+            logger(LOGGER_LEVEL_ERROR, "FLOAT only supports 32 or 64 bits!\r\n");
+            return format_not_supported;
+        }
         break;
     case INPUT_FMT_FIXED:
         // TODO:Solve for fixed point.

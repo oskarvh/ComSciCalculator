@@ -11,6 +11,10 @@ project(comscicalc_unit_tests
 
 set(CMAKE_C_COMPILER gcc)
 set(CMAKE_LINKER gcc)
+
+# Logging level. Set -1 to shut the logger up, 0 for error, 1 for info, 2 for debug
+add_compile_definitions(LOG_LEVEL=-1)
+
 # Add the comcscicalc library
 add_library(comscicalc_lib STATIC
     ${CMAKE_CURRENT_LIST_DIR}/../comSciCalc_lib/comscicalc.c
@@ -26,10 +30,7 @@ target_include_directories(comscicalc_lib PUBLIC
 
 # Add the unity library
 include_directories(${CMAKE_CURRENT_LIST_DIR}/../Unity)
-# add_subdirectory(
-#     ${CMAKE_CURRENT_LIST_DIR}/../Unity
-#     .
-# )
+
 add_library(unity STATIC
     ${CMAKE_CURRENT_LIST_DIR}/../Unity/src/unity.c
 )
@@ -37,9 +38,6 @@ add_library(unity STATIC
 target_include_directories(unity PUBLIC
     ${CMAKE_CURRENT_LIST_DIR}/../Unity/src/
 )
-
-
-
 
 # Add test source files
 file(GLOB src_files

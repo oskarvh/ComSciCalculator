@@ -389,6 +389,7 @@ testParams_t solvable_params[] = {
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_HEX},
         .expectedResult = 0x101a + (0x123 + 0x456 + 0x1213) - 0x789,
     },
+
 };
 void test_solvable_solution(void) {
     calcCoreState_t calcCore;
@@ -1122,6 +1123,47 @@ testParams_t output_formatting[] = {
         .pResultStringHex = "0x7B.1EB851EB\0",
         .pResultStringBin =
             "0b111 1011.0001 1110 1011 1000 0101 0001 1110 1011\0",
+    },
+    {
+        .pInputString = "23.1+100.02\0",
+        .pCursor = {0, 0, 0},
+        .pExpectedString = "23.1+100.02\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
+        .expectedResult = 0x405EC7AE147AE148, // see
+        // https://www.binaryconvert.com/convert_double.html
+        .numberFormat.fixedPointDecimalPlace = 32,
+        .numberFormat.inputBase = inputBase_DEC,
+        .numberFormat.numBits = 64,
+        .numberFormat.sign = false,
+        .numberFormat.inputFormat = INPUT_FMT_FLOAT,
+        .numberFormat.outputFormat = INPUT_FMT_FLOAT,
+        .pResultStringDec = "123.12\0",
+        .pResultStringHex = "0x405EC7AE147AE148\0",
+        .pResultStringBin =
+            "0b0100 0000 0101 1110 1100 0111 1010 1110 0001 0100 0111 1010"
+            " 1110 0001 0100 1000\0",
+    },
+    {   
+        // THIS CURRENTLY FAILS!!!
+        .pInputString = "12.312*10.0\0",
+        .pCursor = {0, 0, 0},
+        .pExpectedString = "12.312*10.0\0",
+        .pOutputString = {0},
+        .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
+        .expectedResult = 0x405EC7AE147AE147, // see
+        // https://www.binaryconvert.com/convert_double.html
+        .numberFormat.fixedPointDecimalPlace = 32,
+        .numberFormat.inputBase = inputBase_DEC,
+        .numberFormat.numBits = 64,
+        .numberFormat.sign = false,
+        .numberFormat.inputFormat = INPUT_FMT_FLOAT,
+        .numberFormat.outputFormat = INPUT_FMT_FLOAT,
+        .pResultStringDec = "123.12\0",
+        .pResultStringHex = "0x405EC7AE147AE147\0",
+        .pResultStringBin =
+            "0b0100 0000 0101 1110 1100 0111 1010 1110 0001 0100 0111 1010"
+            " 1110 0001 0100 0111\0",
     },
 
 };

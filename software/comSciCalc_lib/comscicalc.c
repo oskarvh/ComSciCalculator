@@ -612,6 +612,10 @@ void convertResult(char *pString, SUBRESULT_INT result,
                     double tmpRes = (double)result;
                     sprintf(pString, "%lg", tmpRes);
                 }
+                // Check if trailing zeros should be added. 
+                if(strchr(pString, '.') == NULL){
+                    sprintf(pString, "%s.0", pString);
+                }
             } else if (base == inputBase_BIN) {
                 SUBRESULT_INT tmpRes = 0;
                 if (pNumberFormat->numBits == 32) {
@@ -888,7 +892,6 @@ copyAndConvertList(calcCoreState_t *pCalcCoreState,
             }
             // Finally, cap it off with a null terminator
             *pCurrentChar = '\0';
-
             // Now that we have a string to work with, based on the input
             // format and base, we can convert using the UNIX string-to-X
             // functions.
@@ -1233,11 +1236,11 @@ static int solveExpression(calcCoreState_t *pCalcCoreState,
             }
             // Now that the operator is surrounded by valid input, solve the
             // expression
-            logger(LOGGER_LEVEL_INFO, "Solving %i",
+            logger(LOGGER_LEVEL_INFO, "Solving %llx",
                    pPrevEntry->entry.subresult);
             logger(LOGGER_LEVEL_INFO, " %s ",
                    ((operatorEntry_t *)(pHigestPrioOp->pFunEntry))->opString);
-            logger(LOGGER_LEVEL_INFO, "%i\r\n", pNextEntry->entry.subresult);
+            logger(LOGGER_LEVEL_INFO, "%llx\r\n", pNextEntry->entry.subresult);
 
             inputFormat_t inputFormat =
                 pCalcCoreState->numberFormat.inputFormat;
