@@ -29,7 +29,7 @@
 
 /* User defined settings */
 //#define configTOTAL_HEAP_SIZE ((size_t)(10 * 1024)) // Only used in heap 1, 2
-//and 4
+// and 4
 
 /* Use Pico SDK ISR handlers */
 #define vPortSVCHandler isr_svcall

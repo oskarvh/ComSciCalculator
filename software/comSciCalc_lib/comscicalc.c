@@ -1062,7 +1062,7 @@ int8_t readOutArgs(inputType_t *pArgs, int8_t numArgs, inputListEntry_t *pStart,
         }
         if (GET_SUBRESULT_TYPE(pStart->entry.typeFlag) == SUBRESULT_TYPE_INT) {
             // Argument found.
-            logger(LOGGER_LEVEL_INFO, "Argument[%i] = %i\r\n", readArgs,
+            logger(LOGGER_LEVEL_INFO, "Argument[%i] = %llx\r\n", readArgs,
                    pStart->entry.subresult);
             memcpy(pArgs++, &(pStart->entry), sizeof(inputType_t));
             readArgs++;
@@ -1420,7 +1420,7 @@ static int solveExpression(calcCoreState_t *pCalcCoreState,
                                    DEPTH_CHANGE_KEEP, INPUT_TYPE_NUMBER);
             pResult = pExprStart;
             logger(LOGGER_LEVEL_INFO,
-                   "pResult = 0x%08x, pResult->pNext = 0x%08x", pResult,
+                   "pResult = 0x%08x, pResult->pNext = 0x%08x\r\n", pResult,
                    pResult->pNext);
             free(pArgs);
         } else {

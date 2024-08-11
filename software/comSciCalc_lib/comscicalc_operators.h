@@ -102,6 +102,7 @@ int8_t calc_sum(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
 int8_t calc_and(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
                 int num_args, inputType_t *pArgs);
 //! Function for calculating bitwise NAND
+//! @warning This NAND uses a bitmask of the largest argument, excluding zeros.
 int8_t calc_nand(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
                  int num_args, inputType_t *pArgs);
 //! Function for calculating bitwise OR

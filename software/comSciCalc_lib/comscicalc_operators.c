@@ -87,32 +87,32 @@ const operatorEntry_t operators[NUM_OPERATORS] = {
     {.inputChar = '&',
      .opString = "AND\0",
      .solvPrio = 0,
-     .bIncDepth = false,
-     .numArgs = 2,
+     .bIncDepth = true,
+     .numArgs = -1,
      .pFun = &calc_and},
     {.inputChar = 'n',
      .opString = "NAND\0",
      .solvPrio = 0,
-     .bIncDepth = false,
-     .numArgs = 2,
+     .bIncDepth = true,
+     .numArgs = -1,
      .pFun = &calc_nand},
     {.inputChar = '|',
      .opString = "OR\0",
      .solvPrio = 0,
-     .bIncDepth = false,
-     .numArgs = 2,
+     .bIncDepth = true,
+     .numArgs = -1,
      .pFun = &calc_or},
     {.inputChar = '^',
      .opString = "XOR\0",
      .solvPrio = 0,
-     .bIncDepth = false,
-     .numArgs = 2,
+     .bIncDepth = true,
+     .numArgs = -1,
      .pFun = &calc_xor},
     {.inputChar = 0,
      .opString = "\0",
      .solvPrio = 255,
      .bIncDepth = true,
-     .numArgs = 0,
+     .numArgs = -1,
      .pFun = NULL},
     {.inputChar = 0,
      .opString = "\0",
@@ -499,12 +499,10 @@ int8_t calc_divide(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
     case INPUT_FMT_INT:
         // Solve for 32 bit signed integer
         (*((SUBRESULT_INT *)pResult)) = a / b;
-        // TODO: add overflow detection
         break;
     case INPUT_FMT_FLOAT:
         // Solve for 32bit float
         (*((SUBRESULT_INT *)pResult)) = a / b;
-        // TODO: add overflow detection
         break;
     case INPUT_FMT_FIXED:
         // TODO:Solve for fixed point.
@@ -517,50 +515,103 @@ int8_t calc_divide(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
 
 int8_t calc_and(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
                 int num_args, inputType_t *pArgs) {
-    // Only expecting two variable arguments here
-    if (num_args != 2) {
+    if (pArgs == NULL) {
         return incorrect_args;
     }
-
-    // Read out the args as uint32_t. Will be casted later on
-
-    SUBRESULT_INT a = pArgs[0].subresult;
-    SUBRESULT_INT b = pArgs[1].subresult;
-    if (b == 0) {
-        return error_args;
+    if (num_args < 2) {
+        // We need at least two arguments to begin with
+        return incorrect_args;
     }
-    switch (numberFormat.inputFormat) {
-    case INPUT_FMT_INT:
-        // Solve for 32 bit signed integer
-        (*((SUBRESULT_INT *)pResult)) = a & b;
-        // TODO: add overflow detection
-        break;
-    case INPUT_FMT_FLOAT:
-        // TODO:Solve for fixed point.
-        // TODO: add overflow detection
-        return format_not_supported;
-        break;
-    case INPUT_FMT_FIXED:
-        // TODO:Solve for fixed point.
-        // TODO: add overflow detection
-        return format_not_supported;
-        break;
+    // Initialize the first two
+    (*((SUBRESULT_INT *)pResult)) =
+        (SUBRESULT_INT)pArgs[0].subresult & (SUBRESULT_INT)pArgs[1].subresult;
+    // And "and" the result of the results.
+    for (int i = 2; i < num_args; i++) {
+        (*((SUBRESULT_INT *)pResult)) &= (SUBRESULT_INT)pArgs[i].subresult;
     }
     return function_solved;
 }
 
 int8_t calc_nand(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
                  int num_args, inputType_t *pArgs) {
+    // NAND is a bit special. If it's treated as NOT(AND(a,b)), the NOT
+    // will invert all the bits.
+    // In general, we'd want to count the number of bits going in, based off the
+    // input, e.g., 0x02 would be 8 bits and 0x0001 would be 16 bits.
+    // That's a task for the future, as it requires quite extensive work
+    // to figure that out.
+    if (pArgs == NULL) {
+        return incorrect_args;
+    }
+    if (num_args < 2) {
+        // We need at least two arguments to begin with
+        return incorrect_args;
+    }
+    // Find the subresult containing the higest amount of bits.
+    // Use the UINT subresult type since we want a bitmask.
+    SUBRESULT_UINT bitmask = 0;
+    for (int i = 0; i < num_args; i++) {
+        SUBRESULT_UINT currentBitmask = 0;
+        SUBRESULT_UINT currentArg = (SUBRESULT_UINT)pArgs[i].subresult;
+        while (currentArg > 0) {
+            currentArg = currentArg >> 1;
+            currentBitmask = (currentBitmask << 1) | 0x1;
+        }
+        if (currentBitmask > bitmask) {
+            bitmask = currentBitmask;
+        }
+    }
+
+    // Initialize the first two
+    SUBRESULT_UINT currentResult =
+        bitmask & (~(bitmask & (SUBRESULT_UINT)pArgs[0].subresult &
+                     (SUBRESULT_UINT)pArgs[1].subresult));
+    // And "and" the result of the results.
+    for (int i = 2; i < num_args; i++) {
+
+        currentResult =
+            bitmask &
+            (~(bitmask & currentResult & (SUBRESULT_UINT)pArgs[i].subresult));
+    }
+    (*((SUBRESULT_UINT *)pResult)) = currentResult;
     return function_solved;
 }
 
 int8_t calc_or(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
                int num_args, inputType_t *pArgs) {
+    if (pArgs == NULL) {
+        return incorrect_args;
+    }
+    if (num_args < 2) {
+        // We need at least two arguments to begin with
+        return incorrect_args;
+    }
+    // Initialize the first two
+    (*((SUBRESULT_INT *)pResult)) =
+        (SUBRESULT_INT)pArgs[0].subresult | (SUBRESULT_INT)pArgs[1].subresult;
+    // And "or" the result of the results.
+    for (int i = 2; i < num_args; i++) {
+        (*((SUBRESULT_INT *)pResult)) |= (SUBRESULT_INT)pArgs[i].subresult;
+    }
     return function_solved;
 }
 
 int8_t calc_xor(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
                 int num_args, inputType_t *pArgs) {
+    if (pArgs == NULL) {
+        return incorrect_args;
+    }
+    if (num_args < 2) {
+        // We need at least two arguments to begin with
+        return incorrect_args;
+    }
+    // Initialize the first two
+    (*((SUBRESULT_INT *)pResult)) =
+        (SUBRESULT_INT)pArgs[0].subresult ^ (SUBRESULT_INT)pArgs[1].subresult;
+    // And "xor" the result of the results.
+    for (int i = 2; i < num_args; i++) {
+        (*((SUBRESULT_INT *)pResult)) ^= (SUBRESULT_INT)pArgs[i].subresult;
+    }
     return function_solved;
 }
 

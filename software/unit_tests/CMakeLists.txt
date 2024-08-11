@@ -13,7 +13,7 @@ set(CMAKE_C_COMPILER gcc)
 set(CMAKE_LINKER gcc)
 
 # Logging level. Set -1 to shut the logger up, 0 for error, 1 for info, 2 for debug
-add_compile_definitions(LOG_LEVEL=-1)
+add_compile_definitions(LOG_LEVEL=0)
 
 # Add the comcscicalc library
 add_library(comscicalc_lib STATIC
