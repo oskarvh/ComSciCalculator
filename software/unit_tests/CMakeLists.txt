@@ -13,7 +13,7 @@ set(CMAKE_C_COMPILER gcc)
 set(CMAKE_LINKER gcc)
 
 # Logging level. Set -1 to shut the logger up, 0 for error, 1 for info, 2 for debug
-add_compile_definitions(LOG_LEVEL=0)
+add_compile_definitions(LOG_LEVEL=-1)
 
 # Add the comcscicalc library
 add_library(comscicalc_lib STATIC
@@ -43,6 +43,10 @@ target_include_directories(unity PUBLIC
 file(GLOB src_files
     ${CMAKE_CURRENT_LIST_DIR}/test_suite.c
     ${CMAKE_CURRENT_LIST_DIR}/unit_tests.c
+    ${CMAKE_CURRENT_LIST_DIR}/test_input.c
+    ${CMAKE_CURRENT_LIST_DIR}/test_calc_static.c
+    ${CMAKE_CURRENT_LIST_DIR}/test_format.c
+    ${CMAKE_CURRENT_LIST_DIR}/test_utils.c
 )
 
 #add_definitions("-DVERBOSE")
