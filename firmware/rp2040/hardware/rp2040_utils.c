@@ -97,8 +97,7 @@ void usbReadTask(void *p) {
                 rxChar = getchar_timeout_us(100); // Read the input character
 
                 // Put it into the uartReceiveQueue
-                if (rxChar != 255 && rxChar != 27 &&
-                    rxChar != PICO_ERROR_TIMEOUT) {
+                if (rxChar != PICO_ERROR_TIMEOUT) {
                     // hooray, there is a character in the rx buffer
                     // which is now read!
                     // Push that to the queue.

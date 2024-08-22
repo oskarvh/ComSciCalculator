@@ -2,7 +2,7 @@
  * Copyright (c) 2024
  * Oskar von Heideken.
  *
- * Header file for unit tests of ComSciCalc lib. 
+ * Header file for unit tests of ComSciCalc lib.
  */
 
 // Unity test framework.

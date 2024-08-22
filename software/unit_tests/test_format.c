@@ -2,16 +2,18 @@
  * Copyright (c) 2024
  * Oskar von Heideken.
  *
- * Unit test for checking input and output formatting. 
- * 
- * 
+ * Unit test for checking input and output formatting.
+ *
+ *
  * Requirements:
- * 1. ComSciCalc_lib shall support at least 3 input and output bases: Decimal, Hexadecimal and binary
- * 2. ComSciCalc_lib shall support at least 3 input and output formats: integer, 
- *    fixed point and floating point. 
- * 3. The fixed point format shall support a variable decimal point location, and the total
- *    number of bits for decimal and integer bits shall equal the total number of bits. 
- * 4. ComSciCalc_lib shall support 32 and 64 bit input and output formats. 
+ * 1. ComSciCalc_lib shall support at least 3 input and output bases: Decimal,
+ * Hexadecimal and binary
+ * 2. ComSciCalc_lib shall support at least 3 input and output formats: integer,
+ *    fixed point and floating point.
+ * 3. The fixed point format shall support a variable decimal point location,
+ * and the total number of bits for decimal and integer bits shall equal the
+ * total number of bits.
+ * 4. ComSciCalc_lib shall support 32 and 64 bit input and output formats.
  */
 
 // Standard lib
@@ -194,7 +196,7 @@ void test_string_to_fixed_point(void) {
         SUBRESULT_INT fp = 0;
         fp = strtofp(fixed_point_test_params[i].pInputString, false, 16,
                      (uint16_t)(fixed_point_test_params[i].inputBase[0]));
-        
+
         // Test that it's within 1 bit. Conversion between float and fixed is
         // not absolute, but given the circumstances, it should be OK.
         TEST_ASSERT(abs(fixed_point_test_params[i].expectedResult - fp) <= 1);
@@ -526,7 +528,7 @@ void test_format_conversion(void) {
         calcCoreAddInput(&calcCore, &output_formatting[i]);
         int8_t state = calc_solver(&calcCore);
         calcCoreGetBuffer(&calcCore, &output_formatting[i]);
-        
+
         TEST_ASSERT_EQUAL_STRING(output_formatting[i].pExpectedString,
                                  output_formatting[i].pOutputString);
         // Convert the results to string:

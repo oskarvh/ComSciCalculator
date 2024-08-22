@@ -3,23 +3,24 @@
  * Oskar von Heideken.
  *
  * Test suite to test positive and negative paths
- * of calculations using the comSciCalc_lib. 
- * 
- * The parameters are static, and aims to test the 
+ * of calculations using the comSciCalc_lib.
+ *
+ * The parameters are static, and aims to test the
  * solvability and non-solvability of expressions.
- * 
- * 
+ *
+ *
  * Requirements:
- * 1. For any correct syntax, the comSciCalc_lib shall solve the expression, unless unsolvable
- * 2. ComSciCalc_lib shall catch unsolvable, syntax correct expressions (e.g. divide by zero)
- * 3. ComSciCalc_lib shall catch and highlight incorrect syntax. 
+ * 1. For any correct syntax, the comSciCalc_lib shall solve the expression,
+ * unless unsolvable
+ * 2. ComSciCalc_lib shall catch unsolvable, syntax correct expressions (e.g.
+ * divide by zero)
+ * 3. ComSciCalc_lib shall catch and highlight incorrect syntax.
  */
 
 // Standard lib
 #include <string.h>
 
 #include "test_suite.h"
-
 
 // Need to write more tests.
 // Need to cover:
@@ -172,7 +173,7 @@ void test_solvable_solution(void) {
         calcCoreAddInput(&calcCore, &params_solvable[i]);
         int8_t state = calc_solver(&calcCore);
         calcCoreGetBuffer(&calcCore, &params_solvable[i]);
-        
+
         TEST_ASSERT_EQUAL_STRING(params_solvable[i].pExpectedString,
                                  params_solvable[i].pOutputString);
         teardownTestStruct(&calcCore);
@@ -305,7 +306,7 @@ void test_unsolvable_solution(void) {
         calcCoreAddInput(&calcCore, &params_unsolvable[i]);
         int8_t state = calc_solver(&calcCore);
         calcCoreGetBuffer(&calcCore, &params_unsolvable[i]);
-        
+
         TEST_ASSERT_EQUAL_STRING(params_unsolvable[i].pExpectedString,
                                  params_unsolvable[i].pOutputString);
         teardownTestStruct(&calcCore);
@@ -323,7 +324,6 @@ void test_unsolvable_solution(void) {
         }
     }
 }
-
 
 testParams_t long_expression[] = {
     {
@@ -362,7 +362,6 @@ void test_solvable_long_expression(void) {
         }
     }
 }
-
 
 testParams_t logic_expression_test_params[] = {
     // NAND implementation

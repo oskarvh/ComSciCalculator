@@ -2,13 +2,13 @@
  * Copyright (c) 2024
  * Oskar von Heideken.
  *
- * Test suite to unit test utility functions, 
- * which might not be fully covered by other functions, 
+ * Test suite to unit test utility functions,
+ * which might not be fully covered by other functions,
  * but is sufficiently advanced to warrant its own unit tests.
- * 
- * 
- * There are no associated top level requirements here. 
- * 
+ *
+ *
+ * There are no associated top level requirements here.
+ *
  */
 
 // Standard lib
@@ -16,7 +16,7 @@
 
 #include "test_suite.h"
 
-//! Test to check that NULL pointers are caught by functions. 
+//! Test to check that NULL pointers are caught by functions.
 void test_null_pointers(void) {
     calcCoreState_t calcCore;
     calcCoreState_t *pCalcCore = NULL;

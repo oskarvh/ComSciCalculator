@@ -43,7 +43,7 @@ void tearDown(void) {
 
 int main(void) {
     UNITY_BEGIN();
-    // See test_suite.h for included tests. 
+    // See test_suite.h for included tests.
     RUN_TEST(test_addRemoveInput);
     RUN_TEST(test_addInvalidInput);
     RUN_TEST(test_solvable_solution);

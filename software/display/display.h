@@ -56,9 +56,15 @@ SOFTWARE.
  * --------------------------------------------------------
  *              [Hex output] |             [Decimal output]
  * */
-
+/**
+ * @defgroup Events related to common firmware
+ * @{
+ */
+// Display events
 #define DISPLAY_EVENT_NEW_DATA 1
 #define DISPLAY_EVENT_CURSOR (1 << 1)
+#define DISPLAY_EXIT_MENU (1 << 2)
+/**@}*/
 
 //! Top line which parts the options from the input
 #define OUTLINE_WIDTH 2 * 16
@@ -137,7 +143,9 @@ SOFTWARE.
 #define PURPLE 0x4b0082 // 0x800080
 #define WHITE 0xffffff
 #define BLACK 0x000000
+#define LIGHT_GRAY 0x707070
 #define GRAY 0x303030
+#define DARK_GRAY 0x101010
 #define TURQOISE 0x00fff7
 /**@}*/
 
@@ -152,17 +160,6 @@ SOFTWARE.
 #define MAX_PRINTED_BUFFER_LEN_HEX 20
 //! Maximum length of results buffer
 #define MAX_PRINTED_BUFFER_LEN 100
-
-/**
- * @brief Type to handle the menu options
- */
-typedef struct menuOption {
-    /**
-     * @param pOptionString Pointer to the string for this option
-     */
-    char *pOptionString;
-
-} menuOption_t;
 
 /**
  * @brief Struct holding the state of the options shown
@@ -186,15 +183,50 @@ typedef struct inputState {
 } inputState_t;
 
 /**
+ * @brief Type to handle the menu options
+ */
+typedef struct menuOption {
+    /**
+     * @param pOptionString Pointer to the string for this option.
+     * This is a required option.
+     */
+    char *pOptionString;
+    /**
+     * @param pSubMenu Pointer to a sub-menu
+     * If this is NULL, then no sub-menu exists.
+     */
+    void *pSubMenu;
+    /**
+     * @param pUpdateFun Pointer to a function to update this item
+     * This is the function that is called when this menu option
+     * is selected.
+     * If NULL, then no update function exists, and it has to be a sub-menu.
+     */
+    void *pUpdateFun;
+    /**
+     * @param pDisplayFun Pointer to a function that returns the string
+     * which shows the current option for this function that is selected.
+     * If NULL, then no update function exists, and it has to be a sub-menu.
+     */
+    void *pDisplayFun;
+
+} menuOption_t;
+
+/**
  * @brief Struct holding the menu state.
  */
 typedef struct menuState {
     /**
-     * @param pMenuOptionList Pointer to the list of menu options
+     * @param pMenuOptionList Pointer to the top level menu option list.
      */
     const menuOption_t *pMenuOptionList;
     /**
-     * @param currentItemIndex Index of the current menu item
+     * @param pCurrentMenuOption Index of the current menu item for this menu
+     */
+    menuOption_t *pCurrentMenuOption;
+    /**
+     * @param currentItemIndex Index of the current menu item for this menu
+     * TBD: Do we need this?
      */
     uint8_t currentItemIndex;
 } menuState_t;

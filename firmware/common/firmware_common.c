@@ -75,6 +75,7 @@ void Timer60HzIntHandler(void){
     // For now, empty ISR
 }
 
+
 /**
  * @brief Task that handles the calculator core functions. 
  * the other threads. 
@@ -97,6 +98,9 @@ static void calcCoreTask(void *p){
     calcState.numberFormat.inputBase = inputBase_DEC;
     calcState.numberFormat.numBits = 64;
     calcState.numberFormat.sign = false;
+
+    // Boolean to check if we should keep waiting for the menu to exit.
+    bool inMenu = false;
     while(1){
         // Wait for UART data to be available in the queue
         if(uartReceiveQueue != 0){
@@ -111,22 +115,41 @@ static void calcCoreTask(void *p){
                     // TODO: Check that we're in a state to add chars to the
                     // calc core. The option here could be if we're in
                     // the menu for example.
+                    
                     if(receiveChar == 127){
                         addRemoveStatus = calc_removeInput(&calcState);
                     } else {
-                        if(receiveChar == 'U'){
-                            // TODO
-                        }
-                        if(receiveChar == 'D'){
-                            // TODO
-                        }
-                        if(receiveChar == 'L'){
-                            calcState.cursorPosition += 1;
-                        }
-                        if(receiveChar == 'R'){
-                            if(calcState.cursorPosition > 0){
-                                calcState.cursorPosition -= 1;
+                        // Check if 91 was received, which for USB
+                        // is an escape key for some reason?
+                        // Also check if there's anything else in the queue
+                        
+                        if(receiveChar == 27){
+                            // Escape char. We expect two more chars in there, but don't wait around for it
+                            char escapeSeq[3] = {0};
+                            for(int i = 0; i < 2 ; i++){
+                                xQueueReceive(uartReceiveQueue, &(escapeSeq[i]), (TickType_t)10 );
                             }
+                            
+                            escapeSeq[2] = '\0';
+                            if(strcmp(escapeSeq, "[A")==0){
+                                //Up
+                            }
+                            if(strcmp(escapeSeq, "[B")==0){
+                                //Down
+                            }
+                            if(strcmp(escapeSeq, "[C")==0){
+                                //Forward/right
+                                if(calcState.cursorPosition > 0){
+                                    calcState.cursorPosition -= 1;
+                                }
+                            }
+                            if(strcmp(escapeSeq, "[D")==0){
+                                //Backward/left
+                                calcState.cursorPosition += 1;
+                            }
+                            // Here there's a USB espace char, and something else in the queue
+                            // C (right), D(left), A (up) or ? (down)
+                            
                         }
                         if(receiveChar == 'i' || receiveChar == 'I'){
                             // Update the input base.
@@ -153,6 +176,10 @@ static void calcCoreTask(void *p){
                                 outputFormat = 0;
                             }
                             calc_updateOutputFormat(&calcState, outputFormat);
+                        }
+                        if(receiveChar == 't' || receiveChar == 'T'){
+                            // Placeholder menu state. 
+                            inMenu = true;
                         }
 
                         // The add input contains valuable checks.
@@ -183,6 +210,9 @@ static void calcCoreTask(void *p){
             // Reset the result to 0 to have a clean slate.
             //calcState.result = 0;
             if( xSemaphoreTake( displayStateSemaphore, portMAX_DELAY) == pdTRUE ){
+                if(inMenu){
+                    displayState.inMenu = true;
+                }
                 // Set the output buffer to all null terminators.
                 memset(displayState.printedInputBuffer, 0, MAX_PRINTED_BUFFER_LEN);
 
@@ -209,6 +239,24 @@ static void calcCoreTask(void *p){
 
             }
             xEventGroupSetBits(displayTriggerEvent, DISPLAY_EVENT_NEW_DATA);
+
+            while(inMenu){
+                // We have given the display trigger event. 
+                // We need to just hold tight here and wait for 
+                // the user to exit the menu. 
+                
+                // Wait for the menu exit event:
+                uint32_t eventbits =
+                    xEventGroupWaitBits(displayTriggerEvent,
+                                        DISPLAY_EXIT_MENU,
+                                        pdTRUE, pdFALSE, portMAX_DELAY);
+                // Check if we can unlock this task
+                if (xSemaphoreTake(displayStateSemaphore, portMAX_DELAY)) {
+                    // Copy the display state to the local state to get out of the menu
+                    inMenu = displayState.inMenu;
+                    xSemaphoreGive(displayStateSemaphore);
+                }
+            }
         }
     }
 }

@@ -2,11 +2,12 @@
  * Copyright (c) 2024
  * Oskar von Heideken.
  *
- * Test suite to test basic input/output functions of the ComSciCalc lib. 
- * 
+ * Test suite to test basic input/output functions of the ComSciCalc lib.
+ *
  * Requirements:
  * 1. Inputs shall be added at cursor.
- * 2. Backslash operator (\b) shall remove the last operator or number left of the cursor.
+ * 2. Backslash operator (\b) shall remove the last operator or number left of
+ * the cursor.
  * 3. Inputs shall be restricted to the current input format (dec, float, int).
  * 4. Inputs shall be restricted to the current input base (dec, bin hex).
  * 5. Cursor shall be limited to current expressions length.
@@ -145,9 +146,8 @@ void test_addRemoveInput(void) {
     }
 }
 
-
 /*
- * Negative path test.  
+ * Negative path test.
  */
 testParams_t params_addNegativeInput[] = {
     {
