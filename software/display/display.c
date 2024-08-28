@@ -898,19 +898,25 @@ void displayTask(void *p) {
 #endif
 #endif
 
-        // Update the screen:
-        startDisplaylist();
-        // localDisplayState.inMenu = true;
         if (localDisplayState.inMenu) {
-            // Display the menu
-            displayMenu(&localDisplayState);
-            // End the display list
-            endDisplayList();
-            // Hijack the uartReceiveQueue and update accordingly
-            // Note, we wait for uart in this function
-            updateMenuState(&localDisplayState, &displayState);
+            // Loop until the internal state changes
+            while(localDisplayState.inMenu){
+                // Update the screen:
+                startDisplaylist();
+                // Display the menu
+                displayMenu(&localDisplayState);
+                // End the display list
+                endDisplayList();
+                // Hijack the uartReceiveQueue and update accordingly
+                // Note, we wait for uart in this function
+                updateMenuState(&localDisplayState, &displayState);
+                // Create a task delay to give other equal priority a chance tasks to run.
+                vTaskDelay(10 / portTICK_PERIOD_MS);
+            }
 
         } else {
+            // Update the screen:
+            startDisplaylist();
             // Display the outline
             displayOutline();
             // Write the calculator setting state:
