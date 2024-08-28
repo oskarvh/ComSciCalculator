@@ -127,6 +127,7 @@ pico_enable_stdio_uart(comscicalc_lib 0)
 # Add target for the display library:
 add_library(DISPLAY STATIC 
     ${DISPLAY_SRC_DIRECTORY}/display.c
+    ${DISPLAY_SRC_DIRECTORY}/menu.c
     ${DISPLAY_SRC_DIRECTORY}/fonts/font_library.c
 )
 target_link_libraries(
