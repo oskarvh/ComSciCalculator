@@ -207,6 +207,7 @@ typedef struct menuOption {
      * @param pDisplayFun Pointer to a function that returns the string
      * which shows the current option for this function that is selected.
      * If NULL, then no update function exists, and it has to be a sub-menu.
+     * This function takes in a string as an argument, to return to the display function.
      */
     void *pDisplayFun;
 
@@ -217,18 +218,18 @@ typedef struct menuOption {
  */
 typedef struct menuState {
     /**
-     * @param pMenuOptionList Pointer to the top level menu option list.
+     * @param pUpperMenu Pointer to the option list one step above. This is to get back. 
+     * NULL if this is currently the top level menu. This is a menuState_t pointer.
+     */
+    void *pUpperMenu;
+    /**
+     * @param pMenuOptionList Pointer to the menu list
      */
     const menuOption_t *pMenuOptionList;
     /**
-     * @param pCurrentMenuOption Index of the current menu item for this menu
+     * @param pCurrentMenuOption Pointer to the current option
      */
     menuOption_t *pCurrentMenuOption;
-    /**
-     * @param currentItemIndex Index of the current menu item for this menu
-     * TBD: Do we need this?
-     */
-    uint8_t currentItemIndex;
 } menuState_t;
 
 /**
@@ -292,6 +293,10 @@ extern displayState_t displayState;
 extern xSemaphoreHandle displayStateSemaphore;
 extern EventGroupHandle_t displayTriggerEvent;
 
+//Menu related variables
+extern menuState_t bitSizesMenu;
+extern menuState_t topMenu;
+
 /* -------------------------------------------
  * ---------- FUNCTION PROTOTYPES ------------
  * -------------------------------------------*/
@@ -309,5 +314,17 @@ void initDisplayState(displayState_t *pDisplayState);
  */
 void displayTask(void *p);
 
-void testDisplay();
+void testDisplay(void);
+/**
+ * @brief Function to get the current font.
+ * @param p Pointer to the task argument. Not used for now
+ * @return Nothing
+ */
+void getCurrentFont(char *pString);
+/**
+ * @brief Function to iterate through the current fonts.
+ * @param p Pointer to the task argument. Not used for now
+ * @return Nothing
+ */
+void changeFont(void);
 #endif /* DISPLAY_H_ */

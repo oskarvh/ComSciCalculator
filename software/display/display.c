@@ -69,9 +69,7 @@ const char *formatDisplayStrings[] = {
     [INPUT_FMT_FLOAT] = float_display_string,
 };
 
-menuState_t menuState;
-
-menuOption_t bitSizesMenuOptions[] = {
+menuOption_t bitSizesMenuList[] = {
     [0] =
         {
             .pOptionString = "Update number of bits",
@@ -96,20 +94,20 @@ menuOption_t bitSizesMenuOptions[] = {
         },
 };
 
-menuOption_t specialFunctionOptions[] = {
+menuOption_t topLevelMenuList[] = {
     [0] =
         {
-            .pOptionString = "A function here (NOT IMPLEMENTED)",
-            .pSubMenu = NULL,
-            .pUpdateFun = NULL,  // TODO: Insert function to call update bits.
-            .pDisplayFun = NULL, // TODO: Insert function
+            .pOptionString = "Bit sizes",
+            .pSubMenu = &bitSizesMenu,
+            .pUpdateFun = NULL,  // This is a sub menu, so no function here
+            .pDisplayFun = NULL, // This is a sub menu, so no function here
         },
     [1] =
         {
-            .pOptionString = "Another function here (NOT IMPLEMENTED)",
+            .pOptionString = "Change font",
             .pSubMenu = NULL,
-            .pUpdateFun = NULL,  // TODO: Insert function
-            .pDisplayFun = NULL, // TODO: Insert function
+            .pUpdateFun = &changeFont,  // This is a sub menu, so no function here
+            .pDisplayFun = &getCurrentFont, // This is a sub menu, so no function here
         },
     // END OF LIST, all NULL
     [2] =
@@ -121,36 +119,18 @@ menuOption_t specialFunctionOptions[] = {
         },
 };
 
-const menuOption_t menuOptionList[] = {
-    [0] =
-        {
-            .pOptionString = "Bit sizes",
-            .pSubMenu = bitSizesMenuOptions,
-            .pUpdateFun = NULL,  // This is a sub menu, so no function here
-            .pDisplayFun = NULL, // This is a sub menu, so no function here
-        },
-    [1] =
-        {
-            .pOptionString = "Special functions",
-            .pSubMenu = specialFunctionOptions,
-            .pUpdateFun = NULL,  // This is a sub menu, so no function here
-            .pDisplayFun = NULL, // This is a sub menu, so no function here
-        },
-    [2] =
-        {
-            .pOptionString = "Test without sub menu",
-            .pSubMenu = NULL,
-            .pUpdateFun = NULL,  // This is a sub menu, so no function here
-            .pDisplayFun = NULL, // This is a sub menu, so no function here
-        },
-    // END OF LIST, all NULL
-    [3] =
-        {
-            .pOptionString = NULL,
-            .pSubMenu = NULL,
-            .pUpdateFun = NULL,
-            .pDisplayFun = NULL,
-        },
+//! Top level menu
+menuState_t topMenu= {
+    .pMenuOptionList = topLevelMenuList,
+    .pCurrentMenuOption = &(topLevelMenuList[0]),
+    .pUpperMenu = NULL,
+};
+
+//! Menu for bit sizes
+menuState_t bitSizesMenu = {
+    .pMenuOptionList = bitSizesMenuList,
+    .pCurrentMenuOption = &(bitSizesMenuList[0]),
+    .pUpperMenu = &topMenu,
 };
 
 /**
@@ -252,6 +232,13 @@ void programFont(font_t *pFont, uint8_t fontIndex) {
     EVE_cmd_setfont2_burst(fontIndex, thisFontsAddress, 32);
 
     endDisplayList();
+}
+
+void getCurrentFont(char *pString){
+
+}
+void changeFont(){
+
 }
 
 /**
@@ -485,14 +472,6 @@ void displayInputText(displayState_t *pDisplayState, bool writeCursor) {
     }
 }
 
-void initMenuState(menuState_t *pMenuState) {
-    // Initialize the top level menu list. This is the
-    // entry point for displaying the list.
-    pMenuState->pMenuOptionList = menuOptionList;
-    // Set the current option to be the top level as well.
-    pMenuState->pCurrentMenuOption = menuOptionList;
-    pMenuState->currentItemIndex = 0;
-}
 
 void initDisplayState(displayState_t *pDisplayState) {
     if (pDisplayState == NULL) {
@@ -512,8 +491,7 @@ void initDisplayState(displayState_t *pDisplayState) {
     memset(pDisplayState->printedInputBuffer, '\0', MAX_PRINTED_BUFFER_LEN);
     pDisplayState->syntaxIssueIndex = -1;
     pDisplayState->inMenu = false;
-    initMenuState(&menuState);
-    pDisplayState->pMenuState = &menuState;
+    pDisplayState->pMenuState = &topMenu;
 }
 
 /**
@@ -749,6 +727,22 @@ static void displayMenu(displayState_t *pDisplayState) {
     }
 }
 
+int findCurrentMenuOption(menuState_t *pMenuState){
+    menuOption_t *pCurrentMenuOption = pMenuState->pCurrentMenuOption;
+    menuOption_t *pMenuOption = pMenuState->pMenuOptionList;
+    int i = 0;
+    while (pMenuOption->pOptionString != NULL) {
+        // The pMenuOption points to a list of menu options.
+        // Go through and print.
+        bool selected_item = false;
+        if (pCurrentMenuOption == pMenuOption) {
+            return i;
+        }
+        i++;
+        pMenuOption++;
+    }
+}
+
 /**
  * @brief Function to update the display state
  * @param pLocalDisplayState Pointer to the local displayState. This can be read
@@ -776,9 +770,33 @@ static void updateMenuState(displayState_t *pLocalDisplayState,
                 escapeSeq[2] = '\0';
                 if (strcmp(escapeSeq, "[A") == 0) {
                     // Up
+                    menuState_t *pMenuState = pLocalDisplayState->pMenuState;
+                    menuOption_t *pCurrentMenuOption = pMenuState->pCurrentMenuOption;
+                    menuOption_t *pMenuOption = pMenuState->pMenuOptionList;
+                    // Check if the current menu option points to the 
+                    // first entry to the list:
+                    if(pCurrentMenuOption != &(pMenuState->pMenuOptionList[0])){
+                        // We're not at the top, meaning we can go down.
+                        int idx = findCurrentMenuOption(pMenuState) - 1;
+                        pMenuState->pCurrentMenuOption = &(pMenuState->pMenuOptionList[idx]);
+                    }
+                    
                 }
                 if (strcmp(escapeSeq, "[B") == 0) {
                     // Down
+                    menuState_t *pMenuState = pLocalDisplayState->pMenuState;
+                    menuOption_t *pCurrentMenuOption = pMenuState->pCurrentMenuOption;
+                    menuOption_t *pMenuOption = pMenuState->pMenuOptionList;
+                    // Check if the current menu option points to the 
+                    // first entry to the list:
+                    if((++pCurrentMenuOption)->pOptionString == NULL){
+                        // We're at the bottom, revert the change we made. 
+                        pCurrentMenuOption--;
+                    }
+                    else{
+                        int idx = findCurrentMenuOption(pMenuState) + 1;
+                        pMenuState->pCurrentMenuOption = &(pMenuState->pMenuOptionList[idx]);
+                    }
                 }
                 if (strcmp(escapeSeq, "[C") == 0) {
                 }
@@ -790,16 +808,22 @@ static void updateMenuState(displayState_t *pLocalDisplayState,
             }
 
             if (receiveChar == 't' || receiveChar == 'T') {
-                // Placeholder menu state.
-                if (xSemaphoreTake(displayStateSemaphore, portMAX_DELAY)) {
-                    // To save time, copy the display state. Sort of waste of
-                    // space. Not sure if this is the best approach..
-                    pGlobalDisplayState->inMenu = false;
-                    // Release the semaphore, since we're done with the display
-                    // state global variable
-                    xSemaphoreGive(displayStateSemaphore);
-                    // Give the event to the main loop to give back control
-                    xEventGroupSetBits(displayTriggerEvent, DISPLAY_EXIT_MENU);
+                pLocalDisplayState->inMenu = false;
+            }
+            // Copy over the local state to the global state. 
+            if (xSemaphoreTake(displayStateSemaphore, portMAX_DELAY)) {
+                // To save time, copy the display state. Sort of waste of
+                // space. Not sure if this is the best approach..
+                memcpy(pGlobalDisplayState, pLocalDisplayState, sizeof(displayState_t));
+                // Release the semaphore, since we're done with the display
+                // state global variable
+                xSemaphoreGive(displayStateSemaphore);
+                // Give the event to the main loop to give back control
+                xEventGroupSetBits(displayTriggerEvent, DISPLAY_EXIT_MENU);
+                if(pLocalDisplayState->inMenu == false){
+                    // Return if we're exiting the menu, since we don't
+                    // want to read from the receive queue.
+                    return;
                 }
             }
         }
