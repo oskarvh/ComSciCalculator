@@ -106,8 +106,10 @@ menuOption_t topLevelMenuList[] = {
         {
             .pOptionString = "Change font",
             .pSubMenu = NULL,
-            .pUpdateFun = &changeFont,  // This is a sub menu, so no function here
-            .pDisplayFun = &getCurrentFont, // This is a sub menu, so no function here
+            .pUpdateFun =
+                &changeFont, // This is a sub menu, so no function here
+            .pDisplayFun =
+                &getCurrentFont, // This is a sub menu, so no function here
         },
     // END OF LIST, all NULL
     [2] =
@@ -120,7 +122,7 @@ menuOption_t topLevelMenuList[] = {
 };
 
 //! Top level menu
-menuState_t topMenu= {
+menuState_t topMenu = {
     .pMenuOptionList = topLevelMenuList,
     .pCurrentMenuOption = &(topLevelMenuList[0]),
     .pUpperMenu = NULL,
@@ -234,12 +236,8 @@ void programFont(font_t *pFont, uint8_t fontIndex) {
     endDisplayList();
 }
 
-void getCurrentFont(char *pString){
-
-}
-void changeFont(){
-
-}
+void getCurrentFont(char *pString) {}
+void changeFont() {}
 
 /**
  * @brief Programs the font library
@@ -471,7 +469,6 @@ void displayInputText(displayState_t *pDisplayState, bool writeCursor) {
                            INPUT_TEXT_OPTIONS, "|");
     }
 }
-
 
 void initDisplayState(displayState_t *pDisplayState) {
     if (pDisplayState == NULL) {
@@ -727,7 +724,7 @@ static void displayMenu(displayState_t *pDisplayState) {
     }
 }
 
-int findCurrentMenuOption(menuState_t *pMenuState){
+int findCurrentMenuOption(menuState_t *pMenuState) {
     menuOption_t *pCurrentMenuOption = pMenuState->pCurrentMenuOption;
     menuOption_t *pMenuOption = pMenuState->pMenuOptionList;
     int i = 0;
@@ -771,31 +768,34 @@ static void updateMenuState(displayState_t *pLocalDisplayState,
                 if (strcmp(escapeSeq, "[A") == 0) {
                     // Up
                     menuState_t *pMenuState = pLocalDisplayState->pMenuState;
-                    menuOption_t *pCurrentMenuOption = pMenuState->pCurrentMenuOption;
+                    menuOption_t *pCurrentMenuOption =
+                        pMenuState->pCurrentMenuOption;
                     menuOption_t *pMenuOption = pMenuState->pMenuOptionList;
-                    // Check if the current menu option points to the 
+                    // Check if the current menu option points to the
                     // first entry to the list:
-                    if(pCurrentMenuOption != &(pMenuState->pMenuOptionList[0])){
+                    if (pCurrentMenuOption !=
+                        &(pMenuState->pMenuOptionList[0])) {
                         // We're not at the top, meaning we can go down.
                         int idx = findCurrentMenuOption(pMenuState) - 1;
-                        pMenuState->pCurrentMenuOption = &(pMenuState->pMenuOptionList[idx]);
+                        pMenuState->pCurrentMenuOption =
+                            &(pMenuState->pMenuOptionList[idx]);
                     }
-                    
                 }
                 if (strcmp(escapeSeq, "[B") == 0) {
                     // Down
                     menuState_t *pMenuState = pLocalDisplayState->pMenuState;
-                    menuOption_t *pCurrentMenuOption = pMenuState->pCurrentMenuOption;
+                    menuOption_t *pCurrentMenuOption =
+                        pMenuState->pCurrentMenuOption;
                     menuOption_t *pMenuOption = pMenuState->pMenuOptionList;
-                    // Check if the current menu option points to the 
+                    // Check if the current menu option points to the
                     // first entry to the list:
-                    if((++pCurrentMenuOption)->pOptionString == NULL){
-                        // We're at the bottom, revert the change we made. 
+                    if ((++pCurrentMenuOption)->pOptionString == NULL) {
+                        // We're at the bottom, revert the change we made.
                         pCurrentMenuOption--;
-                    }
-                    else{
+                    } else {
                         int idx = findCurrentMenuOption(pMenuState) + 1;
-                        pMenuState->pCurrentMenuOption = &(pMenuState->pMenuOptionList[idx]);
+                        pMenuState->pCurrentMenuOption =
+                            &(pMenuState->pMenuOptionList[idx]);
                     }
                 }
                 if (strcmp(escapeSeq, "[C") == 0) {
@@ -810,17 +810,18 @@ static void updateMenuState(displayState_t *pLocalDisplayState,
             if (receiveChar == 't' || receiveChar == 'T') {
                 pLocalDisplayState->inMenu = false;
             }
-            // Copy over the local state to the global state. 
+            // Copy over the local state to the global state.
             if (xSemaphoreTake(displayStateSemaphore, portMAX_DELAY)) {
                 // To save time, copy the display state. Sort of waste of
                 // space. Not sure if this is the best approach..
-                memcpy(pGlobalDisplayState, pLocalDisplayState, sizeof(displayState_t));
+                memcpy(pGlobalDisplayState, pLocalDisplayState,
+                       sizeof(displayState_t));
                 // Release the semaphore, since we're done with the display
                 // state global variable
                 xSemaphoreGive(displayStateSemaphore);
                 // Give the event to the main loop to give back control
                 xEventGroupSetBits(displayTriggerEvent, DISPLAY_EXIT_MENU);
-                if(pLocalDisplayState->inMenu == false){
+                if (pLocalDisplayState->inMenu == false) {
                     // Return if we're exiting the menu, since we don't
                     // want to read from the receive queue.
                     return;
@@ -900,7 +901,7 @@ void displayTask(void *p) {
 
         if (localDisplayState.inMenu) {
             // Loop until the internal state changes
-            while(localDisplayState.inMenu){
+            while (localDisplayState.inMenu) {
                 // Update the screen:
                 startDisplaylist();
                 // Display the menu
@@ -910,7 +911,8 @@ void displayTask(void *p) {
                 // Hijack the uartReceiveQueue and update accordingly
                 // Note, we wait for uart in this function
                 updateMenuState(&localDisplayState, &displayState);
-                // Create a task delay to give other equal priority a chance tasks to run.
+                // Create a task delay to give other equal priority a chance
+                // tasks to run.
                 vTaskDelay(10 / portTICK_PERIOD_MS);
             }
 

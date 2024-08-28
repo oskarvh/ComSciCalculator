@@ -207,7 +207,8 @@ typedef struct menuOption {
      * @param pDisplayFun Pointer to a function that returns the string
      * which shows the current option for this function that is selected.
      * If NULL, then no update function exists, and it has to be a sub-menu.
-     * This function takes in a string as an argument, to return to the display function.
+     * This function takes in a string as an argument, to return to the display
+     * function.
      */
     void *pDisplayFun;
 
@@ -218,8 +219,9 @@ typedef struct menuOption {
  */
 typedef struct menuState {
     /**
-     * @param pUpperMenu Pointer to the option list one step above. This is to get back. 
-     * NULL if this is currently the top level menu. This is a menuState_t pointer.
+     * @param pUpperMenu Pointer to the option list one step above. This is to
+     * get back. NULL if this is currently the top level menu. This is a
+     * menuState_t pointer.
      */
     void *pUpperMenu;
     /**
@@ -293,7 +295,7 @@ extern displayState_t displayState;
 extern xSemaphoreHandle displayStateSemaphore;
 extern EventGroupHandle_t displayTriggerEvent;
 
-//Menu related variables
+// Menu related variables
 extern menuState_t bitSizesMenu;
 extern menuState_t topMenu;
 
