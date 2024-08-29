@@ -62,25 +62,36 @@ typedef struct menuState {
 extern menuState_t bitSizesMenu;
 extern menuState_t topMenu;
 
+typedef void menu_function(displayState_t *pDisplayState, char *pString);
+
 /**
  * @brief Function to get the current font.
- * @param p Pointer to the task argument. Not used for now
+ * @param pDisplayState Pointer to the display state.
+ * @param pString Pointer to a pre-allocated string that return the output.
  * @return Nothing
  */
-void getCurrentFont(char *pString);
+void getCurrentFont(displayState_t *pDisplayState, char *pString);
 /**
  * @brief Function to iterate through the current fonts.
- * @param p Pointer to the task argument. Not used for now
+ * @param pDisplayState Pointer to the display state.
+ * @param pString Pointer to a pre-allocated string that return the output.
  * @return Nothing
  */
-void changeFont(void);
+void changeFont(displayState_t *pDisplayState, char *pString);
 /**
  * @brief Function to go up one menu step.
- * @param p Pointer to the task argument. Not used for now
+ * @param pDisplayState Pointer to the display state.
+ * @param pString Pointer to a pre-allocated string that return the output.
  * @return Nothing
  */
-void goUpOneMenu(void);
-
+void goUpOneMenu(displayState_t *pDisplayState, char *pString);
+/**
+ * @brief FFunction to exit the menu.
+ * @param pDisplayState Pointer to the display state.
+ * @param pString Pointer to a pre-allocated string that return the output.
+ * @return Nothing
+ */
+void exitMenu(displayState_t *pDisplayState, char *pString);
 /**
  * @brief Function to update the display state
  * @param pLocalDisplayState Pointer to the local displayState. This can be read

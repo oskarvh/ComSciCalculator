@@ -72,11 +72,7 @@ const char *formatDisplayStrings[] = {
 
 /**
  * @brief Print the outline of graphics
- *
- * This attempts to solve the current buffer and reflect the result
- * in the #pCalcCoreState.
- * @param pCalcCoreState Pointer to an allocated core state variable.
- * @return Status of solving the buffer.
+ * @return Nothing
  */
 static void displayOutline(void) {
     // Outline shall be white

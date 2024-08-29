@@ -254,6 +254,29 @@ static void calcCoreTask(void *p){
                 if (xSemaphoreTake(displayStateSemaphore, portMAX_DELAY)) {
                     // Copy the display state to the local state to get out of the menu
                     inMenu = displayState.inMenu;
+                    // Copy over any changes made to the input state:
+                    if(calcState.numberFormat.fixedPointDecimalPlace != displayState.inputOptions.fixedPointDecimalPlace){
+                        // TODO: Update the fixed point decimal place from the calcState POV
+
+                    }
+                    if(calcState.numberFormat.inputBase != displayState.inputOptions.inputBase){
+                        calcState.numberFormat.inputBase = displayState.inputOptions.inputBase;
+                        calc_updateBase(&calcState);
+                    }
+                    if(calcState.numberFormat.inputFormat != displayState.inputOptions.inputFormat){
+                        calc_updateInputFormat(&calcState, displayState.inputOptions.inputFormat);
+                    }
+                    if(calcState.numberFormat.numBits != displayState.inputOptions.numBits){
+                        // TODO: Make an update function.
+                    }
+                    if(calcState.numberFormat.outputFormat != displayState.inputOptions.outputFormat){
+                        calc_updateOutputFormat(&calcState, displayState.inputOptions.outputFormat);
+                    }
+                    if(calcState.numberFormat.sign != displayState.inputOptions.sign){
+                        // TODO: make update function.
+                    }
+                    // Just copy the number format just in case.
+                    memcpy(&(calcState.numberFormat),&(displayState.inputOptions), sizeof(numberFormat_t));
                     xSemaphoreGive(displayStateSemaphore);
                 }
             }

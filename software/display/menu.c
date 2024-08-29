@@ -86,8 +86,8 @@ menuOption_t topLevelMenuList[] = {
         {
             .pOptionString = "Exit",
             .pSubMenu = NULL,
-            .pUpdateFun = &goUpOneMenu, // TODO: Insert function
-            .pDisplayFun = NULL,        // TODO: Insert function
+            .pUpdateFun = &exitMenu, // TODO: Insert function
+            .pDisplayFun = NULL,     // TODO: Insert function
         },
     // END OF LIST, all NULL
     [3] =
@@ -114,9 +114,22 @@ menuState_t bitSizesMenu = {
 };
 
 // Functions for doing stuff in the menus
-void getCurrentFont(char *pString) {}
-void changeFont() {}
-void goUpOneMenu() {}
+void getCurrentFont(displayState_t *pDisplayState, char *pString) {}
+
+void changeFont(displayState_t *pDisplayState, char *pString) {}
+
+void goUpOneMenu(displayState_t *pDisplayState, char *pString) {
+    // Get the current display option:
+    menuState_t *pMenuState = pDisplayState->pMenuState;
+    // Move the currentMenuOption to the upper menu option.
+    if (pMenuState->pUpperMenu != NULL) {
+        pDisplayState->pMenuState = (menuState_t *)pMenuState->pUpperMenu;
+    }
+}
+
+void exitMenu(displayState_t *pDisplayState, char *pString) {
+    pDisplayState->inMenu = false;
+}
 
 int findCurrentMenuOption(menuState_t *pMenuState) {
     menuOption_t *pCurrentMenuOption = pMenuState->pCurrentMenuOption;
@@ -188,8 +201,6 @@ void updateMenuState(displayState_t *pLocalDisplayState,
                 if (strcmp(escapeSeq, "[D") == 0) {
                     // Backward/left
                 }
-                // Here there's a USB espace char, and something else in the
-                // queue C (right), D(left), A (up) or ? (down)
             }
             if (receiveChar == '\r') {
                 // This is carriage return.
@@ -201,16 +212,15 @@ void updateMenuState(displayState_t *pLocalDisplayState,
                 menuOption_t *pMenuOption = pMenuState->pMenuOptionList;
                 if (pCurrentMenuOption->pUpdateFun != NULL) {
                     // Run the update function
-                    // TODO: Figure out how this should be run.
-                }
-                if (pCurrentMenuOption->pSubMenu != NULL) {
+                    // This is a void function with args:
+                    // displayState_t *pDisplayState, char *pString,
+                    // Where in this case the pString is NULL
+                    (*((menu_function *)(pCurrentMenuOption->pUpdateFun)))(
+                        pLocalDisplayState, NULL);
+                } else if (pCurrentMenuOption->pSubMenu != NULL) {
                     // Enter the sub menu
-                    pMenuState->pCurrentMenuOption =
-                        &(((menuState_t *)(pCurrentMenuOption->pSubMenu))
-                              ->pMenuOptionList[0]);
-                    pMenuState->pMenuOptionList =
-                        ((menuState_t *)(pCurrentMenuOption->pSubMenu))
-                            ->pMenuOptionList;
+                    pLocalDisplayState->pMenuState =
+                        (menuState_t *)(pCurrentMenuOption->pSubMenu);
                 }
             }
             if (receiveChar == 't' || receiveChar == 'T') {
