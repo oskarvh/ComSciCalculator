@@ -40,8 +40,8 @@ char pHexRes[MAX_PRINTED_BUFFER_LEN_HEX] = {0};
 //! Decimal result string buffer
 char pDecRes[MAX_PRINTED_BUFFER_LEN_DEC] = {0};
 //! Color wheel for the brackets
-const uint32_t colorWheel[COLORWHEEL_LEN] = {WHITE,    ORANGE, YELLOW,  GREEN,
-                                             TURQOISE, BLUE_2, MAGENTA, PURPLE};
+const uint32_t colorWheel[COLORWHEEL_LEN] = {WHITE,  YELLOW,  GREEN, TURQOISE,
+                                             BLUE_2, MAGENTA, PURPLE};
 //! String for displaying the decimal base to the user on the screen
 char dec_display_string[] = "DEC";
 //! String for displaying the hexadecimal base to the user on the screen

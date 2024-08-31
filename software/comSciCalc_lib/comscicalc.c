@@ -1566,6 +1566,41 @@ void calc_recordSyntaxIssuePos(int16_t *pSyntaxIssuePos,
     }
 }
 
+/**
+ * @brief Function to return the depth at the current pointer
+ * @param pSyntaxIssuePos Pointer to syntax issue variable
+ * @param numCharsWritten Number of characters that the issue is at.
+ */
+int calc_findDepthOfPointer(inputListEntry_t *pCurrentListEntry) {
+    int depth = 0;
+    // Loop until the entry is NULL
+    while (pCurrentListEntry != NULL) {
+        uint8_t tmpInputType =
+            GET_INPUT_TYPE(pCurrentListEntry->entry.typeFlag);
+        // Check if entry is a depth increasing operator.
+        // If we found one, then break the loop, and reflect in
+        // variable
+        if (tmpInputType == INPUT_TYPE_OPERATOR) {
+            if (GET_DEPTH_FLAG(pCurrentListEntry->entry.typeFlag) ==
+                DEPTH_CHANGE_INCREASE) {
+                depth += 1;
+            }
+        }
+        // Also check if the entry was a closing bracket, in
+        // which case just break.
+        if (tmpInputType == INPUT_TYPE_EMPTY) {
+            if (pCurrentListEntry->entry.c == OPENING_BRACKET) {
+                depth += 1;
+            }
+            if (pCurrentListEntry->entry.c == CLOSING_BRACKET) {
+                depth -= 1;
+            }
+        }
+        pCurrentListEntry = pCurrentListEntry->pPrevious;
+    }
+    return depth;
+}
+
 calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
                                   char *pResString, uint16_t stringLen,
                                   int16_t *pSyntaxIssuePos) {
@@ -1703,13 +1738,17 @@ calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
                 // If it's an opening bracket, the previous
                 // entry must be either nothing, a comma, or an
                 // operator.
+                int depth = calc_findDepthOfPointer(pCurrentListEntry);
+                char prevEntryChar =
+                    ((inputListEntry_t *)(pCurrentListEntry->pPrevious))
+                        ->entry.c;
                 if (pCurrentListEntry->pPrevious != NULL) {
                     if (previousInputType == INPUT_TYPE_NUMBER) {
                         calc_recordSyntaxIssuePos(pSyntaxIssuePos,
                                                   numCharsWritten);
                     } else if (previousInputType == INPUT_TYPE_EMPTY) {
-                        if (((inputListEntry_t *)(pCurrentListEntry->pPrevious))
-                                ->entry.c != '(') {
+                        if (prevEntryChar != '(' &&
+                            !(prevEntryChar == ',' && depth > 0)) {
                             calc_recordSyntaxIssuePos(pSyntaxIssuePos,
                                                       numCharsWritten);
                         }
@@ -1747,6 +1786,7 @@ calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
                     // bracket was due to a depth increasing function, or an
                     // opening bracket.
                     bool inDepthIncreasingFunction = false;
+                    int depth = calc_findDepthOfPointer(pCurrentListEntry);
                     inputListEntry_t *pTmpListEntry =
                         pCurrentListEntry->pPrevious;
                     while (pTmpListEntry != NULL) {
@@ -1765,18 +1805,24 @@ calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
                         // Also check if the entry was a closing bracket, in
                         // which case just break.
                         if (tmpInputType == INPUT_TYPE_EMPTY) {
-                            if (pTmpListEntry->entry.c == '(') {
+                            if (pTmpListEntry->entry.c == OPENING_BRACKET) {
                                 break;
                             }
                         }
                         pTmpListEntry = pTmpListEntry->pPrevious;
                     }
-                    if (previousInputType != INPUT_TYPE_NUMBER ||
-                        !inDepthIncreasingFunction) {
-                        calc_recordSyntaxIssuePos(pSyntaxIssuePos,
-                                                  numCharsWritten);
+                    if (previousInputType != INPUT_TYPE_NUMBER || depth > 0) {
+                        inputListEntry_t *pTmpListEntry =
+                            pCurrentListEntry->pPrevious;
+                        // Closing bracket is still OK here
+                        if (!(depth > 0) &&
+                            pTmpListEntry->entry.c != CLOSING_BRACKET) {
+                            calc_recordSyntaxIssuePos(pSyntaxIssuePos,
+                                                      numCharsWritten);
+                        }
                     }
                 } else {
+                    // Illegal to start an expression with a comma.
                     calc_recordSyntaxIssuePos(pSyntaxIssuePos, numCharsWritten);
                 }
             } else {

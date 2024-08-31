@@ -131,7 +131,7 @@ SOFTWARE.
  * @defgroup ColorDefinitions Definitions for the colors used in the display
  * @{
  */
-#define COLORWHEEL_LEN 8
+#define COLORWHEEL_LEN 7
 #define RED 0xff0000
 #define ORANGE 0xff7f00
 #define GREEN 0x00ff00
