@@ -268,7 +268,6 @@ void displayCalcState(displayState_t *pDisplayState) {
 
     // Find the maximum length of string we can print to the screen.
     // This has to be based on the font.
-    // uint16_t maxDisplayStrLen =
     char pStatusString[60] = {0};
     sprintf(pStatusString, "%s  BITS:%s  INPUT:%s  OUTPUT:%s\0", pBaseString,
             bitWidthString, pInputFormatString, pOutputFormatString);

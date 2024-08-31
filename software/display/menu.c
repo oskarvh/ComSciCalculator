@@ -114,9 +114,29 @@ menuState_t bitSizesMenu = {
 };
 
 // Functions for doing stuff in the menus
-void getCurrentFont(displayState_t *pDisplayState, char *pString) {}
+void getCurrentFont(displayState_t *pDisplayState, char *pString) {
+    font_t *pCurrentFont =
+        pFontLibraryTable[pDisplayState->fontIdx]->pSmallFont;
+    strcpy(pString, pCurrentFont->font_name);
+}
 
-void changeFont(displayState_t *pDisplayState, char *pString) {}
+void changeFont(displayState_t *pDisplayState, char *pString) {
+    // Get the current font index
+    uint8_t fontIdx = pDisplayState->fontIdx;
+    // Do we have any more fonts?
+    if (fontIdx + 1 < MAX_LEN_FONT_LIBRARY_TABLE) {
+        // If we increase the font index, will the font table point to 0?
+        if (pFontLibraryTable[fontIdx + 1] == NULL) {
+            // No more fonts have been programmed, roll around to 0
+            pDisplayState->fontIdx = 0;
+        } else {
+            pDisplayState->fontIdx += 1;
+        }
+    } else {
+        // Maximum font index is reached roll around to 0
+        pDisplayState->fontIdx = 0;
+    }
+}
 
 void goUpOneMenu(displayState_t *pDisplayState, char *pString) {
     // Get the current display option:

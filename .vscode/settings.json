@@ -33,7 +33,8 @@
         "event_groups.h": "c",
         "stdint.h": "c",
         "task.h": "c",
-        "queue.h": "c"
+        "queue.h": "c",
+        "cascadia_20_l2.h": "c"
     },
     "cmake.configureOnOpen": true
 }
