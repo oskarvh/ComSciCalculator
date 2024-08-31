@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2023 Oskar von Heideken
+Copyright (c) 2024 Oskar von Heideken
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -21,49 +21,47 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-#ifndef FIRMWARE_COMMON_H_
-#define FIRMWARE_COMMON_H_
-// Standard libraries
-#include <stdint.h>
 
-// FreeRTOS includes
-#include "FreeRTOS.h"
-#include "queue.h"
-#include "semphr.h"
-#include "event_groups.h" 
+/*
+ * This file includes function mappings used by firmware_common,
+ * which are specific to the RP2040 comSciCalc rev 1 board.
+ */
 
-//! Queue for handling UART input
-extern QueueHandle_t uartReceiveQueue;
-//! Semaphore protecting the display state
-extern xSemaphoreHandle displayStateSemaphore;
-//! Event group which triggers a display update.
-extern EventGroupHandle_t displayTriggerEvent;
+// Standard library
+#include <stdbool.h>
+
+// RP2040 stdlib
+#include "pico/stdlib.h"
 
 /**
- * @brief Main thread. Calls init functions and starts
- * the other threads. 
- * @param p Pointer to arguments
- * @return Nothing
+ * @brief Init the RP2040 HW
  */
-void mainThread(void *p);
+bool mcuInit(void);
 
 /**
- * @brief Task for testing the display.
- * @param p Pointer to arguments
- * @return Nothing
+ * @brief Init the UART(s) on the RP2040
  */
-void displayTestThread(void *p);
+bool initUart(void);
 
 /**
- * @brief ISR for 1 Hz timer
- * @return Nothing
+ * @brief Init the offboard SPI.
+ * @note The FT81x SPI interface is initialized in the EVE driver.
  */
-void Timer1HzIntHandler(void);
+bool initSpi(void);
 
 /**
- * @brief ISR for 60 Hz timer
- * @return Nothing
+ * @brief Init the HW timer used for cursor blinking etc.
  */
-void Timer60HzIntHandler(void);
+bool initTimer(void);
 
-#endif //FIRMWARE_COMMON_H_
+/**
+ * @brief Start the HW timer used for cursor blinking etc.
+ */
+void startTimer(void);
+
+/**
+ * @brief printf function used for UART logging with the RP2040
+ * @param pcString Pointer string, must be null terminated.
+ * @param vaArgP String formatting string
+ */
+void UARTvprintf(const char *pcString, va_list vaArgP);

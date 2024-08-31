@@ -607,10 +607,14 @@ void convertResult(char *pString, SUBRESULT_INT result,
             if (base == inputBase_DEC) {
                 if (pNumberFormat->numBits == 32) {
                     float tmpRes = (float)result;
-                    sprintf(pString, "%g.0", tmpRes);
+                    sprintf(pString, "%g", tmpRes);
                 } else if (pNumberFormat->numBits == 64) {
                     double tmpRes = (double)result;
-                    sprintf(pString, "%lg.0", tmpRes);
+                    sprintf(pString, "%lg", tmpRes);
+                }
+                // Check if trailing zeros should be added.
+                if (strchr(pString, '.') == NULL) {
+                    sprintf(pString, "%s.0", pString);
                 }
             } else if (base == inputBase_BIN) {
                 SUBRESULT_INT tmpRes = 0;
@@ -888,7 +892,6 @@ copyAndConvertList(calcCoreState_t *pCalcCoreState,
             }
             // Finally, cap it off with a null terminator
             *pCurrentChar = '\0';
-
             // Now that we have a string to work with, based on the input
             // format and base, we can convert using the UNIX string-to-X
             // functions.
@@ -1059,7 +1062,7 @@ int8_t readOutArgs(inputType_t *pArgs, int8_t numArgs, inputListEntry_t *pStart,
         }
         if (GET_SUBRESULT_TYPE(pStart->entry.typeFlag) == SUBRESULT_TYPE_INT) {
             // Argument found.
-            logger(LOGGER_LEVEL_INFO, "Argument[%i] = %i\r\n", readArgs,
+            logger(LOGGER_LEVEL_INFO, "Argument[%i] = %llx\r\n", readArgs,
                    pStart->entry.subresult);
             memcpy(pArgs++, &(pStart->entry), sizeof(inputType_t));
             readArgs++;
@@ -1233,11 +1236,11 @@ static int solveExpression(calcCoreState_t *pCalcCoreState,
             }
             // Now that the operator is surrounded by valid input, solve the
             // expression
-            logger(LOGGER_LEVEL_INFO, "Solving %i",
+            logger(LOGGER_LEVEL_INFO, "Solving %llx",
                    pPrevEntry->entry.subresult);
             logger(LOGGER_LEVEL_INFO, " %s ",
                    ((operatorEntry_t *)(pHigestPrioOp->pFunEntry))->opString);
-            logger(LOGGER_LEVEL_INFO, "%i\r\n", pNextEntry->entry.subresult);
+            logger(LOGGER_LEVEL_INFO, "%llx\r\n", pNextEntry->entry.subresult);
 
             inputFormat_t inputFormat =
                 pCalcCoreState->numberFormat.inputFormat;
@@ -1417,7 +1420,7 @@ static int solveExpression(calcCoreState_t *pCalcCoreState,
                                    DEPTH_CHANGE_KEEP, INPUT_TYPE_NUMBER);
             pResult = pExprStart;
             logger(LOGGER_LEVEL_INFO,
-                   "pResult = 0x%08x, pResult->pNext = 0x%08x", pResult,
+                   "pResult = 0x%08x, pResult->pNext = 0x%08x\r\n", pResult,
                    pResult->pNext);
             free(pArgs);
         } else {
@@ -1563,6 +1566,41 @@ void calc_recordSyntaxIssuePos(int16_t *pSyntaxIssuePos,
     }
 }
 
+/**
+ * @brief Function to return the depth at the current pointer
+ * @param pSyntaxIssuePos Pointer to syntax issue variable
+ * @param numCharsWritten Number of characters that the issue is at.
+ */
+int calc_findDepthOfPointer(inputListEntry_t *pCurrentListEntry) {
+    int depth = 0;
+    // Loop until the entry is NULL
+    while (pCurrentListEntry != NULL) {
+        uint8_t tmpInputType =
+            GET_INPUT_TYPE(pCurrentListEntry->entry.typeFlag);
+        // Check if entry is a depth increasing operator.
+        // If we found one, then break the loop, and reflect in
+        // variable
+        if (tmpInputType == INPUT_TYPE_OPERATOR) {
+            if (GET_DEPTH_FLAG(pCurrentListEntry->entry.typeFlag) ==
+                DEPTH_CHANGE_INCREASE) {
+                depth += 1;
+            }
+        }
+        // Also check if the entry was a closing bracket, in
+        // which case just break.
+        if (tmpInputType == INPUT_TYPE_EMPTY) {
+            if (pCurrentListEntry->entry.c == OPENING_BRACKET) {
+                depth += 1;
+            }
+            if (pCurrentListEntry->entry.c == CLOSING_BRACKET) {
+                depth -= 1;
+            }
+        }
+        pCurrentListEntry = pCurrentListEntry->pPrevious;
+    }
+    return depth;
+}
+
 calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
                                   char *pResString, uint16_t stringLen,
                                   int16_t *pSyntaxIssuePos) {
@@ -1700,13 +1738,17 @@ calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
                 // If it's an opening bracket, the previous
                 // entry must be either nothing, a comma, or an
                 // operator.
+                int depth = calc_findDepthOfPointer(pCurrentListEntry);
+                char prevEntryChar =
+                    ((inputListEntry_t *)(pCurrentListEntry->pPrevious))
+                        ->entry.c;
                 if (pCurrentListEntry->pPrevious != NULL) {
                     if (previousInputType == INPUT_TYPE_NUMBER) {
                         calc_recordSyntaxIssuePos(pSyntaxIssuePos,
                                                   numCharsWritten);
                     } else if (previousInputType == INPUT_TYPE_EMPTY) {
-                        if (((inputListEntry_t *)(pCurrentListEntry->pPrevious))
-                                ->entry.c != '(') {
+                        if (prevEntryChar != '(' &&
+                            !(prevEntryChar == ',' && depth > 0)) {
                             calc_recordSyntaxIssuePos(pSyntaxIssuePos,
                                                       numCharsWritten);
                         }
@@ -1744,6 +1786,7 @@ calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
                     // bracket was due to a depth increasing function, or an
                     // opening bracket.
                     bool inDepthIncreasingFunction = false;
+                    int depth = calc_findDepthOfPointer(pCurrentListEntry);
                     inputListEntry_t *pTmpListEntry =
                         pCurrentListEntry->pPrevious;
                     while (pTmpListEntry != NULL) {
@@ -1762,18 +1805,24 @@ calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
                         // Also check if the entry was a closing bracket, in
                         // which case just break.
                         if (tmpInputType == INPUT_TYPE_EMPTY) {
-                            if (pTmpListEntry->entry.c == '(') {
+                            if (pTmpListEntry->entry.c == OPENING_BRACKET) {
                                 break;
                             }
                         }
                         pTmpListEntry = pTmpListEntry->pPrevious;
                     }
-                    if (previousInputType != INPUT_TYPE_NUMBER ||
-                        !inDepthIncreasingFunction) {
-                        calc_recordSyntaxIssuePos(pSyntaxIssuePos,
-                                                  numCharsWritten);
+                    if (previousInputType != INPUT_TYPE_NUMBER || depth > 0) {
+                        inputListEntry_t *pTmpListEntry =
+                            pCurrentListEntry->pPrevious;
+                        // Closing bracket is still OK here
+                        if (!(depth > 0) &&
+                            pTmpListEntry->entry.c != CLOSING_BRACKET) {
+                            calc_recordSyntaxIssuePos(pSyntaxIssuePos,
+                                                      numCharsWritten);
+                        }
                     }
                 } else {
+                    // Illegal to start an expression with a comma.
                     calc_recordSyntaxIssuePos(pSyntaxIssuePos, numCharsWritten);
                 }
             } else {

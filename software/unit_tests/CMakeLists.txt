@@ -11,6 +11,10 @@ project(comscicalc_unit_tests
 
 set(CMAKE_C_COMPILER gcc)
 set(CMAKE_LINKER gcc)
+
+# Logging level. Set -1 to shut the logger up, 0 for error, 1 for info, 2 for debug
+add_compile_definitions(LOG_LEVEL=-1)
+
 # Add the comcscicalc library
 add_library(comscicalc_lib STATIC
     ${CMAKE_CURRENT_LIST_DIR}/../comSciCalc_lib/comscicalc.c
@@ -21,33 +25,45 @@ add_library(comscicalc_lib STATIC
 
 target_include_directories(comscicalc_lib PUBLIC
     ${CMAKE_CURRENT_LIST_DIR}/../comSciCalc_lib/
+    m
 )
 
 # Add the unity library
+include_directories(${CMAKE_CURRENT_LIST_DIR}/../Unity)
+
 add_library(unity STATIC
-    ${CMAKE_CURRENT_LIST_DIR}/../unity/src/unity.c
+    ${CMAKE_CURRENT_LIST_DIR}/../Unity/src/unity.c
 )
 
 target_include_directories(unity PUBLIC
-    ${CMAKE_CURRENT_LIST_DIR}/../unity/src/
+    ${CMAKE_CURRENT_LIST_DIR}/../Unity/src/
 )
 
 # Add test source files
 file(GLOB src_files
     ${CMAKE_CURRENT_LIST_DIR}/test_suite.c
     ${CMAKE_CURRENT_LIST_DIR}/unit_tests.c
+    ${CMAKE_CURRENT_LIST_DIR}/test_input.c
+    ${CMAKE_CURRENT_LIST_DIR}/test_calc_static.c
+    ${CMAKE_CURRENT_LIST_DIR}/test_format.c
+    ${CMAKE_CURRENT_LIST_DIR}/test_utils.c
 )
 
 #add_definitions("-DVERBOSE")
 add_compile_options("-finput-charset=ascii")
-add_executable(comscicalc_unit_tests ${src_files})
+add_executable(comscicalc_unit_tests
+    ${src_files}
+)
 target_include_directories(
     comscicalc_unit_tests PUBLIC
     ${CMAKE_CURRENT_LIST_DIR}/
+    ${CMAKE_CURRENT_LIST_DIR}/../Unity
+    ${CMAKE_CURRENT_LIST_DIR}/../Unity/src/
 )
 
 target_link_libraries(
     comscicalc_unit_tests
     comscicalc_lib
     unity
+    m
 )

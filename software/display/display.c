@@ -22,8 +22,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include "display.h"
+// stdlib
+#include <stdio.h>
+#include <string.h>
+
 #include "EVE.h"
+#include "display.h"
+#include "firmware_common.h"
+#include "menu.h"
 #include "print_utils.h"
 #include "uart_logger.h"
 
@@ -34,8 +40,8 @@ char pHexRes[MAX_PRINTED_BUFFER_LEN_HEX] = {0};
 //! Decimal result string buffer
 char pDecRes[MAX_PRINTED_BUFFER_LEN_DEC] = {0};
 //! Color wheel for the brackets
-const uint32_t colorWheel[COLORWHEEL_LEN] = {WHITE,    ORANGE, YELLOW,  GREEN,
-                                             TURQOISE, BLUE_2, MAGENTA, PURPLE};
+const uint32_t colorWheel[COLORWHEEL_LEN] = {WHITE,  YELLOW,  GREEN, TURQOISE,
+                                             BLUE_2, MAGENTA, PURPLE};
 //! String for displaying the decimal base to the user on the screen
 char dec_display_string[] = "DEC";
 //! String for displaying the hexadecimal base to the user on the screen
@@ -64,19 +70,9 @@ const char *formatDisplayStrings[] = {
     [INPUT_FMT_FLOAT] = float_display_string,
 };
 
-const menuOption_t menuOptionList[] = {
-    "Integer bits",
-    "Fractional bits",
-    NULL,
-};
-
 /**
  * @brief Print the outline of graphics
- *
- * This attempts to solve the current buffer and reflect the result
- * in the #pCalcCoreState.
- * @param pCalcCoreState Pointer to an allocated core state variable.
- * @return Status of solving the buffer.
+ * @return Nothing
  */
 static void displayOutline(void) {
     // Outline shall be white
@@ -222,12 +218,12 @@ uint8_t getFontCharWidth(font_t *pFont, char c) {
  */
 void displayCalcState(displayState_t *pDisplayState) {
     // Get the string and length depending on the base:
-    char *pBaseString =
+    const char *pBaseString =
         baseDisplayStrings[pDisplayState->inputOptions.inputBase];
     uint8_t baseStringLen = strlen(pBaseString);
 
     // Get the string and length depending on the input format:
-    char *pInputFormatString =
+    const char *pInputFormatString =
         formatDisplayStrings[pDisplayState->inputOptions.inputFormat];
     uint8_t inputFormatStringLen = strlen(pInputFormatString);
 
@@ -247,7 +243,7 @@ void displayCalcState(displayState_t *pDisplayState) {
     }
 
     // Get the string and length depending on the output format:
-    char *pOutputFormatString =
+    const char *pOutputFormatString =
         formatDisplayStrings[pDisplayState->inputOptions.outputFormat];
     uint8_t outputFormatStringLen = strlen(pOutputFormatString);
 
@@ -272,7 +268,6 @@ void displayCalcState(displayState_t *pDisplayState) {
 
     // Find the maximum length of string we can print to the screen.
     // This has to be based on the font.
-    // uint16_t maxDisplayStrLen =
     char pStatusString[60] = {0};
     sprintf(pStatusString, "%s  BITS:%s  INPUT:%s  OUTPUT:%s\0", pBaseString,
             bitWidthString, pInputFormatString, pOutputFormatString);
@@ -403,6 +398,11 @@ void displayInputText(displayState_t *pDisplayState, bool writeCursor) {
 }
 
 void initDisplayState(displayState_t *pDisplayState) {
+    if (pDisplayState == NULL) {
+        while (1)
+            ;
+    }
+
     pDisplayState->inputOptions.fixedPointDecimalPlace = 32; // TBD
     pDisplayState->inputOptions.inputFormat = 0;             // TBD
     pDisplayState->inputOptions.outputFormat = 0;            // TBD
@@ -415,8 +415,7 @@ void initDisplayState(displayState_t *pDisplayState) {
     memset(pDisplayState->printedInputBuffer, '\0', MAX_PRINTED_BUFFER_LEN);
     pDisplayState->syntaxIssueIndex = -1;
     pDisplayState->inMenu = false;
-    pDisplayState->pMenuState->pMenuOptionList = menuOptionList;
-    pDisplayState->pMenuState->currentItemIndex = 0;
+    pDisplayState->pMenuState = &topMenu;
 }
 
 /**
@@ -483,6 +482,12 @@ static void displayResultWithinBounds(char *pString, uint16_t yStart,
 }
 
 void printResult(displayState_t *pDisplayState) {
+    // Let the color reflect if the operation was OK or not.
+    if (pDisplayState->solveStatus == calc_solveStatus_SUCCESS) {
+        EVE_cmd_dl_burst(DL_COLOR_RGB | WHITE);
+    } else {
+        EVE_cmd_dl_burst(DL_COLOR_RGB | GRAY);
+    }
     // Get the result and output formats
     SUBRESULT_INT result = pDisplayState->result;
 
@@ -516,26 +521,133 @@ void printResult(displayState_t *pDisplayState) {
 /**
  * @brief Function to print the menu
  * @param pDisplayState Pointer to displayState
+ * @param pMenuOption Pointer to the menu option to print
+ * @param offset_y Offset of Y for the box, in pixels
+ * @param offset_x Offset of X for the box, in pixels
+ * @param spacing_y Spacing in the Y axis between each box
+ * @param selected_item This is the currently selected item.
  * @return Nothing
  */
-static void displayMenu(displayState_t *pDisplayState){
-    // display list is already started, will be ended outside of this function. 
+void printMenuItem(displayState_t *pDisplayState, menuOption_t *pMenuOption,
+                   uint16_t offset_y, uint16_t offset_x, uint16_t spacing_y,
+                   bool selected_item) {
+    font_t *pCurrentFont =
+        pFontLibraryTable[pDisplayState->fontIdx]->pLargeFont;
+    uint16_t menuOptionOffsetY = pCurrentFont->font_caps_height + spacing_y * 2;
+    // Outline shall be white
+    if (selected_item) {
+        EVE_color_rgb_burst(WHITE);
+    } else {
+        EVE_color_rgb_burst(GRAY);
+    }
+    // Write the top line
+    EVE_cmd_dl_burst(DL_BEGIN | EVE_RECTS);
+    EVE_cmd_dl(VERTEX2F((offset_x)*16, (offset_y)*16));
+    EVE_cmd_dl(VERTEX2F((TOP_OUTLINE_X1 - (offset_x)) * 16,
+                        ((offset_y + menuOptionOffsetY)) * 16));
+
+    EVE_cmd_dl_burst(DL_BEGIN | EVE_LINES);
+    EVE_cmd_dl(VERTEX2F((offset_x)*16, (offset_y)*16));
+    EVE_cmd_dl(VERTEX2F((EVE_HSIZE - offset_x) * 16, (offset_y)*16));
+
+    // Write the bottom line
+    EVE_cmd_dl_burst(DL_BEGIN | EVE_LINES);
+    EVE_cmd_dl(VERTEX2F((offset_x)*16, ((offset_y + menuOptionOffsetY)) * 16));
+    EVE_cmd_dl(VERTEX2F((TOP_OUTLINE_X1 - (offset_x)) * 16,
+                        ((offset_y + menuOptionOffsetY)) * 16));
+
+    // Write the right vertical line
+    EVE_cmd_dl_burst(DL_BEGIN | EVE_LINES);
+    EVE_cmd_dl(VERTEX2F((EVE_HSIZE - offset_x) * 16, (offset_y)*16));
+    EVE_cmd_dl(VERTEX2F((TOP_OUTLINE_X1 - (offset_x)) * 16,
+                        ((offset_y + menuOptionOffsetY)) * 16));
+
+    // Write the left vertical line
+    EVE_cmd_dl_burst(DL_BEGIN | EVE_LINES);
+    EVE_cmd_dl(VERTEX2F((offset_x)*16, (offset_y)*16));
+    EVE_cmd_dl(VERTEX2F((offset_x)*16, ((offset_y + menuOptionOffsetY)) * 16));
+
+    // write the text:
+    // Left justified for the menu items.
+    if (selected_item) {
+        EVE_color_rgb_burst(BLACK);
+    } else {
+        EVE_color_rgb_burst(WHITE);
+    }
+    EVE_cmd_text_burst(offset_x + 10, offset_y, pCurrentFont->ft81x_font_index,
+                       0, pMenuOption->pOptionString);
+    // TODO: Run the pDisplayFun it's not NULL
+}
+/**
+ * @brief Function to print the menu
+ * @param pDisplayState Pointer to displayState
+ * @return Nothing
+ */
+static void displayMenu(displayState_t *pDisplayState) {
+    // display list is already started, will be ended outside of this function.
 
     // Get the small font, which is what is to be used in the menu.
-    font_t *pCurrentFont = pFontLibraryTable[pDisplayState->fontIdx]->pSmallFont;
-    
+    font_t *pCurrentFont =
+        pFontLibraryTable[pDisplayState->fontIdx]->pLargeFont;
+
     // Find the offset based on font size
     // Take the size of the caps, plus 10 pixels
-    uint8_t menuOptionOffsetY = pCurrentFont->font_caps_height + 10;
-    
-    // Print the whole menu:
-    menuState_t *pMenuState = pDisplayState->pMenuState;
-    menuOption_t *pCurrentMenuOption = pMenuState->pMenuOptionList;
-    uint8_t menuItemCount = 0;
-    while(pCurrentMenuOption++ != NULL){
-        // Print the menu option
+    uint8_t menuOptionOffsetY = pCurrentFont->font_caps_height + 20;
 
-        menuItemCount++; 
+    // Offsets around the boxes
+    uint16_t offset_y =
+        10; // Starting offset. Will later depend on the font size
+    uint16_t spacing_y = 10;    // 10 px spacing between items
+    uint16_t spacing_boxes = 4; // Spacing between each box
+    uint16_t offset_x = 10;     // 10 px spacing around x to the border.
+    // Print a box around the menu:
+
+    // Outline shall be white
+    EVE_color_rgb_burst(WHITE);
+    // Write the top line
+    EVE_cmd_dl_burst(DL_BEGIN | EVE_LINES);
+    EVE_cmd_dl(VERTEX2F((offset_x / 2) * 16, (spacing_y / 2) * 16));
+    EVE_cmd_dl(VERTEX2F((EVE_HSIZE - offset_x / 2) * 16, (spacing_y / 2) * 16));
+
+    // Write the bottom line
+    EVE_cmd_dl_burst(DL_BEGIN | EVE_LINES);
+    EVE_cmd_dl(
+        VERTEX2F((offset_x / 2) * 16, (EVE_VSIZE - (spacing_y / 2)) * 16));
+    EVE_cmd_dl(VERTEX2F((TOP_OUTLINE_X1 - (offset_x / 2)) * 16,
+                        (EVE_VSIZE - (spacing_y / 2)) * 16));
+
+    // Write the right vertical line
+    EVE_cmd_dl_burst(DL_BEGIN | EVE_LINES);
+    EVE_cmd_dl(VERTEX2F((EVE_HSIZE - offset_x / 2) * 16, (spacing_y / 2) * 16));
+    EVE_cmd_dl(VERTEX2F((TOP_OUTLINE_X1 - (offset_x / 2)) * 16,
+                        (EVE_VSIZE - (spacing_y / 2)) * 16));
+
+    // Write the left vertical line
+    EVE_cmd_dl_burst(DL_BEGIN | EVE_LINES);
+    EVE_cmd_dl(VERTEX2F((offset_x / 2) * 16, (spacing_y / 2) * 16));
+    EVE_cmd_dl(
+        VERTEX2F((offset_x / 2) * 16, (EVE_VSIZE - (spacing_y / 2)) * 16));
+
+    // Get the menu state
+    menuState_t *pMenuState = pDisplayState->pMenuState;
+    menuOption_t *pCurrentMenuOption = pMenuState->pCurrentMenuOption;
+    menuOption_t *pMenuOption = pMenuState->pMenuOptionList;
+    uint8_t menuItemCount = 0;
+    // Print the top level menu
+    // Go through the list
+    while (pMenuOption->pOptionString != NULL) {
+        // The pMenuOption points to a list of menu options.
+        // Go through and print.
+        bool selected_item = false;
+        if (pCurrentMenuOption == pMenuOption) {
+            selected_item = true;
+        } else {
+            selected_item = false;
+        }
+        printMenuItem(pDisplayState, pMenuOption, offset_y, offset_x, spacing_y,
+                      selected_item);
+        pMenuOption++;
+        offset_y += menuOptionOffsetY + spacing_boxes;
     }
 }
 
@@ -607,32 +719,38 @@ void displayTask(void *p) {
 #endif
 #endif
 
-        // Update the screen:
-        startDisplaylist();
-        if(localDisplayState.inMenu){
-            // Display the menu
-            displayMenu(&localDisplayState);
-        } else { 
+        if (localDisplayState.inMenu) {
+            // Loop until the internal state changes
+            while (localDisplayState.inMenu) {
+                // Update the screen:
+                startDisplaylist();
+                // Display the menu
+                displayMenu(&localDisplayState);
+                // End the display list
+                endDisplayList();
+                // Hijack the uartReceiveQueue and update accordingly
+                // Note, we wait for uart in this function
+                updateMenuState(&localDisplayState, &displayState);
+                // Create a task delay to give other equal priority a chance
+                // tasks to run.
+                vTaskDelay(10 / portTICK_PERIOD_MS);
+            }
+
+        } else {
+            // Update the screen:
+            startDisplaylist();
             // Display the outline
             displayOutline();
             // Write the calculator setting state:
             displayCalcState(&localDisplayState);
             // Write the input text
             displayInputText(&localDisplayState, writeCursor);
-            // EVE_cmd_text_burst(INPUT_TEXT_XC0, INPUT_TEXT_YC0, FONT,
-            // INPUT_TEXT_OPTIONS, pRxBuf);
-
-            // Let the color reflect if the operation was OK or not.
-            if (localDisplayState.solveStatus == calc_solveStatus_SUCCESS) {
-                EVE_cmd_dl_burst(DL_COLOR_RGB | WHITE);
-            } else {
-                EVE_cmd_dl_burst(DL_COLOR_RGB | GRAY);
-            }
             // Print the results
             printResult(&localDisplayState);
+            // End the display list
+            endDisplayList();
         }
-        // End the display list
-        endDisplayList();
+
         vTaskDelay(10 / portTICK_PERIOD_MS);
     }
 }

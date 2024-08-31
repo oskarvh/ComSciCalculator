@@ -14,6 +14,29 @@
                 "debuggerType": "SEGGERJLINKARM",
                 "serverParameters": ["-uConnectionTimeout=","30","-uSelect=","USB","-uLowPower=","0","-uInteface=","SWD","-uIfSpeed=","4000","-uResetBeginConnection=","1","-uNoReset=","1","-uResetPreRun=","1","-uResetCon=","1","-uReleaseCM3=","0","-uDisconnectionMode=","1","-uSWOcoreClock=","0","-uEnableSciBoot=","1","-uresetOnReload=","1","-n","0","-uFlashBp=","1","-uSimulation=","0","-ueraseRomOnDownload=","0","-ueraseDataRomOnDownload=","0","-uOSRestriction=","0","-uProgReWriteIRom=","1","-uCPUFrequency=","0","-uCECycle=","1","-uResetBehavior=","Reset","-uMemRegion=","0x20000000:0x1400:RAM:s","-uMemRegion=","0x20001400:0xC00:RAM:c","-uMemRegion=","0x00000000:0x2C00:FLASH:s","-uMemRegion=","0x00002C00:0x5400:FLASH:c","-uMemRegion=","0x08000000:0x0:DATA_FLASH:s","-uMemRegion=","0x0100A100:0x80:OPTION_SETTING:s","-uMemRegion=","0x0100A200:0xD0:OPTION_SETTING_S:s","-uMemRegion=","0x00000000:0x0:ID_CODE:s","-uMemRegion=","0x80010000:0x0:SDRAM:s","-uMemRegion=","0x60000000:0x0:QSPI_FLASH:s","-uMemRegion=","0x80020000:0x0:OSPI_DEVICE_0:s","-uMemRegion=","0x80030000:0x0:OSPI_DEVICE_1:s","-uMemRegion=","0x00008000:0xF8000:FLASH:n","-uMemRegion=","0x08000000:0x2000:DATA_FLASH:n","-uTz=","SSD","-l","-uCore=","SINGLE_CORE|enabled|1|main","-uSyncMode=","async","-uFirstGDB=","main"]
             }
+        },
+        {
+            "name": "Pico Debug",
+            "cwd": "${workspaceRoot}",
+            "executable": "${command:cmake.launchTargetPath}",
+            "request": "launch",
+            "type": "cortex-debug",
+            "servertype": "openocd",
+            // This may need to be "arm-none-eabi-gdb" for some previous builds
+            "gdbPath" : "arm-none-eabi-gdb",//"gdb-multiarch",
+            "device": "RP2040",
+            "configFiles": [
+                "interface/cmsis-dap.cfg",
+                "target/rp2040.cfg"
+            ],
+            "svdFile": "${env:PICO_SDK_PATH}/src/rp2040/hardware_regs/rp2040.svd",
+            "runToEntryPoint": "main",
+            // Work around for stopping at main on restart
+            "postRestartCommands": [
+                "break main",
+                "continue"
+            ],
+            "showDevDebugOutput": "raw"
         }
     ]
 

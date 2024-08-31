@@ -34,7 +34,7 @@ SOFTWARE.
 #include "Cascadia_20_L2.h"
 #include "Cascadia_36_L2.h"
 //#include "Comic_Sans_MS_20_L2.h"
-//#include "Comic_Sans_MS_38_L2.h"
+#include "Comic_Sans_MS_38_L2.h"
 
 font_t rom_font_0 = {.rom_font = true,
                      .ft81x_font_index = 18,
@@ -62,11 +62,16 @@ const font_collection_t cascadia = {
     .pLargeFont = &font_Cascadia_36_L2,
 };
 
+const font_collection_t comic_sans = {
+    .pSmallFont = &font_Comic_Sans_MS_38_L2,
+    .pLargeFont = &font_Comic_Sans_MS_38_L2,
+};
+
 const font_collection_t rom_font = {
     .pSmallFont = &rom_font_0,
     .pLargeFont = &rom_font_1,
 };
 
 font_collection_t *pFontLibraryTable[MAX_LEN_FONT_LIBRARY_TABLE] = {
-    [0] = &cascadia, [1] = NULL, [2] = NULL, [3] = NULL, [4] = NULL,
-    [5] = NULL,      [6] = NULL, [7] = NULL, [8] = NULL, [9] = NULL};
+    [0] = &cascadia, [1] = &comic_sans, [2] = NULL, [3] = NULL, [4] = NULL,
+    [5] = NULL,      [6] = NULL,        [7] = NULL, [8] = NULL, [9] = NULL};

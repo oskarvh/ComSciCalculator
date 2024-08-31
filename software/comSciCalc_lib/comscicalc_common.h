@@ -84,7 +84,10 @@ typedef uint8_t inputFormat_t;
  * @warning These shall be removed and replaced with numberFormat
  * @{
  */
+//! Type for subresult, signed to keep track of that.
 typedef int64_t SUBRESULT_INT;
+//! Same bitsize type but unsigned. Useful for bitmasks etc.
+typedef uint64_t SUBRESULT_UINT;
 /**@}*/
 
 //! Typedef for the input base (dec, hex, bin, none)

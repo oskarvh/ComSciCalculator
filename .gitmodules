@@ -16,3 +16,6 @@
 	path = firmware/renesas/CMSIS_5
 	url = git@github.com:ARM-software/CMSIS_5.git
 	branch = 5.9.0
+[submodule "firmware/rp2040/pico-sdk"]
+	path = firmware/rp2040/pico-sdk
+	url = git@github.com:raspberrypi/pico-sdk.git

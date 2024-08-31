@@ -56,9 +56,15 @@ SOFTWARE.
  * --------------------------------------------------------
  *              [Hex output] |             [Decimal output]
  * */
-
+/**
+ * @defgroup Events related to common firmware
+ * @{
+ */
+// Display events
 #define DISPLAY_EVENT_NEW_DATA 1
 #define DISPLAY_EVENT_CURSOR (1 << 1)
+#define DISPLAY_EXIT_MENU (1 << 2)
+/**@}*/
 
 //! Top line which parts the options from the input
 #define OUTLINE_WIDTH 2 * 16
@@ -125,7 +131,7 @@ SOFTWARE.
  * @defgroup ColorDefinitions Definitions for the colors used in the display
  * @{
  */
-#define COLORWHEEL_LEN 8
+#define COLORWHEEL_LEN 7
 #define RED 0xff0000
 #define ORANGE 0xff7f00
 #define GREEN 0x00ff00
@@ -137,7 +143,9 @@ SOFTWARE.
 #define PURPLE 0x4b0082 // 0x800080
 #define WHITE 0xffffff
 #define BLACK 0x000000
+#define LIGHT_GRAY 0x707070
 #define GRAY 0x303030
+#define DARK_GRAY 0x101010
 #define TURQOISE 0x00fff7
 /**@}*/
 
@@ -152,17 +160,6 @@ SOFTWARE.
 #define MAX_PRINTED_BUFFER_LEN_HEX 20
 //! Maximum length of results buffer
 #define MAX_PRINTED_BUFFER_LEN 100
-
-/**
- * @brief Type to handle the menu options
- */
-typedef struct menuOption {
-    /**
-     * @param pOptionString Pointer to the string for this option
-     */
-    char *pOptionString;
-
-} menuOption_t;
 
 /**
  * @brief Struct holding the state of the options shown
@@ -184,20 +181,6 @@ typedef struct inputState {
     uint8_t currentInputBase;
 
 } inputState_t;
-
-/**
- * @brief Struct holding the menu state. 
- */
-typedef struct menuState {
-    /**
-     * @param pMenuOptionList Pointer to the list of menu options
-     */
-    menuOption_t *pMenuOptionList;
-    /**
-     * @param currentItemIndex Index of the current menu item
-     */
-    uint8_t currentItemIndex;
-} menuState_t;
 
 /**
  * @brief Struct holding the display state, along with calculator
@@ -243,9 +226,9 @@ typedef struct displayState {
      */
     bool inMenu;
     /**
-     * @param pMenuState Pointer to menu state. 
+     * @param pMenuState Pointer to menu state.
      */
-    menuState_t *pMenuState;
+    void *pMenuState;
     /**
      * @param printedInputBuffer Input buffer printed by calc core.
      */
@@ -277,5 +260,6 @@ void initDisplayState(displayState_t *pDisplayState);
  */
 void displayTask(void *p);
 
-void testDisplay();
+void testDisplay(void);
+
 #endif /* DISPLAY_H_ */
