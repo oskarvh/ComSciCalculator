@@ -117,6 +117,9 @@ menuState_t bitSizesMenu = {
 void getCurrentFont(displayState_t *pDisplayState, char *pString) {
     font_t *pCurrentFont =
         pFontLibraryTable[pDisplayState->fontIdx]->pSmallFont;
+    if (strlen(pCurrentFont->font_name) > MAX_MENU_DISPLAY_FUN_STRING) {
+        // TODO: The name is too long. Cut it
+    }
     strcpy(pString, pCurrentFont->font_name);
 }
 

@@ -552,7 +552,7 @@ int printMenuItem(displayState_t *pDisplayState, menuOption_t *pMenuOption,
         // Check if the word itself is longer than the
         // line.
         if (wordWith + 10 > EVE_HSIZE / 2 - 10) {
-            logger(LOGGER_LEVEL_ERROR, "Trying to print a too long word!");
+            logger(LOGGER_LEVEL_ERROR, "Trying to print a too long word/r/n!");
         }
         if (charsWidth + wordWith > EVE_HSIZE / 2 - 10) {
             // The next char would be creeping over the midpoint of the print,
@@ -595,14 +595,15 @@ int printMenuItem(displayState_t *pDisplayState, menuOption_t *pMenuOption,
         int tmpCharIter = charIter;
         int wordWith = 0;
         while (pMenuOption->pOptionString[tmpCharIter] != '\0' &&
-               pMenuOption->pOptionString[tmpCharIter] != ' ') {
+               pMenuOption->pOptionString[tmpCharIter] != ' ' &&
+               pMenuOption->pOptionString[tmpCharIter] != '-') {
             wordWith += getFontCharWidth(
                 pCurrentFont, pMenuOption->pOptionString[tmpCharIter++]);
         }
         // Check if the word itself is longer than the
         // line.
         if (wordWith + 10 > EVE_HSIZE / 2 - 10) {
-            logger(LOGGER_LEVEL_ERROR, "Trying to print a too long word!");
+            logger(LOGGER_LEVEL_ERROR, "Trying to print a too long word!/r/n");
         }
         if (charsWidth + wordWith > EVE_HSIZE / 2 - 10) {
             // The next char would be creeping over the midpoint of the print,
@@ -611,13 +612,6 @@ int printMenuItem(displayState_t *pDisplayState, menuOption_t *pMenuOption,
             charsWidth = offset_x + 10;
         }
 
-        // if(charsWidth + currentCharsWidth > EVE_HSIZE/2-10){
-        //     // The next char would be creeping over the midpoint of the
-        //     print,
-        //     // so move down one line
-        //     numLines += 1;
-        //     charsWidth = offset_x + 10;
-        // }
         char pTmpRxBuf[2] = {pMenuOption->pOptionString[charIter], '\0'};
         EVE_cmd_text_burst(offset_x + 10 + charsWidth,
                            offset_y + (numLines - 1) * (charsHeight),
@@ -631,6 +625,52 @@ int printMenuItem(displayState_t *pDisplayState, menuOption_t *pMenuOption,
     // pCurrentFont->ft81x_font_index,
     //                    0, pMenuOption->pOptionString);
     //  TODO: Run the pDisplayFun it's not NULL
+    if (pMenuOption->pDisplayFun != NULL) {
+        // Run the display function here to get the string
+        // that displays the selected option.
+        char pString[MAX_MENU_DISPLAY_FUN_STRING] = {0};
+        (*((menu_function *)(pMenuOption->pDisplayFun)))(pDisplayState,
+                                                         pString);
+        // Display the output
+        charIter = 0;
+        int tmpNumLines = 1;
+        charsWidth = 0;
+        int totalWordLen = 0;
+        while (pString[charIter] != '\0') {
+            totalWordLen += getFontCharWidth(pCurrentFont, pString[charIter++]);
+        }
+        charIter = 0;
+        while (pString[charIter] != '\0') {
+            // Check if the next word fits on this line
+            int tmpCharIter = charIter;
+            int wordWith = 0;
+            while (pString[tmpCharIter] != '\0' &&
+                   pString[tmpCharIter] != ' ' && pString[tmpCharIter] != '-') {
+                wordWith +=
+                    getFontCharWidth(pCurrentFont, pString[tmpCharIter++]);
+            }
+            // Check if the word itself is longer than the
+            // line.
+            if (wordWith + 10 > EVE_HSIZE / 2 - 10) {
+                logger(LOGGER_LEVEL_ERROR,
+                       "Trying to print a too long word!/r/n");
+            }
+            if (charsWidth + wordWith > EVE_HSIZE / 2 - 10) {
+                // The next char would be creeping over the midpoint of the
+                // print, so move down one line
+                tmpNumLines += 1;
+                charsWidth = 0;
+            }
+
+            char pTmpRxBuf[2] = {pString[charIter], '\0'};
+            EVE_cmd_text_burst(EVE_HSIZE - totalWordLen - 10 - offset_x +
+                                   charsWidth,
+                               offset_y + (tmpNumLines - 1) * (charsHeight),
+                               pCurrentFont->ft81x_font_index, 0, pTmpRxBuf);
+            charsWidth += getFontCharWidth(pCurrentFont, pString[charIter]);
+            charIter++;
+        }
+    }
     return numLines;
 }
 /**

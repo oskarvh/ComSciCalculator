@@ -6,6 +6,8 @@
 // Display library
 #include "display.h"
 
+#define MAX_MENU_DISPLAY_FUN_STRING 40
+
 /**
  * @brief Type to handle the menu options
  */
