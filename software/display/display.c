@@ -526,14 +526,46 @@ void printResult(displayState_t *pDisplayState) {
  * @param offset_x Offset of X for the box, in pixels
  * @param spacing_y Spacing in the Y axis between each box
  * @param selected_item This is the currently selected item.
- * @return Nothing
+ * @return Number of rows written.
  */
-void printMenuItem(displayState_t *pDisplayState, menuOption_t *pMenuOption,
-                   uint16_t offset_y, uint16_t offset_x, uint16_t spacing_y,
-                   bool selected_item) {
+int printMenuItem(displayState_t *pDisplayState, menuOption_t *pMenuOption,
+                  uint16_t offset_y, uint16_t offset_x, uint16_t spacing_y,
+                  bool selected_item, int charsHeight) {
     font_t *pCurrentFont =
         pFontLibraryTable[pDisplayState->fontIdx]->pLargeFont;
-    uint16_t menuOptionOffsetY = pCurrentFont->font_caps_height + spacing_y * 2;
+
+    // Get the length of the string as it would be printed in the
+    // current font:
+    uint8_t charIter = 0;
+    int widthAllChars = 0;
+    int numLines = 1;
+    int charsWidth = offset_x + 10;
+    while (pMenuOption->pOptionString[charIter] != '\0') {
+        int tmpCharIter = charIter;
+        int wordWith = 0;
+        while (pMenuOption->pOptionString[tmpCharIter] != '\0' &&
+               pMenuOption->pOptionString[tmpCharIter] != ' ' &&
+               pMenuOption->pOptionString[tmpCharIter] != '-') {
+            wordWith += getFontCharWidth(
+                pCurrentFont, pMenuOption->pOptionString[tmpCharIter++]);
+        }
+        // Check if the word itself is longer than the
+        // line.
+        if (wordWith + 10 > EVE_HSIZE / 2 - 10) {
+            logger(LOGGER_LEVEL_ERROR, "Trying to print a too long word!");
+        }
+        if (charsWidth + wordWith > EVE_HSIZE / 2 - 10) {
+            // The next char would be creeping over the midpoint of the print,
+            // so move down one line
+            numLines += 1;
+            charsWidth = offset_x + 10;
+        }
+        charsWidth += getFontCharWidth(pCurrentFont,
+                                       pMenuOption->pOptionString[charIter]);
+        charIter++;
+    }
+    uint16_t menuOptionOffsetY = (numLines - 1) * charsHeight +
+                                 pCurrentFont->font_caps_height + spacing_y * 2;
     // Outline shall be white
     if (selected_item) {
         EVE_color_rgb_burst(WHITE);
@@ -546,37 +578,60 @@ void printMenuItem(displayState_t *pDisplayState, menuOption_t *pMenuOption,
     EVE_cmd_dl(VERTEX2F((TOP_OUTLINE_X1 - (offset_x)) * 16,
                         ((offset_y + menuOptionOffsetY)) * 16));
 
-    EVE_cmd_dl_burst(DL_BEGIN | EVE_LINES);
-    EVE_cmd_dl(VERTEX2F((offset_x)*16, (offset_y)*16));
-    EVE_cmd_dl(VERTEX2F((EVE_HSIZE - offset_x) * 16, (offset_y)*16));
-
-    // Write the bottom line
-    EVE_cmd_dl_burst(DL_BEGIN | EVE_LINES);
-    EVE_cmd_dl(VERTEX2F((offset_x)*16, ((offset_y + menuOptionOffsetY)) * 16));
-    EVE_cmd_dl(VERTEX2F((TOP_OUTLINE_X1 - (offset_x)) * 16,
-                        ((offset_y + menuOptionOffsetY)) * 16));
-
-    // Write the right vertical line
-    EVE_cmd_dl_burst(DL_BEGIN | EVE_LINES);
-    EVE_cmd_dl(VERTEX2F((EVE_HSIZE - offset_x) * 16, (offset_y)*16));
-    EVE_cmd_dl(VERTEX2F((TOP_OUTLINE_X1 - (offset_x)) * 16,
-                        ((offset_y + menuOptionOffsetY)) * 16));
-
-    // Write the left vertical line
-    EVE_cmd_dl_burst(DL_BEGIN | EVE_LINES);
-    EVE_cmd_dl(VERTEX2F((offset_x)*16, (offset_y)*16));
-    EVE_cmd_dl(VERTEX2F((offset_x)*16, ((offset_y + menuOptionOffsetY)) * 16));
-
-    // write the text:
-    // Left justified for the menu items.
+    // Select the color of the text
     if (selected_item) {
         EVE_color_rgb_burst(BLACK);
     } else {
         EVE_color_rgb_burst(WHITE);
     }
-    EVE_cmd_text_burst(offset_x + 10, offset_y, pCurrentFont->ft81x_font_index,
-                       0, pMenuOption->pOptionString);
-    // TODO: Run the pDisplayFun it's not NULL
+
+    // Go through and print each char, checking that the total width doesn't
+    // go past the halfway point. If it does, then wrap and start a new line.
+    charsWidth = offset_x + 10;
+    charIter = 0;
+    numLines = 1;
+    while (pMenuOption->pOptionString[charIter] != '\0') {
+        // Check if the next word fits on this line
+        int tmpCharIter = charIter;
+        int wordWith = 0;
+        while (pMenuOption->pOptionString[tmpCharIter] != '\0' &&
+               pMenuOption->pOptionString[tmpCharIter] != ' ') {
+            wordWith += getFontCharWidth(
+                pCurrentFont, pMenuOption->pOptionString[tmpCharIter++]);
+        }
+        // Check if the word itself is longer than the
+        // line.
+        if (wordWith + 10 > EVE_HSIZE / 2 - 10) {
+            logger(LOGGER_LEVEL_ERROR, "Trying to print a too long word!");
+        }
+        if (charsWidth + wordWith > EVE_HSIZE / 2 - 10) {
+            // The next char would be creeping over the midpoint of the print,
+            // so move down one line
+            numLines += 1;
+            charsWidth = offset_x + 10;
+        }
+
+        // if(charsWidth + currentCharsWidth > EVE_HSIZE/2-10){
+        //     // The next char would be creeping over the midpoint of the
+        //     print,
+        //     // so move down one line
+        //     numLines += 1;
+        //     charsWidth = offset_x + 10;
+        // }
+        char pTmpRxBuf[2] = {pMenuOption->pOptionString[charIter], '\0'};
+        EVE_cmd_text_burst(offset_x + 10 + charsWidth,
+                           offset_y + (numLines - 1) * (charsHeight),
+                           pCurrentFont->ft81x_font_index, 0, pTmpRxBuf);
+        charsWidth += getFontCharWidth(pCurrentFont,
+                                       pMenuOption->pOptionString[charIter]);
+        charIter++;
+    }
+    // EVE_cmd_text_burst(offset_x + 10, offset_y +
+    // numLines*(pCurrentFont->font_caps_height),
+    // pCurrentFont->ft81x_font_index,
+    //                    0, pMenuOption->pOptionString);
+    //  TODO: Run the pDisplayFun it's not NULL
+    return numLines;
 }
 /**
  * @brief Function to print the menu
@@ -644,10 +699,10 @@ static void displayMenu(displayState_t *pDisplayState) {
         } else {
             selected_item = false;
         }
-        printMenuItem(pDisplayState, pMenuOption, offset_y, offset_x, spacing_y,
-                      selected_item);
+        int rows = printMenuItem(pDisplayState, pMenuOption, offset_y, offset_x,
+                                 spacing_y, selected_item, menuOptionOffsetY);
         pMenuOption++;
-        offset_y += menuOptionOffsetY + spacing_boxes;
+        offset_y += rows * menuOptionOffsetY + spacing_boxes;
     }
 }
 

@@ -81,7 +81,7 @@ menuOption_t topLevelMenuList[] = {
             .pUpdateFun = &changeFont,
             .pDisplayFun = &getCurrentFont,
         },
-    // All submenus should have this option. It just makes sense
+    // Top level menu needs an exit.
     [2] =
         {
             .pOptionString = "Exit",
