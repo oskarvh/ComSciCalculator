@@ -33,8 +33,8 @@ SOFTWARE.
 // Included fonts. Add new fonts here.
 #include "Cascadia_20_L2.h"
 #include "Cascadia_36_L2.h"
-//#include "Comic_Sans_MS_20_L2.h"
 #include "Comic_Sans_MS_38_L2.h"
+#include "comic_20_L2.h"
 
 font_t rom_font_0 = {.rom_font = true,
                      .ft81x_font_index = 18,
@@ -63,7 +63,7 @@ const font_collection_t cascadia = {
 };
 
 const font_collection_t comic_sans = {
-    .pSmallFont = &font_Comic_Sans_MS_38_L2,
+    .pSmallFont = &font_comic_20_L2,
     .pLargeFont = &font_Comic_Sans_MS_38_L2,
 };
 

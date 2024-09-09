@@ -564,10 +564,13 @@ int getNumberOfLinesForString(displayState_t *pDisplayState, char *pString,
                                                      pString[tmpEndCharIter++]);
                 }
                 tmpEndCharIter--;
-                numLines += 2;
+                numLines += 1;
                 charsWidth = 0;
                 wordWidth -= tmpWordWidth;
                 charIter = tmpEndCharIter;
+                if (wordWidth > 0) {
+                    numLines += 1;
+                }
             }
             // Check if the remaining word plus the
             if (charsWidth + wordWidth > maxWidth) {
@@ -586,47 +589,7 @@ int getNumberOfLinesForString(displayState_t *pDisplayState, char *pString,
     }
     return numLines;
 }
-// {
-//     uint8_t charIter = 0;
-//     int numLines = 1;
-//     int charsWidth = 0;
-//     font_t *pCurrentFont =
-//     pFontLibraryTable[pDisplayState->fontIdx]->pLargeFont; while
-//     (pString[charIter] != '\0') {
-//         int tmpCharIter = charIter;
-//         int wordWidth = 0;
-//         while (isalpha(pString[tmpCharIter])) {
-//             int currentCharsWith = getFontCharWidth(
-//                 pCurrentFont, pString[tmpCharIter]);
-//             wordWidth += currentCharsWith;
-//             if (charsWidth + wordWidth > maxWidth) {
-//                 // The current word is wider than the box we're trying to fit
-//                 it into.
-//                 // Increase counter and reset the character iterator
-//                 numLines += 1;
-//                 // The new word length is just the width of this character.
-//                 wordWidth = currentCharsWith;
-//                 charsWidth = 0;
-//             }
-//             tmpCharIter++;
-//         }
-//         // Check if the word itself is longer than the
-//         // line.
-//         int currentCharsWith = getFontCharWidth(
-//                 pCurrentFont, pString[tmpCharIter]);
-//         if (charsWidth + wordWidth > maxWidth) {
-//             // The currently written characters plus the
-//             // word is collectively wider than the goal width.
-//             // Increase the number of lines,
-//             numLines += 1;
-//             charsWidth = 0;
-//         }
-//         charsWidth += getFontCharWidth(pCurrentFont,
-//                                        pString[charIter]);
-//         charIter++;
-//     }
-//     return numLines;
-// }
+
 /**
  * @brief Calculate the
  * @param pString Pointer to string to calculate width for
