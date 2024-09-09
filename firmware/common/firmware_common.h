@@ -28,9 +28,9 @@ SOFTWARE.
 
 // FreeRTOS includes
 #include "FreeRTOS.h"
+#include "event_groups.h"
 #include "queue.h"
 #include "semphr.h"
-#include "event_groups.h" 
 
 //! Queue for handling UART input
 extern QueueHandle_t uartReceiveQueue;
@@ -41,7 +41,7 @@ extern EventGroupHandle_t displayTriggerEvent;
 
 /**
  * @brief Main thread. Calls init functions and starts
- * the other threads. 
+ * the other threads.
  * @param p Pointer to arguments
  * @return Nothing
  */
@@ -66,4 +66,4 @@ void Timer1HzIntHandler(void);
  */
 void Timer60HzIntHandler(void);
 
-#endif //FIRMWARE_COMMON_H_
+#endif // FIRMWARE_COMMON_H_

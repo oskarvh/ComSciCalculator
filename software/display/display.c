@@ -23,6 +23,7 @@ SOFTWARE.
 */
 
 // stdlib
+#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -519,6 +520,244 @@ void printResult(displayState_t *pDisplayState) {
 }
 
 /**
+ * @brief Calculate the number of lines it would take to
+ *        print a string given a max width with the current font.
+ *        If one word is longer than the max width, then it would assume that
+ *        the word continues on the next line.
+ *        A word is separated by any non-alfabetical characters
+ * @param pDisplayState Pointer to displayState
+ * @param pString Pointer to string, maximum length is 255
+ * @param maxWidth Maximum width of the string in pixels
+ * @param xOffset Offset in width between the bounding box
+ * @return Number of lines that would require to print string.
+ */
+int getNumberOfLinesForString(displayState_t *pDisplayState, char *pString,
+                              int maxWidth) {
+    // Before any chars have been written, the width is the offset.
+    int charsWidth = 0;
+    // Init the counters
+    int charIter = 0;
+    int numLines = 1;
+    // Get the currently selected font
+    font_t *pCurrentFont =
+        pFontLibraryTable[pDisplayState->fontIdx]->pLargeFont;
+    while (pString[charIter] != '\0') {
+        // Check if the next word fits on this line
+        int tmpCharIter = charIter;
+        int wordWidth = 0;
+        // Lookahead and print the next word
+        int endCharIter = charIter;
+        while (isalpha(pString[endCharIter])) {
+            wordWidth += getFontCharWidth(pCurrentFont, pString[endCharIter++]);
+        }
+        // Check if the word combined with the previously written chars are
+        // longer than the line width
+        if (charsWidth + wordWidth > maxWidth) {
+            // Check if the word only is longer than the line width
+            while (wordWidth > maxWidth) {
+                // Get the string that fits the line and print that
+                int tmpWordWidth = 0;
+                int tmpEndCharIter = charIter;
+                while (tmpWordWidth < maxWidth &&
+                       tmpEndCharIter < endCharIter) {
+                    tmpWordWidth += getFontCharWidth(pCurrentFont,
+                                                     pString[tmpEndCharIter++]);
+                }
+                tmpEndCharIter--;
+                numLines += 2;
+                charsWidth = 0;
+                wordWidth -= tmpWordWidth;
+                charIter = tmpEndCharIter;
+            }
+            // Check if the remaining word plus the
+            if (charsWidth + wordWidth > maxWidth) {
+                charsWidth += wordWidth;
+                charIter = endCharIter;
+                numLines += 1;
+            }
+        }
+        // Create a temporary buffer for the current character
+        char pTmpRxBuf[2] = {pString[charIter], '\0'};
+        int currentCharsWidth =
+            getFontCharWidth(pCurrentFont, pString[charIter]);
+        // Increase the written character width, and increase the iterator
+        charsWidth += currentCharsWidth;
+        charIter++;
+    }
+    return numLines;
+}
+// {
+//     uint8_t charIter = 0;
+//     int numLines = 1;
+//     int charsWidth = 0;
+//     font_t *pCurrentFont =
+//     pFontLibraryTable[pDisplayState->fontIdx]->pLargeFont; while
+//     (pString[charIter] != '\0') {
+//         int tmpCharIter = charIter;
+//         int wordWidth = 0;
+//         while (isalpha(pString[tmpCharIter])) {
+//             int currentCharsWith = getFontCharWidth(
+//                 pCurrentFont, pString[tmpCharIter]);
+//             wordWidth += currentCharsWith;
+//             if (charsWidth + wordWidth > maxWidth) {
+//                 // The current word is wider than the box we're trying to fit
+//                 it into.
+//                 // Increase counter and reset the character iterator
+//                 numLines += 1;
+//                 // The new word length is just the width of this character.
+//                 wordWidth = currentCharsWith;
+//                 charsWidth = 0;
+//             }
+//             tmpCharIter++;
+//         }
+//         // Check if the word itself is longer than the
+//         // line.
+//         int currentCharsWith = getFontCharWidth(
+//                 pCurrentFont, pString[tmpCharIter]);
+//         if (charsWidth + wordWidth > maxWidth) {
+//             // The currently written characters plus the
+//             // word is collectively wider than the goal width.
+//             // Increase the number of lines,
+//             numLines += 1;
+//             charsWidth = 0;
+//         }
+//         charsWidth += getFontCharWidth(pCurrentFont,
+//                                        pString[charIter]);
+//         charIter++;
+//     }
+//     return numLines;
+// }
+/**
+ * @brief Calculate the
+ * @param pString Pointer to string to calculate width for
+ * @param pFont Pointer to font to calculate the width for
+ * @return Width in pixels that the word would need to print
+ */
+int getStringWidth(char *pString, font_t *pFont) {
+    int charIter = 0;
+    int wordWidth = 0;
+    while (isalpha(pString[charIter])) {
+        wordWidth += getFontCharWidth(pFont, pString[charIter++]);
+    }
+}
+
+void printLine(char *pString, font_t *pCurrentFont, int charsWidth,
+               int numLines, int xOffset, int yOffset, int y1, int textHeight,
+               bool leftJustification) {
+    if (leftJustification) {
+        EVE_cmd_text_burst(EVE_HSIZE - charsWidth - xOffset,
+                           y1 + yOffset + (numLines - 1) * (textHeight),
+                           pCurrentFont->ft81x_font_index, 0, pString);
+    } else {
+        EVE_cmd_text_burst(xOffset + charsWidth,
+                           y1 + yOffset + (numLines - 1) * (textHeight),
+                           pCurrentFont->ft81x_font_index, 0, pString);
+    }
+}
+
+/**
+ * @brief Print a string within a bounding box with a symmetrical offset
+ * @param pDisplayState Pointer to displayState
+ * @param pString Pointer to string, maximum length is 255
+ * @param x1 X-coordinate of the right upper corner of the bounding box
+ * @param y1 Y-coordinate of the right upper corner of the bounding box
+ * @param x2 X-coordinate of the left bottom corner of the bounding box
+ * @param y2 Y-coordinate of the left bottom corner of the bounding box
+ * @param xOffset X-offset from the bounding box, in pixels
+ * @param yOffset Y-offset from the bounding box, in pixels
+ * @param textHeight Height of the text between one line to the next
+ * @param leftJustification True if text is coming from the left, false if
+ * writing from the right
+ * @return Number of lines that would require to print string.
+ */
+int printMenuOptionString(displayState_t *pDisplayState, char *pString, int x1,
+                          int y1, int x2, int y2, int xOffset, int yOffset,
+                          int textHeight, bool leftJustification) {
+    // Before any chars have been written, the width is the offset.
+    int charsWidth = 2 * xOffset;
+    // Calculate the maximum width, offset is symmetrical
+    int maxWidth = x2 - x1;
+    // Calculate the maximum height, offset is symmetrical
+    int maxHeight = y2 - y1;
+    // Init the counters
+    int charIter = 0;
+    int numLines = 1;
+    // Get the currently selected font
+    font_t *pCurrentFont =
+        pFontLibraryTable[pDisplayState->fontIdx]->pLargeFont;
+    while (pString[charIter] != '\0') {
+        // Check if the next word fits on this line
+        int tmpCharIter = charIter;
+        int wordWidth = 0;
+        // Lookahead and print the next word
+        int endCharIter = charIter;
+        while (isalpha(pString[endCharIter])) {
+            wordWidth += getFontCharWidth(pCurrentFont, pString[endCharIter++]);
+        }
+        // Check if the word combined with the previously written chars are
+        // longer than the line width
+        if (charsWidth + wordWidth > maxWidth) {
+            // Check if the word only is longer than the line width
+            while (wordWidth > maxWidth) {
+                // Get the string that fits the line and print that
+                int tmpWordWidth = 2 * xOffset;
+                int tmpEndCharIter = charIter;
+                while (tmpWordWidth < maxWidth &&
+                       tmpEndCharIter < endCharIter) {
+                    tmpWordWidth += getFontCharWidth(pCurrentFont,
+                                                     pString[tmpEndCharIter++]);
+                }
+                tmpEndCharIter--;
+                int wordLen = (tmpEndCharIter - charIter);
+                // Here, print the string between charIter and tmpEndCharIter
+                char *pTmpBuf = malloc(sizeof(char) * (wordLen + 1));
+                // Set all to null chars to terminate
+                memset(pTmpBuf, '\0', wordLen + 1);
+                memcpy(pTmpBuf, &(pString[charIter]), sizeof(char) * wordLen);
+                // At this point, we should already have caught if there's
+                // another char that was supposed to be on this line.
+                // Go down one line, and print the string
+                numLines += 1;
+                printLine(pTmpBuf, pCurrentFont, 2 * xOffset, numLines, xOffset,
+                          yOffset, y1, textHeight, leftJustification);
+                free(pTmpBuf);
+                numLines += 1;
+                charsWidth = 2 * xOffset;
+                wordWidth -= tmpWordWidth;
+                charIter = tmpEndCharIter;
+            }
+            // Check if the remaining word plus the
+            if (charsWidth + wordWidth > maxWidth) {
+                int wordLen = (endCharIter - charIter);
+                // Here, print the string between charIter and endCharIter
+                char *pTmpBuf = malloc(sizeof(char) * (wordLen + 1));
+                // Set all to null chars to terminate
+                memset(pTmpBuf, '\0', wordLen + 1);
+                memcpy(pTmpBuf, &(pString[charIter]), sizeof(char) * wordLen);
+                // At this point, we should already have caught if there's
+                // another char that was supposed to be on this line.
+                // Go down one line, and print the string
+                numLines += 1;
+                printLine(pTmpBuf, pCurrentFont, 2 * xOffset, numLines, xOffset,
+                          yOffset, y1, textHeight, leftJustification);
+                free(pTmpBuf);
+                charsWidth += wordWidth;
+                charIter = endCharIter;
+            }
+        }
+        // Create a temporary buffer for the current character
+        char pTmpRxBuf[2] = {pString[charIter], '\0'};
+        int currentCharsWidth =
+            getFontCharWidth(pCurrentFont, pString[charIter]);
+        printLine(pTmpRxBuf, pCurrentFont, charsWidth, numLines, xOffset,
+                  yOffset, y1, textHeight, leftJustification);
+        // Increase the written character width, and increase the iterator
+        charsWidth += currentCharsWidth;
+        charIter++;
+    }
+}
+
+/**
  * @brief Function to print the menu
  * @param pDisplayState Pointer to displayState
  * @param pMenuOption Pointer to the menu option to print
@@ -526,6 +765,7 @@ void printResult(displayState_t *pDisplayState) {
  * @param offset_x Offset of X for the box, in pixels
  * @param spacing_y Spacing in the Y axis between each box
  * @param selected_item This is the currently selected item.
+ * @param charsHeight Height, or offset, in pixels in Y-direction.
  * @return Number of rows written.
  */
 int printMenuItem(displayState_t *pDisplayState, menuOption_t *pMenuOption,
@@ -538,32 +778,26 @@ int printMenuItem(displayState_t *pDisplayState, menuOption_t *pMenuOption,
     // current font:
     uint8_t charIter = 0;
     int widthAllChars = 0;
-    int numLines = 1;
     int charsWidth = offset_x + 10;
-    while (pMenuOption->pOptionString[charIter] != '\0') {
-        int tmpCharIter = charIter;
-        int wordWith = 0;
-        while (pMenuOption->pOptionString[tmpCharIter] != '\0' &&
-               pMenuOption->pOptionString[tmpCharIter] != ' ' &&
-               pMenuOption->pOptionString[tmpCharIter] != '-') {
-            wordWith += getFontCharWidth(
-                pCurrentFont, pMenuOption->pOptionString[tmpCharIter++]);
+    int numLines =
+        getNumberOfLinesForString(pDisplayState, pMenuOption->pOptionString,
+                                  EVE_HSIZE / 2 - offset_x * 2 - 20);
+
+    if (pMenuOption->pDisplayFun != NULL) {
+        // Run the display function here to get the string
+        // that displays the selected option.
+        char pString[MAX_MENU_DISPLAY_FUN_STRING] = {0};
+        (*((menu_function *)(pMenuOption->pDisplayFun)))(pDisplayState,
+                                                         pString);
+        int numLinesFn = getNumberOfLinesForString(
+            pDisplayState, pString, EVE_HSIZE / 2 - offset_x * 2 - 20);
+        if (numLinesFn > numLines) {
+            // The result is longer than the option string. Use the result
+            // string numLines
+            numLines = numLinesFn;
         }
-        // Check if the word itself is longer than the
-        // line.
-        if (wordWith + 10 > EVE_HSIZE / 2 - 10) {
-            logger(LOGGER_LEVEL_ERROR, "Trying to print a too long word/r/n!");
-        }
-        if (charsWidth + wordWith > EVE_HSIZE / 2 - 10) {
-            // The next char would be creeping over the midpoint of the print,
-            // so move down one line
-            numLines += 1;
-            charsWidth = offset_x + 10;
-        }
-        charsWidth += getFontCharWidth(pCurrentFont,
-                                       pMenuOption->pOptionString[charIter]);
-        charIter++;
     }
+
     uint16_t menuOptionOffsetY = (numLines - 1) * charsHeight +
                                  pCurrentFont->font_caps_height + spacing_y * 2;
     // Outline shall be white
@@ -572,10 +806,10 @@ int printMenuItem(displayState_t *pDisplayState, menuOption_t *pMenuOption,
     } else {
         EVE_color_rgb_burst(GRAY);
     }
-    // Write the top line
+    // Write the rectangle encompassing the option.
     EVE_cmd_dl_burst(DL_BEGIN | EVE_RECTS);
     EVE_cmd_dl(VERTEX2F((offset_x)*16, (offset_y)*16));
-    EVE_cmd_dl(VERTEX2F((TOP_OUTLINE_X1 - (offset_x)) * 16,
+    EVE_cmd_dl(VERTEX2F((EVE_HSIZE - (offset_x)) * 16,
                         ((offset_y + menuOptionOffsetY)) * 16));
 
     // Select the color of the text
@@ -587,44 +821,11 @@ int printMenuItem(displayState_t *pDisplayState, menuOption_t *pMenuOption,
 
     // Go through and print each char, checking that the total width doesn't
     // go past the halfway point. If it does, then wrap and start a new line.
-    charsWidth = offset_x + 10;
-    charIter = 0;
-    numLines = 1;
-    while (pMenuOption->pOptionString[charIter] != '\0') {
-        // Check if the next word fits on this line
-        int tmpCharIter = charIter;
-        int wordWith = 0;
-        while (pMenuOption->pOptionString[tmpCharIter] != '\0' &&
-               pMenuOption->pOptionString[tmpCharIter] != ' ' &&
-               pMenuOption->pOptionString[tmpCharIter] != '-') {
-            wordWith += getFontCharWidth(
-                pCurrentFont, pMenuOption->pOptionString[tmpCharIter++]);
-        }
-        // Check if the word itself is longer than the
-        // line.
-        if (wordWith + 10 > EVE_HSIZE / 2 - 10) {
-            logger(LOGGER_LEVEL_ERROR, "Trying to print a too long word!/r/n");
-        }
-        if (charsWidth + wordWith > EVE_HSIZE / 2 - 10) {
-            // The next char would be creeping over the midpoint of the print,
-            // so move down one line
-            numLines += 1;
-            charsWidth = offset_x + 10;
-        }
+    printMenuOptionString(pDisplayState, pMenuOption->pOptionString, offset_x,
+                          offset_y, EVE_HSIZE / 2 - (offset_x),
+                          (offset_y + menuOptionOffsetY), 10, spacing_y,
+                          charsHeight, false);
 
-        char pTmpRxBuf[2] = {pMenuOption->pOptionString[charIter], '\0'};
-        EVE_cmd_text_burst(offset_x + 10 + charsWidth,
-                           offset_y + (numLines - 1) * (charsHeight),
-                           pCurrentFont->ft81x_font_index, 0, pTmpRxBuf);
-        charsWidth += getFontCharWidth(pCurrentFont,
-                                       pMenuOption->pOptionString[charIter]);
-        charIter++;
-    }
-    // EVE_cmd_text_burst(offset_x + 10, offset_y +
-    // numLines*(pCurrentFont->font_caps_height),
-    // pCurrentFont->ft81x_font_index,
-    //                    0, pMenuOption->pOptionString);
-    //  TODO: Run the pDisplayFun it's not NULL
     if (pMenuOption->pDisplayFun != NULL) {
         // Run the display function here to get the string
         // that displays the selected option.
