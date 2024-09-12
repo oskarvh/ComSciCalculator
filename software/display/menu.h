@@ -74,6 +74,21 @@ typedef void menu_function(displayState_t *pDisplayState, char *pString);
  */
 void getCurrentFont(displayState_t *pDisplayState, char *pString);
 /**
+ * @brief Function to get the number of bits that the calculator is configured
+ * for.
+ * @param pDisplayState Pointer to the display state.
+ * @param pString Pointer to a pre-allocated string that return the output.
+ * @return Nothing
+ */
+void getBitSize(displayState_t *pDisplayState, char *pString);
+/**
+ * @brief Function to get the number of fractional bits for fixed point.
+ * @param pDisplayState Pointer to the display state.
+ * @param pString Pointer to a pre-allocated string that return the output.
+ * @return Nothing
+ */
+void getFractionalBits(displayState_t *pDisplayState, char *pString);
+/**
  * @brief Function to iterate through the current fonts.
  * @param pDisplayState Pointer to the display state.
  * @param pString Pointer to a pre-allocated string that return the output.

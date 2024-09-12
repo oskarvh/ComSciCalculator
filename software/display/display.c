@@ -641,7 +641,7 @@ int printMenuOptionString(displayState_t *pDisplayState, char *pString, int x1,
         // Get the length of the next word:
         bool writeLine = false;
         // Find the first non-whitespace char:
-        while (!isalnum(pString[charIter])) {
+        while (isspace(pString[charIter])) {
             charIter++;
         }
         int endStringIter = charIter;
@@ -659,7 +659,7 @@ int printMenuOptionString(displayState_t *pDisplayState, char *pString, int x1,
             } else {
                 // Current char is not alfanumeric, meaning the next word width
                 // is the width of the char
-                if (pString[charIter] == '\0') {
+                if (pString[charIter] == '\0' || pString[charIter] == '\n') {
                     // This is the end of the string, break and print.
                     writeLine = true;
                     break;
@@ -748,7 +748,7 @@ int printMenuOptionString(displayState_t *pDisplayState, char *pString, int x1,
             }
             // If the character after the end of this substring is null, then
             // print.
-            if (pString[charIter] == '\0') {
+            if (pString[charIter] == '\0' || pString[charIter] == '\n') {
                 writeLine = true;
             }
         }
@@ -811,10 +811,10 @@ int printMenuItem(displayState_t *pDisplayState, menuOption_t *pMenuOption,
         char pString[MAX_MENU_DISPLAY_FUN_STRING] = {0};
         (*((menu_function *)(pMenuOption->pDisplayFun)))(pDisplayState,
                                                          pString);
-        int numLinesFn = printMenuOptionString(
-            pDisplayState, pMenuOption->pOptionString, offset_x, offset_y,
-            EVE_HSIZE / 2 - (offset_x), 0, 20, spacing_y, charsHeight, true,
-            false);
+        int numLinesFn =
+            printMenuOptionString(pDisplayState, pString, offset_x, offset_y,
+                                  EVE_HSIZE / 2 - (offset_x), 0, 20, spacing_y,
+                                  charsHeight, true, true);
         if (numLinesFn > numLines) {
             // The result is longer than the option string. Use the result
             // string numLines
@@ -936,17 +936,6 @@ static void displayMenu(displayState_t *pDisplayState) {
     }
 }
 
-// TODO:
-// 1. Support different color output + freeze output if
-//    calculation was unsuccessful. DONE
-// 2. Support non-monospaced fonts (it's possible to find the
-//    spacing from the font meta data) DONE
-// 3. Support multiple fonts. DONE
-// 3. Support blinking cursor.
-//      Blinking done but I need the font spacing to be completed before I can
-//      set this as done.DONE
-// 4. For non-monospaced operators (e.g. SUM), the cursor is at the incorrect
-// location. DONE
 void displayTask(void *p) {
 
     // Program the font library

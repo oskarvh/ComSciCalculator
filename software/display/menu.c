@@ -38,15 +38,15 @@ menuOption_t bitSizesMenuList[] = {
         {
             .pOptionString = "Update number of bits",
             .pSubMenu = NULL,
-            .pUpdateFun = NULL,  // TODO: Insert function to call update bits.
-            .pDisplayFun = NULL, // TODO: Insert function
+            .pUpdateFun = NULL, // TODO: Insert function to call update bits.
+            .pDisplayFun = &getBitSize,
         },
     [1] =
         {
             .pOptionString = "Update fixed point fractional bits",
             .pSubMenu = NULL,
-            .pUpdateFun = NULL,  // TODO: Insert function
-            .pDisplayFun = NULL, // TODO: Insert function
+            .pUpdateFun = NULL, // TODO: Insert function
+            .pDisplayFun = &getFractionalBits,
         },
     // All submenus should have this option. It just makes sense
     [2] =
@@ -69,7 +69,7 @@ menuOption_t bitSizesMenuList[] = {
 menuOption_t topLevelMenuList[] = {
     [0] =
         {
-            .pOptionString = "Bit sizes",
+            .pOptionString = "Update bit size",
             .pSubMenu = &bitSizesMenu,
             .pUpdateFun = NULL,
             .pDisplayFun = NULL,
@@ -121,6 +121,21 @@ void getCurrentFont(displayState_t *pDisplayState, char *pString) {
         // TODO: The name is too long. Cut it
     }
     strcpy(pString, pCurrentFont->font_name);
+}
+
+// Function to return the current bit size/width
+void getBitSize(displayState_t *pDisplayState, char *pString) {
+    uint8_t numBits = pDisplayState->inputOptions.numBits;
+    sprintf(pString, "Current:\n%i bits", numBits);
+}
+
+// Function to display the fractional bits
+void getFractionalBits(displayState_t *pDisplayState, char *pString) {
+    uint8_t numBits = pDisplayState->inputOptions.numBits;
+    uint8_t decimalBits = pDisplayState->inputOptions.fixedPointDecimalPlace;
+    // Work out the Q notation:
+    uint8_t integerBits = numBits - decimalBits;
+    sprintf(pString, "Current:\n%u.%u\n[int.dec]", integerBits, decimalBits);
 }
 
 void changeFont(displayState_t *pDisplayState, char *pString) {
