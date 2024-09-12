@@ -81,15 +81,8 @@ menuOption_t topLevelMenuList[] = {
             .pUpdateFun = &changeFont,
             .pDisplayFun = &getCurrentFont,
         },
-    [2] =
-        {
-            .pOptionString = "123 blablablablablablabla",
-            .pSubMenu = NULL,
-            .pUpdateFun = NULL,
-            .pDisplayFun = NULL,
-        },
     // Top level menu needs an exit.
-    [3] =
+    [2] =
         {
             .pOptionString = "Exit",
             .pSubMenu = NULL,
@@ -97,7 +90,7 @@ menuOption_t topLevelMenuList[] = {
             .pDisplayFun = NULL,     // TODO: Insert function
         },
     // END OF LIST, all NULL
-    [4] =
+    [3] =
         {
             .pOptionString = NULL,
             .pSubMenu = NULL,
