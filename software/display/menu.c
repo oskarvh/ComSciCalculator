@@ -29,23 +29,33 @@ SOFTWARE.
 #include <stdlib.h>
 #include <string.h>
 
+#include "EVE.h"
 #include "display.h"
 #include "firmware_common.h"
 #include "menu.h"
+#include "uart_logger.h"
 
 menuOption_t bitSizesMenuList[] = {
     [0] =
         {
             .pOptionString = "Update number of bits",
             .pSubMenu = NULL,
-            .pUpdateFun = NULL, // TODO: Insert function to call update bits.
+            .menuUpdateFun =
+                {
+                    .interactiveUpdateFun = true,
+                    .pUpdateFun = &updateBitWidth,
+                },
             .pDisplayFun = &getBitSize,
         },
     [1] =
         {
             .pOptionString = "Update fixed point fractional bits",
             .pSubMenu = NULL,
-            .pUpdateFun = NULL, // TODO: Insert function
+            .menuUpdateFun =
+                {
+                    .interactiveUpdateFun = false,
+                    .pUpdateFun = NULL, // TODO: Update this
+                },
             .pDisplayFun = &getFractionalBits,
         },
     // All submenus should have this option. It just makes sense
@@ -53,15 +63,23 @@ menuOption_t bitSizesMenuList[] = {
         {
             .pOptionString = "Back",
             .pSubMenu = NULL,
-            .pUpdateFun = &goUpOneMenu, // TODO: Insert function
-            .pDisplayFun = NULL,        // TODO: Insert function
+            .menuUpdateFun =
+                {
+                    .interactiveUpdateFun = false,
+                    .pUpdateFun = &goUpOneMenu, // TODO: Insert function
+                },
+            .pDisplayFun = NULL, // TODO: Insert function
         },
     // END OF LIST, all NULL
     [3] =
         {
             .pOptionString = NULL,
             .pSubMenu = NULL,
-            .pUpdateFun = NULL,
+            .menuUpdateFun =
+                {
+                    .interactiveUpdateFun = false,
+                    .pUpdateFun = NULL,
+                },
             .pDisplayFun = NULL,
         },
 };
@@ -71,14 +89,22 @@ menuOption_t topLevelMenuList[] = {
         {
             .pOptionString = "Update bit size",
             .pSubMenu = &bitSizesMenu,
-            .pUpdateFun = NULL,
+            .menuUpdateFun =
+                {
+                    .interactiveUpdateFun = false,
+                    .pUpdateFun = NULL,
+                },
             .pDisplayFun = NULL,
         },
     [1] =
         {
             .pOptionString = "Change font",
             .pSubMenu = NULL,
-            .pUpdateFun = &changeFont,
+            .menuUpdateFun =
+                {
+                    .interactiveUpdateFun = false,
+                    .pUpdateFun = &changeFont,
+                },
             .pDisplayFun = &getCurrentFont,
         },
     // Top level menu needs an exit.
@@ -86,15 +112,23 @@ menuOption_t topLevelMenuList[] = {
         {
             .pOptionString = "Exit",
             .pSubMenu = NULL,
-            .pUpdateFun = &exitMenu, // TODO: Insert function
-            .pDisplayFun = NULL,     // TODO: Insert function
+            .menuUpdateFun =
+                {
+                    .interactiveUpdateFun = false,
+                    .pUpdateFun = &exitMenu,
+                },
+            .pDisplayFun = NULL, // TODO: Insert function
         },
     // END OF LIST, all NULL
     [3] =
         {
             .pOptionString = NULL,
             .pSubMenu = NULL,
-            .pUpdateFun = NULL,
+            .menuUpdateFun =
+                {
+                    .interactiveUpdateFun = false,
+                    .pUpdateFun = NULL,
+                },
             .pDisplayFun = NULL,
         },
 };
@@ -132,10 +166,200 @@ void getBitSize(displayState_t *pDisplayState, char *pString) {
 // Function to display the fractional bits
 void getFractionalBits(displayState_t *pDisplayState, char *pString) {
     uint8_t numBits = pDisplayState->inputOptions.numBits;
-    uint8_t decimalBits = pDisplayState->inputOptions.fixedPointDecimalPlace;
+    uint8_t decimalBits =
+        getEffectiveFixedPointDecimalPlace(&(pDisplayState->inputOptions));
     // Work out the Q notation:
     uint8_t integerBits = numBits - decimalBits;
     sprintf(pString, "Current:\n%u.%u\n[int.dec]", integerBits, decimalBits);
+}
+
+// Function to update the number of bits:
+// NOTE: THIS HIJACKS THE DISPLAY AND RECEIVE QUEUE!
+void updateBitWidth(displayState_t *pDisplayState,
+                    QueueHandle_t *pUartReceiveQueue) {
+
+// This should show a new screen, with the option to enter a number between
+// 0-64.
+#define MAX_BIT_WIDTH_LEN 2
+#define MAX_NUM_MENU_ITEMS 2
+    // Buffer to hold the entered chars. Currently only supporting up to 64
+    // bits, so 2 chars + null char is enough to hold the entered number.
+    char pEnteredChars[MAX_BIT_WIDTH_LEN + 1] = {"\0"};
+    // Iterator to track how many chars have been written to the buffer
+    uint8_t charIter = 0;
+    // Iterator to track the current menu selection
+    uint8_t selectionIter = 0;
+    // Get the current font:
+    font_t *pCurrentFont =
+        pFontLibraryTable[pDisplayState->fontIdx]->pLargeFont;
+    // Help string for entering the number
+    char *pHelpString =
+        "Enter number of bits\nMax: 64\nMin: 1\nPress enter to accept";
+    char *pAbortString = "Abort";
+
+    // Use the same parameters as for the menu here
+    uint16_t frameStart_x =
+        MENU_FRAME_OFFSET_X + MENU_FRAME_TO_OPTION_FRAME_OFFSET_X;
+    uint16_t frameStart_y =
+        MENU_FRAME_OFFSET_Y + MENU_FRAME_TO_OPTION_FRAME_OFFSET_Y;
+    uint16_t frameEnd_x = EVE_HSIZE - frameStart_x;
+    uint16_t start_x = frameStart_x + MENU_OPTION_FRAME_TEXT_PADDING_X;
+    uint16_t start_y = frameStart_y + MENU_OPTION_FRAME_TEXT_PADDING_Y;
+    uint16_t end_x = EVE_HSIZE - start_x;
+    uint16_t textPadding_x = MENU_OPTION_FRAME_TEXT_PADDING_X;
+    uint16_t textPadding_y = MENU_OPTION_FRAME_TEXT_PADDING_Y;
+
+    // Precompute how manu lines the help string would be
+    int numLinesHelpString = printMenuOptionString(
+        pDisplayState, pHelpString, start_x, start_y,
+        (end_x - start_x) / 2 - MENU_OPTION_FRAME_TEXT_PADDING_X / 2,
+        MENU_OPTION_LINE_TEXT_PADDING,
+        false, // left justified
+        false  // Don't print the string to screen
+    );
+    while (true) {
+        // Print the screen.
+        startDisplaylist();
+        // Print the menu outline to keep things consistent.
+        printMenuOutline(MENU_FRAME_OFFSET_X, MENU_FRAME_OFFSET_Y);
+
+        // Print the helpString frame:
+        // Write the rectangle encompassing the option.
+        uint16_t menuOptionFrameHeight =
+            2 * textPadding_y +
+            numLinesHelpString * pCurrentFont->font_caps_height +
+            (numLinesHelpString - 1) * MENU_OPTION_LINE_TEXT_PADDING;
+        if (selectionIter == 0) {
+            EVE_color_rgb_burst(WHITE);
+        } else {
+            EVE_color_rgb_burst(GRAY);
+        }
+        // Write the rectangle encompassing the option.
+        EVE_cmd_dl_burst(DL_BEGIN | EVE_RECTS);
+        EVE_cmd_dl(VERTEX2F(frameStart_x * 16, frameStart_y * 16));
+        EVE_cmd_dl(VERTEX2F(frameEnd_x * 16,
+                            (frameStart_y + menuOptionFrameHeight) * 16));
+        if (selectionIter == 0) {
+            EVE_color_rgb_burst(BLACK);
+        } else {
+            EVE_color_rgb_burst(WHITE);
+        }
+        numLinesHelpString = printMenuOptionString(
+            pDisplayState, pHelpString, start_x, start_y,
+            (end_x - start_x) / 2 - MENU_OPTION_FRAME_TEXT_PADDING_X / 2,
+            MENU_OPTION_LINE_TEXT_PADDING,
+            false, // left justified
+            true);
+        if (selectionIter == 0) {
+            // Here, there's an option to blink red or something.
+            EVE_color_rgb_burst(BLACK);
+        }
+        int numLinesNumBits = printMenuOptionString(
+            pDisplayState, pEnteredChars,
+            (end_x - start_x) / 2 - MENU_OPTION_FRAME_TEXT_PADDING_X / 2,
+            start_y, end_x - textPadding_x, MENU_OPTION_LINE_TEXT_PADDING,
+            true, // right justified
+            true);
+
+        // Print the abort option frame:
+        if (selectionIter == 1) {
+            EVE_color_rgb_burst(WHITE);
+        } else {
+            EVE_color_rgb_burst(GRAY);
+        }
+        EVE_cmd_dl_burst(DL_BEGIN | EVE_RECTS);
+        uint16_t frameStart_y_abort_option =
+            frameStart_y + menuOptionFrameHeight + MENU_OPTION_FRAME_SPACING_Y;
+        uint16_t menuOptionFrameHeight_abort_option =
+            2 * textPadding_y + pCurrentFont->font_caps_height;
+        EVE_cmd_dl(VERTEX2F(frameStart_x * 16, frameStart_y_abort_option * 16));
+        EVE_cmd_dl(VERTEX2F(
+            frameEnd_x * 16,
+            (frameStart_y_abort_option + menuOptionFrameHeight_abort_option) *
+                16));
+        if (selectionIter == 1) {
+            EVE_color_rgb_burst(BLACK);
+        } else {
+            EVE_color_rgb_burst(WHITE);
+        }
+        int numLinesAbortString = printMenuOptionString(
+            pDisplayState, pAbortString, start_x,
+            frameStart_y_abort_option + MENU_OPTION_FRAME_TEXT_PADDING_Y,
+            (end_x - start_x) / 2 - MENU_OPTION_FRAME_TEXT_PADDING_X / 2,
+            MENU_OPTION_LINE_TEXT_PADDING,
+            false, // left justified
+            true);
+        endDisplayList();
+
+        // Wait for a character to be received.
+        char receiveChar = 0;
+        if (xQueueReceive(*pUartReceiveQueue, &receiveChar,
+                          (TickType_t)portMAX_DELAY)) {
+            if (receiveChar == 27) {
+                // Escape char. read them out of the queue if there are any,
+                // Only up or down is available, to select writing or aborting.
+                char escapeSeq[3] = {0};
+                for (int i = 0; i < 2; i++) {
+                    xQueueReceive(*pUartReceiveQueue, &(escapeSeq[i]),
+                                  (TickType_t)10);
+                }
+                escapeSeq[2] = '\0';
+                if (strcmp(escapeSeq, "[A") == 0) {
+                    // Up
+                    if (selectionIter > 0) {
+                        selectionIter--;
+                    }
+                }
+                if (strcmp(escapeSeq, "[B") == 0) {
+                    // Down
+                    if (selectionIter < MAX_NUM_MENU_ITEMS - 1) {
+                        selectionIter++;
+                    }
+                }
+            } else if (receiveChar == '\r') {
+                // Done, check if the number of bits are OK, in which case
+                // change it and exit this function.
+                if (selectionIter == 1) {
+                    // This is the abort option, abort.
+                    return;
+                }
+                int newBitSize = strtol(pEnteredChars, NULL, 10);
+                if (newBitSize <= 64 && newBitSize > 0) {
+                    pDisplayState->inputOptions.numBits = newBitSize;
+                    return;
+                }
+            } else if (receiveChar == '\b' || receiveChar == 127) {
+                // Backspace, remove the latest added char.
+                if (charIter != 0) {
+                    pEnteredChars[--charIter] = '\0';
+                } else {
+                    // Buffer is full, inform.
+                    logger(LOGGER_LEVEL_INFO,
+                           "updateBitWidth: Could not remove digit, buffer is "
+                           "empty\r\n");
+                }
+            } else if (receiveChar >= '0' && receiveChar <= '9') {
+                // Received a number, add it to the bit width.
+                if (charIter == 0 && receiveChar == '0') {
+                    // Cannot have a leading 0, ignore it.
+                    logger(LOGGER_LEVEL_INFO, "updateBitWidth: Leading zeros "
+                                              "is not a valid input\r\n");
+                } else if (charIter < 2) {
+                    pEnteredChars[charIter++] = receiveChar;
+                } else {
+                    // Buffer is full, inform.
+                    logger(LOGGER_LEVEL_INFO,
+                           "updateBitWidth: %c could not be added since %s is "
+                           "already entered\r\n",
+                           receiveChar, pEnteredChars);
+                }
+            } else {
+                logger(LOGGER_LEVEL_INFO,
+                       "updateBitWidth: Unrecognized/unhandled input: %c\r\n",
+                       receiveChar);
+            }
+        }
+    }
 }
 
 void changeFont(displayState_t *pDisplayState, char *pString) {
@@ -189,7 +413,6 @@ void updateMenuState(displayState_t *pLocalDisplayState,
                      displayState_t *pGlobalDisplayState) {
     do {
         char receiveChar = 0;
-        calc_funStatus_t addRemoveStatus;
         if (xQueueReceive(uartReceiveQueue, &receiveChar,
                           (TickType_t)portMAX_DELAY)) {
             if (receiveChar == 27) {
@@ -248,13 +471,24 @@ void updateMenuState(displayState_t *pLocalDisplayState,
                 menuOption_t *pCurrentMenuOption =
                     pMenuState->pCurrentMenuOption;
                 menuOption_t *pMenuOption = pMenuState->pMenuOptionList;
-                if (pCurrentMenuOption->pUpdateFun != NULL) {
+                if (pCurrentMenuOption->menuUpdateFun.pUpdateFun != NULL) {
                     // Run the update function
                     // This is a void function with args:
                     // displayState_t *pDisplayState, char *pString,
                     // Where in this case the pString is NULL
-                    (*((menu_function *)(pCurrentMenuOption->pUpdateFun)))(
-                        pLocalDisplayState, NULL);
+                    if (pCurrentMenuOption->menuUpdateFun
+                            .interactiveUpdateFun) {
+                        // NOTE: This will hijack the display and serial
+                        // interface, and return when it's done
+                        (*((interactive_menu_function *)(pCurrentMenuOption
+                                                             ->menuUpdateFun
+                                                             .pUpdateFun)))(
+                            pLocalDisplayState, &uartReceiveQueue);
+                    } else {
+                        (*((non_interactive_menu_function
+                                *)(pCurrentMenuOption->menuUpdateFun
+                                       .pUpdateFun)))(pLocalDisplayState, NULL);
+                    }
                 } else if (pCurrentMenuOption->pSubMenu != NULL) {
                     // Enter the sub menu
                     pLocalDisplayState->pMenuState =

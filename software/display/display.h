@@ -127,6 +127,24 @@ SOFTWARE.
 #define FONT_SIZE_X 8
 #define FONT_SIZE_OPTIONS 20
 
+//! Menu offsets
+//! Offset in pixels for the menu frame from the edge of the screen, x axis
+#define MENU_FRAME_OFFSET_X 10
+//! Offset in pixels for the menu frame from the edge of the screen, y axis
+#define MENU_FRAME_OFFSET_Y 10
+//! Offset in pixels from the menu frame to menu option frame, x axis
+#define MENU_FRAME_TO_OPTION_FRAME_OFFSET_X 5
+//! Offset in pixels from the menu frame to menu option frame, y axis
+#define MENU_FRAME_TO_OPTION_FRAME_OFFSET_Y 5
+//! Menu option frame spacing in pixels, y axis
+#define MENU_OPTION_FRAME_SPACING_Y 10
+//! Padding per side in x-axis for the text in the menu option frame
+#define MENU_OPTION_FRAME_TEXT_PADDING_X 10
+//! Padding per side in y-axis for the text in the menu option frame
+#define MENU_OPTION_FRAME_TEXT_PADDING_Y 15
+//! Padding between lines
+#define MENU_OPTION_LINE_TEXT_PADDING 12
+
 /**
  * @defgroup ColorDefinitions Definitions for the colors used in the display
  * @{
@@ -259,6 +277,43 @@ void initDisplayState(displayState_t *pDisplayState);
  * @return Nothing
  */
 void displayTask(void *p);
+
+/**
+ * @brief Print the outline that's used in the menu
+ * @param spacing_x Spacing in x in pixels from the display edge
+ * @param spacing_y Spacing in y in pixels from the display edge
+ * @return Nothing
+ */
+void printMenuOutline(uint16_t spacing_x, uint16_t spacing_y);
+
+/**
+ * @brief Print a string within a bounding box with a symmetrical offset
+ * @param pDisplayState Pointer to displayState
+ * @param pString Pointer to string, maximum length is 255
+ * @param x1 X-coordinate of the right upper corner of the bounding box
+ * @param y1 Y-coordinate of the right upper corner of the bounding box
+ * @param x2 X-coordinate of the left bottom corner of the bounding box
+ * @param linePadding Number of pixels of padding between each line of text
+ * @param rightJustification True if printing from the right, false if printing
+ * from the left
+ * @param print True if we should print to display, false if not
+ * (useful for calculating the number of lines that would be printed)
+ * @return Number of lines that would require to print string.
+ */
+uint8_t printMenuOptionString(displayState_t *pDisplayState, char *pString,
+                              uint16_t x1, uint16_t y1, uint16_t x2,
+                              uint16_t linePadding, bool rightJustification,
+                              bool print);
+
+/**
+ * @brief Starts the display list, clear local buffers and clears color buffers
+ */
+void startDisplaylist(void);
+
+/**
+ * @brief End the display list by sending display and swap DL
+ */
+void endDisplayList(void);
 
 void testDisplay(void);
 

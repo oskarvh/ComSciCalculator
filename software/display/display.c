@@ -96,7 +96,7 @@ static void displayOutline(void) {
 /**
  * @brief Starts the display list, clear local buffers and clears color buffers
  */
-static void startDisplaylist(void) {
+void startDisplaylist(void) {
     EVE_start_cmd_burst();
     EVE_cmd_dl_burst(CMD_DLSTART);
     EVE_cmd_dl_burst(DL_CLEAR_COLOR_RGB | BLACK);
@@ -106,7 +106,7 @@ static void startDisplaylist(void) {
 /**
  * @brief End the display list by sending display and swap DL
  */
-static void endDisplayList(void) {
+void endDisplayList(void) {
     EVE_cmd_dl_burst(DL_DISPLAY);
     EVE_cmd_dl_burst(CMD_SWAP);
     EVE_end_cmd_burst();
@@ -234,7 +234,7 @@ void displayCalcState(displayState_t *pDisplayState) {
         // Fixed point require Q notation.
         uint8_t numBits = pDisplayState->inputOptions.numBits;
         uint8_t decimalBits =
-            pDisplayState->inputOptions.fixedPointDecimalPlace;
+            getEffectiveFixedPointDecimalPlace(&(pDisplayState->inputOptions));
         // Work out the Q notation:
         uint8_t integerBits = numBits - decimalBits;
         sprintf(bitWidthString, "%u.%u", integerBits, decimalBits);
@@ -408,7 +408,7 @@ void initDisplayState(displayState_t *pDisplayState) {
     pDisplayState->inputOptions.inputFormat = 0;             // TBD
     pDisplayState->inputOptions.outputFormat = 0;            // TBD
     pDisplayState->inputOptions.inputBase = 0;               // TBD
-    pDisplayState->inputOptions.numBits = 0;                 // TBD
+    pDisplayState->inputOptions.numBits = 64;                // TBD
     pDisplayState->inputOptions.sign = 0;                    // TBD
     pDisplayState->solveStatus = calc_solveStatus_INPUT_LIST_NULL;
     pDisplayState->printStatus = 0;
@@ -520,121 +520,36 @@ void printResult(displayState_t *pDisplayState) {
 }
 
 /**
- * @brief Calculate the number of lines it would take to
- *        print a string given a max width with the current font.
- *        If one word is longer than the max width, then it would assume that
- *        the word continues on the next line.
- *        A word is separated by any non-alfabetical characters
- * @param pDisplayState Pointer to displayState
- * @param pString Pointer to string, maximum length is 255
- * @param maxWidth Maximum width of the string in pixels
- * @param xOffset Offset in width between the bounding box
- * @return Number of lines that would require to print string.
- */
-int getNumberOfLinesForString(displayState_t *pDisplayState, char *pString,
-                              int maxWidth) {
-    // Before any chars have been written, the width is the offset.
-    int charsWidth = 0;
-    // Init the counters
-    int charIter = 0;
-    int numLines = 1;
-    // Get the currently selected font
-    font_t *pCurrentFont =
-        pFontLibraryTable[pDisplayState->fontIdx]->pLargeFont;
-    while (pString[charIter] != '\0') {
-        // Check if the next word fits on this line
-        int tmpCharIter = charIter;
-        int wordWidth = 0;
-        // Lookahead and print the next word
-        int endCharIter = charIter;
-        while (isalpha(pString[endCharIter])) {
-            wordWidth += getFontCharWidth(pCurrentFont, pString[endCharIter++]);
-        }
-        // Check if the word combined with the previously written chars are
-        // longer than the line width
-        if (charsWidth + wordWidth > maxWidth) {
-            // Check if the word only is longer than the line width
-            while (wordWidth > maxWidth) {
-                // Get the string that fits the line and print that
-                int tmpWordWidth = 0;
-                int tmpEndCharIter = charIter;
-                while (tmpWordWidth < maxWidth &&
-                       tmpEndCharIter < endCharIter) {
-                    tmpWordWidth += getFontCharWidth(pCurrentFont,
-                                                     pString[tmpEndCharIter++]);
-                }
-                tmpEndCharIter--;
-                numLines += 1;
-                charsWidth = 0;
-                wordWidth -= tmpWordWidth;
-                charIter = tmpEndCharIter;
-                if (wordWidth > 0) {
-                    numLines += 1;
-                }
-            }
-            // Check if the remaining word plus the
-            if (charsWidth + wordWidth > maxWidth) {
-                charsWidth += wordWidth;
-                charIter = endCharIter;
-                numLines += 1;
-            }
-        }
-        // Create a temporary buffer for the current character
-        char pTmpRxBuf[2] = {pString[charIter], '\0'};
-        int currentCharsWidth =
-            getFontCharWidth(pCurrentFont, pString[charIter]);
-        // Increase the written character width, and increase the iterator
-        charsWidth += currentCharsWidth;
-        charIter++;
-    }
-    return numLines;
-}
-
-/**
- * @brief Calculate the
- * @param pString Pointer to string to calculate width for
- * @param pFont Pointer to font to calculate the width for
+ * @brief Print a line to the screen
+ * @param pString Pointer to string to be printed
+ * @param pCurrentFont Pointer to the current font
+ * @param start_x X-coordinate of where to start printing the line
+ * @param start_y Y-coordinate of where to start printing the line
+ * @param rightJustification If true, then print from the right. Otherwise print
+ * from the left.
  * @return Width in pixels that the word would need to print
  */
-void printLine(char *pString, font_t *pCurrentFont, int wordWidth,
-               int charsWidth, int numLines, int xOffset, int yOffset, int y1,
-               int textHeight, bool leftJustification) {
-    if (leftJustification) {
-        EVE_cmd_text_burst(EVE_HSIZE - wordWidth + charsWidth - xOffset,
-                           y1 + yOffset + (numLines - 1) * (textHeight),
-                           pCurrentFont->ft81x_font_index, 0, pString);
+void printLine(char *pString, font_t *pCurrentFont, uint16_t start_x,
+               uint16_t end_x, uint16_t start_y, bool rightJustification) {
+    if (rightJustification) {
+        EVE_cmd_text_burst(end_x, start_y, pCurrentFont->ft81x_font_index,
+                           EVE_OPT_RIGHTX, pString);
     } else {
-        EVE_cmd_text_burst(xOffset + charsWidth,
-                           y1 + yOffset + (numLines - 1) * (textHeight),
-                           pCurrentFont->ft81x_font_index, 0, pString);
+        EVE_cmd_text_burst(start_x, start_y, pCurrentFont->ft81x_font_index, 0,
+                           pString);
     }
 }
 
-/**
- * @brief Print a string within a bounding box with a symmetrical offset
- * @param pDisplayState Pointer to displayState
- * @param pString Pointer to string, maximum length is 255
- * @param x1 X-coordinate of the right upper corner of the bounding box
- * @param y1 Y-coordinate of the right upper corner of the bounding box
- * @param x2 X-coordinate of the left bottom corner of the bounding box
- * @param y2 Y-coordinate of the left bottom corner of the bounding box
- * @param xOffset X-offset to add to the characters, from the edge of the screen
- * @param yOffset Y-offset from the bounding box, in pixels
- * @param textHeight Height of the text between one line to the next
- * @param leftJustification True if text is coming from the left, false if
- * writing from the right
- * @return Number of lines that would require to print string.
- */
-int printMenuOptionString(displayState_t *pDisplayState, char *pString, int x1,
-                          int y1, int x2, int y2, int xOffset, int yOffset,
-                          int textHeight, bool leftJustification, bool print) {
+uint8_t printMenuOptionString(displayState_t *pDisplayState, char *pString,
+                              uint16_t x1, uint16_t y1, uint16_t x2,
+                              uint16_t linePadding, bool rightJustification,
+                              bool print) {
     // Write line by line, evaluating the next word.
-
     font_t *pCurrentFont =
         pFontLibraryTable[pDisplayState->fontIdx]->pLargeFont;
     int charIter = 0;
     int writtenCharsWidth = 0;
-    int maxWidth = x2 - x1 - 2 * xOffset;
+    int maxWidth = x2 - x1;
     int numLines = 0;
     // Loop until the character is null
     while (pString[charIter] != '\0') {
@@ -701,18 +616,20 @@ int printMenuOptionString(displayState_t *pDisplayState, char *pString, int x1,
                     // and splitNextWordIter, increase the line before and
                     // after.
                     int wordLen = splitNextWordIter - stringStartIter;
-                    numLines += 1;
                     if (print) {
                         char *pTmpBuf = malloc(sizeof(char) * (wordLen + 1));
                         // Set all to null chars to terminate
                         memset(pTmpBuf, '\0', wordLen + 1);
                         memcpy(pTmpBuf, &(pString[stringStartIter]),
                                sizeof(char) * wordLen);
-                        printLine(pTmpBuf, pCurrentFont, splitNextWordWidth, 0,
-                                  numLines, xOffset, yOffset, y1, textHeight,
-                                  leftJustification);
+                        uint16_t yCoordLine =
+                            y1 + numLines * (linePadding +
+                                             pCurrentFont->font_caps_height);
+                        printLine(pTmpBuf, pCurrentFont, x1, x2, yCoordLine,
+                                  rightJustification);
                         free(pTmpBuf);
                     }
+                    numLines += 1;
                     // We're now at a new line, so set the
                     // next word width minus what we've written here
                     nextWordWidth -= splitNextWordWidth;
@@ -755,8 +672,6 @@ int printMenuOptionString(displayState_t *pDisplayState, char *pString, int x1,
         // Here, we've either breaked due to some error, or it's time to write a
         // line
         if (writeLine) {
-            // Increase the line number
-            numLines += 1;
             if (print) {
                 int wordLen = endStringIter - stringStartIter;
                 char *pTmpBuf = malloc(sizeof(char) * (wordLen + 1));
@@ -764,10 +679,15 @@ int printMenuOptionString(displayState_t *pDisplayState, char *pString, int x1,
                 memset(pTmpBuf, '\0', wordLen + 1);
                 memcpy(pTmpBuf, &(pString[stringStartIter]),
                        sizeof(char) * wordLen);
-                printLine(pTmpBuf, pCurrentFont, writtenCharsWidth, 0, numLines,
-                          xOffset, yOffset, y1, textHeight, leftJustification);
+                uint16_t yCoordLine =
+                    y1 +
+                    numLines * (linePadding + pCurrentFont->font_caps_height);
+                printLine(pTmpBuf, pCurrentFont, x1, x2, yCoordLine,
+                          rightJustification);
                 free(pTmpBuf);
             }
+            // Increase the line number
+            numLines += 1;
             // Reset the written character width
             writtenCharsWidth = 0;
         } else {
@@ -779,51 +699,69 @@ int printMenuOptionString(displayState_t *pDisplayState, char *pString, int x1,
 }
 
 /**
- * @brief Function to print the menu
+ * @brief Function that prints a box and text for a menu item.
  * @param pDisplayState Pointer to displayState
  * @param pMenuOption Pointer to the menu option to print
- * @param offset_y Offset of Y for the box, in pixels
- * @param offset_x Offset of X for the box, in pixels
- * @param spacing_y Spacing in the Y axis between each box
- * @param selected_item This is the currently selected item.
- * @param charsHeight Height, or offset, in pixels in Y-direction.
- * @return Number of rows written.
+ * @param start_x X-coordinate in pixels where to start the option frame
+ * @param end_x X-coordinate in pixels where to end the option frame
+ * @param start_y Y-coordinate in pixels to the top of the option frame. The
+ * ending will depend on the length of the string(s) that are printed.
+ * @param textPadding_x X-axis padding between the option frame and the text,
+ * one sided
+ * @param textPadding_y Y-axis padding between the option frame and the text,
+ * one sided
+ * @param selected_item True if this is the currently selected item, and should
+ * be formatted as such
+ * @return number of pixels that were used for this option.
  */
-int printMenuItem(displayState_t *pDisplayState, menuOption_t *pMenuOption,
-                  uint16_t offset_y, uint16_t offset_x, uint16_t spacing_y,
-                  bool selected_item, int charsHeight) {
+uint16_t printMenuItem(displayState_t *pDisplayState, menuOption_t *pMenuOption,
+                       uint16_t start_x, uint16_t end_x, uint16_t start_y,
+                       uint16_t textPadding_x, uint16_t textPadding_y,
+                       bool selected_item) {
     font_t *pCurrentFont =
         pFontLibraryTable[pDisplayState->fontIdx]->pLargeFont;
 
-    // Get the length of the string as it would be printed in the
-    // current font:
-    uint8_t charIter = 0;
-    int widthAllChars = 0;
-    int charsWidth = offset_x + 10;
-    int numLines =
-        printMenuOptionString(pDisplayState, pMenuOption->pOptionString,
-                              offset_x, offset_y, EVE_HSIZE / 2 - (offset_x), 0,
-                              20, spacing_y, charsHeight, false, false);
+    // Calculate the number of lines for the menu option
+    int numLines = printMenuOptionString(
+        pDisplayState, pMenuOption->pOptionString, start_x + textPadding_x,
+        start_y + textPadding_y,
+        (end_x - start_x) / 2 -
+            textPadding_x / 2, // Should print to the center of the screen.
+        MENU_OPTION_LINE_TEXT_PADDING,
+        false, // left justified
+        false  // Don't print the string to screen
+    );
 
     if (pMenuOption->pDisplayFun != NULL) {
         // Run the display function here to get the string
         // that displays the selected option.
         char pString[MAX_MENU_DISPLAY_FUN_STRING] = {0};
-        (*((menu_function *)(pMenuOption->pDisplayFun)))(pDisplayState,
-                                                         pString);
-        int numLinesFn =
-            printMenuOptionString(pDisplayState, pString, offset_x, offset_y,
-                                  EVE_HSIZE / 2 - (offset_x), 0, 20, spacing_y,
-                                  charsHeight, true, true);
-        if (numLinesFn > numLines) {
+        (*((non_interactive_menu_function *)(pMenuOption->pDisplayFun)))(
+            pDisplayState, pString);
+        int resultNumLines = printMenuOptionString(
+            pDisplayState, pString,
+            (end_x - start_x) / 2 +
+                textPadding_x / 2, // Start printing in the middle of the screen
+            start_y + textPadding_y, end_x - textPadding_x,
+            MENU_OPTION_LINE_TEXT_PADDING,
+            true, // right justified
+            false // Don't print the string to screen
+        );
+        if (resultNumLines > numLines) {
             // The result is longer than the option string. Use the result
             // string numLines
-            numLines = numLinesFn;
+            numLines = resultNumLines;
         }
     }
 
-    uint16_t menuOptionOffsetY = (numLines - 1) * charsHeight +
-                                 pCurrentFont->font_caps_height + spacing_y * 2;
+    if (numLines < 1) {
+        logger(LOGGER_LEVEL_ERROR, "Trying to print %d lines, returning.\r\n",
+               numLines);
+        return 0;
+    }
+    uint16_t menuOptionFrameHeight =
+        2 * textPadding_y + numLines * pCurrentFont->font_caps_height +
+        (numLines - 1) * MENU_OPTION_LINE_TEXT_PADDING;
     // Outline shall be white
     if (selected_item) {
         EVE_color_rgb_burst(WHITE);
@@ -832,9 +770,8 @@ int printMenuItem(displayState_t *pDisplayState, menuOption_t *pMenuOption,
     }
     // Write the rectangle encompassing the option.
     EVE_cmd_dl_burst(DL_BEGIN | EVE_RECTS);
-    EVE_cmd_dl(VERTEX2F((offset_x)*16, (offset_y)*16));
-    EVE_cmd_dl(VERTEX2F((EVE_HSIZE - (offset_x)) * 16,
-                        ((offset_y + menuOptionOffsetY)) * 16));
+    EVE_cmd_dl(VERTEX2F(start_x * 16, start_y * 16));
+    EVE_cmd_dl(VERTEX2F(end_x * 16, (start_y + menuOptionFrameHeight) * 16));
 
     // Select the color of the text
     if (selected_item) {
@@ -845,24 +782,65 @@ int printMenuItem(displayState_t *pDisplayState, menuOption_t *pMenuOption,
 
     // Go through and print each char, checking that the total width doesn't
     // go past the halfway point. If it does, then wrap and start a new line.
-    printMenuOptionString(pDisplayState, pMenuOption->pOptionString, offset_x,
-                          offset_y, EVE_HSIZE / 2 - (offset_x),
-                          (offset_y + menuOptionOffsetY), 20, spacing_y,
-                          charsHeight, false, true);
+    numLines = printMenuOptionString(
+        pDisplayState, pMenuOption->pOptionString, start_x + textPadding_x,
+        start_y + textPadding_y, //+ pCurrentFont->font_caps_height,
+        (end_x - start_x) / 2 -
+            textPadding_x / 2, // Should print to the center of the screen.
+        MENU_OPTION_LINE_TEXT_PADDING,
+        false, // left justified
+        true   // print this time
+    );
 
     if (pMenuOption->pDisplayFun != NULL) {
         // Run the display function here to get the string
         // that displays the selected option.
         char pString[MAX_MENU_DISPLAY_FUN_STRING] = {0};
-        (*((menu_function *)(pMenuOption->pDisplayFun)))(pDisplayState,
-                                                         pString);
-        printMenuOptionString(pDisplayState, pString, offset_x, offset_y,
-                              EVE_HSIZE / 2 - (offset_x),
-                              (offset_y + menuOptionOffsetY), 20, spacing_y,
-                              charsHeight, true, true);
+        (*((non_interactive_menu_function *)(pMenuOption->pDisplayFun)))(
+            pDisplayState, pString);
+        int resultNumLines = printMenuOptionString(
+            pDisplayState, pString,
+            (end_x - start_x) / 2 +
+                textPadding_x / 2, // Start printing in the middle of the screen
+            start_y + textPadding_y, end_x - textPadding_x,
+            MENU_OPTION_LINE_TEXT_PADDING,
+            true, // Right justified
+            true  // Print this time
+        );
     }
-    return numLines;
+    return menuOptionFrameHeight;
 }
+
+void printMenuOutline(uint16_t spacing_x, uint16_t spacing_y) {
+    // Outline shall be white
+    EVE_color_rgb_burst(WHITE);
+    // Write the top line
+    EVE_cmd_dl_burst(DL_BEGIN | EVE_LINES);
+    EVE_cmd_dl(VERTEX2F((spacing_x / 2) * 16, (spacing_y / 2) * 16));
+    EVE_cmd_dl(
+        VERTEX2F((EVE_HSIZE - spacing_x / 2) * 16, (spacing_y / 2) * 16));
+
+    // Write the bottom line
+    EVE_cmd_dl_burst(DL_BEGIN | EVE_LINES);
+    EVE_cmd_dl(
+        VERTEX2F((spacing_x / 2) * 16, (EVE_VSIZE - (spacing_y / 2)) * 16));
+    EVE_cmd_dl(VERTEX2F((TOP_OUTLINE_X1 - (spacing_x / 2)) * 16,
+                        (EVE_VSIZE - (spacing_y / 2)) * 16));
+
+    // Write the right vertical line
+    EVE_cmd_dl_burst(DL_BEGIN | EVE_LINES);
+    EVE_cmd_dl(
+        VERTEX2F((EVE_HSIZE - spacing_x / 2) * 16, (spacing_y / 2) * 16));
+    EVE_cmd_dl(VERTEX2F((TOP_OUTLINE_X1 - (spacing_x / 2)) * 16,
+                        (EVE_VSIZE - (spacing_y / 2)) * 16));
+
+    // Write the left vertical line
+    EVE_cmd_dl_burst(DL_BEGIN | EVE_LINES);
+    EVE_cmd_dl(VERTEX2F((spacing_x / 2) * 16, (spacing_y / 2) * 16));
+    EVE_cmd_dl(
+        VERTEX2F((spacing_x / 2) * 16, (EVE_VSIZE - (spacing_y / 2)) * 16));
+}
+
 /**
  * @brief Function to print the menu
  * @param pDisplayState Pointer to displayState
@@ -875,43 +853,11 @@ static void displayMenu(displayState_t *pDisplayState) {
     font_t *pCurrentFont =
         pFontLibraryTable[pDisplayState->fontIdx]->pLargeFont;
 
-    // Find the offset based on font size
-    // Take the size of the caps, plus 10 pixels
-    uint8_t menuOptionOffsetY = pCurrentFont->font_caps_height + 20;
+    uint16_t currentOptionStartCoordY =
+        MENU_FRAME_OFFSET_Y + MENU_FRAME_TO_OPTION_FRAME_OFFSET_Y;
 
-    // Offsets around the boxes
-    uint16_t offset_y =
-        10; // Starting offset. Will later depend on the font size
-    uint16_t spacing_y = 10;    // 10 px spacing between items
-    uint16_t spacing_boxes = 4; // Spacing between each box
-    uint16_t offset_x = 10;     // 10 px spacing around x to the border.
     // Print a box around the menu:
-
-    // Outline shall be white
-    EVE_color_rgb_burst(WHITE);
-    // Write the top line
-    EVE_cmd_dl_burst(DL_BEGIN | EVE_LINES);
-    EVE_cmd_dl(VERTEX2F((offset_x / 2) * 16, (spacing_y / 2) * 16));
-    EVE_cmd_dl(VERTEX2F((EVE_HSIZE - offset_x / 2) * 16, (spacing_y / 2) * 16));
-
-    // Write the bottom line
-    EVE_cmd_dl_burst(DL_BEGIN | EVE_LINES);
-    EVE_cmd_dl(
-        VERTEX2F((offset_x / 2) * 16, (EVE_VSIZE - (spacing_y / 2)) * 16));
-    EVE_cmd_dl(VERTEX2F((TOP_OUTLINE_X1 - (offset_x / 2)) * 16,
-                        (EVE_VSIZE - (spacing_y / 2)) * 16));
-
-    // Write the right vertical line
-    EVE_cmd_dl_burst(DL_BEGIN | EVE_LINES);
-    EVE_cmd_dl(VERTEX2F((EVE_HSIZE - offset_x / 2) * 16, (spacing_y / 2) * 16));
-    EVE_cmd_dl(VERTEX2F((TOP_OUTLINE_X1 - (offset_x / 2)) * 16,
-                        (EVE_VSIZE - (spacing_y / 2)) * 16));
-
-    // Write the left vertical line
-    EVE_cmd_dl_burst(DL_BEGIN | EVE_LINES);
-    EVE_cmd_dl(VERTEX2F((offset_x / 2) * 16, (spacing_y / 2) * 16));
-    EVE_cmd_dl(
-        VERTEX2F((offset_x / 2) * 16, (EVE_VSIZE - (spacing_y / 2)) * 16));
+    printMenuOutline(MENU_FRAME_OFFSET_X, MENU_FRAME_OFFSET_Y);
 
     // Get the menu state
     menuState_t *pMenuState = pDisplayState->pMenuState;
@@ -929,10 +875,16 @@ static void displayMenu(displayState_t *pDisplayState) {
         } else {
             selected_item = false;
         }
-        int rows = printMenuItem(pDisplayState, pMenuOption, offset_y, offset_x,
-                                 spacing_y, selected_item, menuOptionOffsetY);
+        uint16_t heightOfMenuOption = printMenuItem(
+            pDisplayState, pMenuOption,
+            MENU_FRAME_OFFSET_X + MENU_FRAME_TO_OPTION_FRAME_OFFSET_X,
+            EVE_HSIZE - MENU_FRAME_OFFSET_X -
+                MENU_FRAME_TO_OPTION_FRAME_OFFSET_X,
+            currentOptionStartCoordY, MENU_OPTION_FRAME_TEXT_PADDING_X,
+            MENU_OPTION_FRAME_TEXT_PADDING_Y, selected_item);
         pMenuOption++;
-        offset_y += rows * menuOptionOffsetY + spacing_boxes;
+        currentOptionStartCoordY +=
+            heightOfMenuOption + MENU_OPTION_FRAME_SPACING_Y;
     }
 }
 

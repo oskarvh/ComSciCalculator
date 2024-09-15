@@ -252,6 +252,21 @@ getInputListEntry(calcCoreState_t *calcCoreState,
     return inputModStatus_SUCCESS;
 }
 
+uint8_t getEffectiveFixedPointDecimalPlace(numberFormat_t *pNumberFormat) {
+    // Check if fixedPointDecimalPlace is less than the number of bits
+    if (pNumberFormat == NULL) {
+        return 0;
+    }
+    if (pNumberFormat->fixedPointDecimalPlace < pNumberFormat->numBits) {
+        // All good, return the fixedPointDecimalPlace
+        return pNumberFormat->fixedPointDecimalPlace;
+    } else {
+        // The bit width will cause problems for the fixed point format,
+        // return an adjusted format which accounts for 1 decimal bit:
+        return pNumberFormat->numBits - 1;
+    }
+}
+
 /* -------- CALCULATOR CORE FUNCTIONS -------- */
 
 calc_funStatus_t calc_coreInit(calcCoreState_t *pCalcCoreState) {
@@ -588,7 +603,8 @@ void convertResult(char *pString, SUBRESULT_INT result,
 
         } else if (pNumberFormat->inputFormat == INPUT_FMT_FIXED) {
             // Just truncate.
-            SUBRESULT_INT decimalPlace = pNumberFormat->fixedPointDecimalPlace;
+            SUBRESULT_INT decimalPlace =
+                getEffectiveFixedPointDecimalPlace(pNumberFormat);
             SUBRESULT_INT tmpRes = result >> ((SUBRESULT_INT)decimalPlace);
             if (base == inputBase_DEC) {
                 sprintf(pString, "%1lli", tmpRes);
@@ -672,11 +688,12 @@ void convertResult(char *pString, SUBRESULT_INT result,
                 // or fixed point (actually, float is used in the conversion
                 // from fixed point, so this gives the same format. )
                 fptostr(pString, result, pNumberFormat->sign,
-                        pNumberFormat->fixedPointDecimalPlace, 10);
+                        getEffectiveFixedPointDecimalPlace(pNumberFormat), 10);
             } else {
                 // Here though, a conversion from fixed point to float is
                 // required.
-                uint16_t decimalPlace = pNumberFormat->fixedPointDecimalPlace;
+                uint16_t decimalPlace =
+                    getEffectiveFixedPointDecimalPlace(pNumberFormat);
                 uint64_t decPart = result >> decimalPlace;
                 uint64_t mask = (1ULL << decimalPlace) - 1;
                 uint64_t tmpRes = 0;
@@ -719,8 +736,8 @@ void convertResult(char *pString, SUBRESULT_INT result,
         // Output format is fixed point. Convert based on input format.
         if (pNumberFormat->inputFormat == INPUT_FMT_INT) {
             // Integer to fixed point conversion. Just shift by decimal place.
-            SUBRESULT_INT tmpRes = result
-                                   << (pNumberFormat->fixedPointDecimalPlace);
+            SUBRESULT_INT tmpRes =
+                result << (getEffectiveFixedPointDecimalPlace(pNumberFormat));
             if (base == inputBase_DEC) {
                 // Hack: integer to fixed point will always result in xxx.0
                 sprintf(pString, "%1lli.0", result);
@@ -740,7 +757,8 @@ void convertResult(char *pString, SUBRESULT_INT result,
                 memcpy(&tmpResf, &result, sizeof(float));
                 SUBRESULT_INT decPart = floor(tmpResf);
                 float fractPart = tmpResf - floor(tmpResf);
-                uint16_t decimalPlace = pNumberFormat->fixedPointDecimalPlace;
+                uint16_t decimalPlace =
+                    getEffectiveFixedPointDecimalPlace(pNumberFormat);
                 fp_res = decPart << decimalPlace;
                 float mult = 0.5;
 
@@ -757,7 +775,8 @@ void convertResult(char *pString, SUBRESULT_INT result,
                 memcpy(&tmpResf, &result, sizeof(double));
                 SUBRESULT_INT decPart = floor(tmpResf);
                 double fractPart = tmpResf - floor(tmpResf);
-                uint16_t decimalPlace = pNumberFormat->fixedPointDecimalPlace;
+                uint16_t decimalPlace =
+                    getEffectiveFixedPointDecimalPlace(pNumberFormat);
                 fp_res = decPart << decimalPlace;
                 double mult = 0.5;
 
@@ -775,25 +794,25 @@ void convertResult(char *pString, SUBRESULT_INT result,
                 // or fixed point (actually, float is used in the conversion
                 // from fixed point, so this gives the same format. )
                 fptostr(pString, fp_res, pNumberFormat->sign,
-                        pNumberFormat->fixedPointDecimalPlace, 10);
+                        getEffectiveFixedPointDecimalPlace(pNumberFormat), 10);
             } else if (base == inputBase_BIN) {
                 fptostr(pString, fp_res, pNumberFormat->sign,
-                        pNumberFormat->fixedPointDecimalPlace, 2);
+                        getEffectiveFixedPointDecimalPlace(pNumberFormat), 2);
             } else if (base == inputBase_HEX) {
                 fptostr(pString, fp_res, pNumberFormat->sign,
-                        pNumberFormat->fixedPointDecimalPlace, 16);
+                        getEffectiveFixedPointDecimalPlace(pNumberFormat), 16);
             }
         } else if (pNumberFormat->inputFormat == INPUT_FMT_FIXED) {
             // Fixed point to fixed point conversion. Just print the result.
             if (base == inputBase_DEC) {
                 fptostr(pString, result, pNumberFormat->sign,
-                        pNumberFormat->fixedPointDecimalPlace, 10);
+                        getEffectiveFixedPointDecimalPlace(pNumberFormat), 10);
             } else if (base == inputBase_BIN) {
                 fptostr(pString, result, pNumberFormat->sign,
-                        pNumberFormat->fixedPointDecimalPlace, 2);
+                        getEffectiveFixedPointDecimalPlace(pNumberFormat), 2);
             } else if (base == inputBase_HEX) {
                 fptostr(pString, result, pNumberFormat->sign,
-                        pNumberFormat->fixedPointDecimalPlace, 16);
+                        getEffectiveFixedPointDecimalPlace(pNumberFormat), 16);
             }
         }
     }
@@ -921,10 +940,11 @@ copyAndConvertList(calcCoreState_t *pCalcCoreState,
                     }
                 } else if (inputFormat == INPUT_FMT_FIXED) {
                     // Use function to convert to fixed point with radix 10
-                    pNewListEntry->entry.subresult = strtofp(
-                        pCurrentString, sign,
-                        pCalcCoreState->numberFormat.fixedPointDecimalPlace,
-                        10);
+                    pNewListEntry->entry.subresult =
+                        strtofp(pCurrentString, sign,
+                                getEffectiveFixedPointDecimalPlace(
+                                    &(pCalcCoreState->numberFormat)),
+                                10);
                 }
             } else if (inputBase == inputBase_HEX) {
                 if (inputFormat == INPUT_FMT_INT) {
@@ -947,10 +967,11 @@ copyAndConvertList(calcCoreState_t *pCalcCoreState,
                             strtoull(pCurrentString, &endPtr, 16);
                     }
                 } else if (inputFormat == INPUT_FMT_FIXED) {
-                    pNewListEntry->entry.subresult = strtofp(
-                        pCurrentString, sign,
-                        pCalcCoreState->numberFormat.fixedPointDecimalPlace,
-                        16);
+                    pNewListEntry->entry.subresult =
+                        strtofp(pCurrentString, sign,
+                                getEffectiveFixedPointDecimalPlace(
+                                    &(pCalcCoreState->numberFormat)),
+                                16);
                 }
 
             } else if (inputBase == inputBase_BIN) {
@@ -977,9 +998,11 @@ copyAndConvertList(calcCoreState_t *pCalcCoreState,
                             strtoull(pCurrentString, &endPtr, 2);
                     }
                 } else if (inputFormat == INPUT_FMT_FIXED) {
-                    pNewListEntry->entry.subresult = strtofp(
-                        pCurrentString, sign,
-                        pCalcCoreState->numberFormat.fixedPointDecimalPlace, 2);
+                    pNewListEntry->entry.subresult =
+                        strtofp(pCurrentString, sign,
+                                getEffectiveFixedPointDecimalPlace(
+                                    &(pCalcCoreState->numberFormat)),
+                                2);
                 }
             } else {
                 free(pCurrentString);

@@ -340,6 +340,18 @@ calc_funStatus_t calc_updateOutputFormat(calcCoreState_t *pCalcCoreState,
 void convertResult(char *pString, SUBRESULT_INT result,
                    numberFormat_t *pNumberFormat, uint8_t base);
 
+/**
+ * @brief Function that return the fixed point decimal place,
+ * based on number of bits and fixed point decimal place.
+ * If the number of bits is less than the decimal place,
+ * weird things can happen. Hence, this helper function
+ * return the effective fixed point decimal place, which is
+ * at most one less than numBits.
+ * @param pNumberFormat Pointer to the number format
+ * @return Effective fixed point decimal place
+ */
+uint8_t getEffectiveFixedPointDecimalPlace(numberFormat_t *pNumberFormat);
+
 /* -------------------------------------------
  * ---------------- VARIABLES ----------------
  * -------------------------------------------*/
