@@ -27,6 +27,8 @@
 
 // Unit test header
 #include "unit_tests.h"
+/* ----------------- GLOBALS ----------------- */
+char pOutputString[MAX_STR_LEN] = {0};
 
 /* -------------------------------------------------
  * Function to setup the test based on parameters
@@ -53,15 +55,11 @@ void setupTestStruct(calcCoreState_t *pCoreState, testParams_t *pTestParams) {
         TEST_FAIL();
     }
 
-    if (pTestParams->pOutputString == NULL) {
-        printf("[ERROR]: output string pointer is NULL");
-        TEST_FAIL();
-    }
-
     if (pTestParams->pExpectedString == NULL) {
         printf("[ERROR]: expected string pointer is NULL");
         TEST_FAIL();
     }
+    memset(pOutputString, '\0', MAX_STR_LEN);
 }
 
 /* -------------------------------------------------
@@ -118,9 +116,8 @@ void calcCoreAddInput(calcCoreState_t *pCoreState, testParams_t *pTestParams) {
 /* -------------------------------------------------
  * Function to print the test buffer.
  * ------------------------------------------------- */
-void calcCoreGetBuffer(calcCoreState_t *pCoreState, testParams_t *pTestParams) {
+void calcCoreGetBuffer(calcCoreState_t *pCoreState, char *pOutputString) {
     // Get the output, using the comSciCalc library function
-    char *pOutputString = pTestParams->pOutputString;
     uint8_t status =
         calc_printBuffer(pCoreState, pOutputString, MAX_STR_LEN, NULL);
 }

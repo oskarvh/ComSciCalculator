@@ -21,7 +21,6 @@
 #include <string.h>
 
 #include "test_suite.h"
-
 // Need to write more tests.
 // Need to cover:
 // 1. hex, dec and bin input.
@@ -39,7 +38,7 @@ testParams_t params_solvable[] = {
         .pInputString = "123\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "123\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = 123,
     },
@@ -47,7 +46,7 @@ testParams_t params_solvable[] = {
         .pInputString = "123+456\0",
         .pCursor = {0},
         .pExpectedString = "123+456\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = 123 + 456,
     },
@@ -55,7 +54,7 @@ testParams_t params_solvable[] = {
         .pInputString = "123+456+789\0",
         .pCursor = {0},
         .pExpectedString = "123+456+789\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = 123 + 456 + 789,
     },
@@ -63,7 +62,6 @@ testParams_t params_solvable[] = {
         .pInputString = "(123+456)\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "(123+456)\0",
-        .pOutputString = {0},
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = 123 + 456,
     },
@@ -71,7 +69,7 @@ testParams_t params_solvable[] = {
         .pInputString = "123+456*789\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "123+456*789\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = 123 + 456 * 789,
     },
@@ -79,7 +77,7 @@ testParams_t params_solvable[] = {
         .pInputString = "(123+456*789)\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "(123+456*789)\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = 123 + 456 * 789,
     },
@@ -87,7 +85,7 @@ testParams_t params_solvable[] = {
         .pInputString = "(123+456)*789\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "(123+456)*789\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = (123 + 456) * 789,
     },
@@ -95,7 +93,7 @@ testParams_t params_solvable[] = {
         .pInputString = "123+(456+789)/1011\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "123+(456+789)/1011\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = 123 + (456 + 789) / 1011,
     },
@@ -103,7 +101,7 @@ testParams_t params_solvable[] = {
         .pInputString = "~123)\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "NOT(123)\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = ~123,
     },
@@ -111,7 +109,7 @@ testParams_t params_solvable[] = {
         .pInputString = "~123+456)\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "NOT(123+456)\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = ~(123 + 456),
     },
@@ -119,7 +117,7 @@ testParams_t params_solvable[] = {
         .pInputString = "789+~123+456)\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "789+NOT(123+456)\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = 789 + ~(123 + 456),
     },
@@ -127,7 +125,7 @@ testParams_t params_solvable[] = {
         .pInputString = "~123+456)-789\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "NOT(123+456)-789\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = ~(123 + 456) - 789,
     },
@@ -135,7 +133,7 @@ testParams_t params_solvable[] = {
         .pInputString = "1011+~123+456)-789\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "1011+NOT(123+456)-789\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = 1011 + ~(123 + 456) - 789,
     },
@@ -143,7 +141,7 @@ testParams_t params_solvable[] = {
         .pInputString = "1011+~123+456+1213)-789\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "1011+NOT(123+456+1213)-789\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = 1011 + ~(123 + 456 + 1213) - 789,
     },
@@ -151,7 +149,7 @@ testParams_t params_solvable[] = {
         .pInputString = "1011+s123,456,1213)-789\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "1011+SUM(123,456,1213)-789\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = 1011 + (123 + 456 + 1213) - 789,
     },
@@ -159,7 +157,7 @@ testParams_t params_solvable[] = {
         .pInputString = "101a+s123,456,1213)-789\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "0x101a+SUM(0x123,0x456,0x1213)-0x789\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_HEX},
         .expectedResult = 0x101a + (0x123 + 0x456 + 0x1213) - 0x789,
     },
@@ -172,10 +170,11 @@ void test_solvable_solution(void) {
         setupTestStruct(&calcCore, &params_solvable[i]);
         calcCoreAddInput(&calcCore, &params_solvable[i]);
         int8_t state = calc_solver(&calcCore);
-        calcCoreGetBuffer(&calcCore, &params_solvable[i]);
+        calcCoreGetBuffer(&calcCore, pOutputString);
 
         TEST_ASSERT_EQUAL_STRING(params_solvable[i].pExpectedString,
-                                 params_solvable[i].pOutputString);
+                                 pOutputString);
+
         teardownTestStruct(&calcCore);
 
         // Check that an equal amount of mallocs and free's happened
@@ -197,7 +196,7 @@ testParams_t params_unsolvable[] = {
         .pInputString = "123+\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "123+\0",
-        .pOutputString = {0},
+        //
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = 0, // There shouldn't be a result
     },
@@ -205,7 +204,7 @@ testParams_t params_unsolvable[] = {
         .pInputString = "123+456+\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "123+456+\0",
-        .pOutputString = {0},
+        //
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = 0, // There shouldn't be a result
     },
@@ -213,7 +212,7 @@ testParams_t params_unsolvable[] = {
         .pInputString = "~123+\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "NOT(123+\0",
-        .pOutputString = {0},
+        //
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = 0, // There shouldn't be a result
     },
@@ -221,7 +220,7 @@ testParams_t params_unsolvable[] = {
         .pInputString = "~)\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "NOT()\0",
-        .pOutputString = {0},
+        //
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = 0, // There shouldn't be a result
     },
@@ -229,7 +228,7 @@ testParams_t params_unsolvable[] = {
         .pInputString = "()\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "()\0",
-        .pOutputString = {0},
+        //
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = 0, // There shouldn't be a result
     },
@@ -237,7 +236,7 @@ testParams_t params_unsolvable[] = {
         .pInputString = "(\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "(\0",
-        .pOutputString = {0},
+        //
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = 0, // There shouldn't be a result
     },
@@ -245,7 +244,7 @@ testParams_t params_unsolvable[] = {
         .pInputString = ")\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = ")\0",
-        .pOutputString = {0},
+        //
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = 0, // There shouldn't be a result
     },
@@ -253,7 +252,7 @@ testParams_t params_unsolvable[] = {
         .pInputString = "s*,+)\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "SUM(*,+)\0",
-        .pOutputString = {0},
+        //
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = 0, // There shouldn't be a result
     },
@@ -261,7 +260,7 @@ testParams_t params_unsolvable[] = {
         .pInputString = "s,)\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "SUM(,)\0",
-        .pOutputString = {0},
+        //
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = 0, // There shouldn't be a result
     },
@@ -269,7 +268,7 @@ testParams_t params_unsolvable[] = {
         .pInputString = "s,1)\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "SUM(,1)\0",
-        .pOutputString = {0},
+        //
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = 0, // There shouldn't be a result
     },
@@ -277,7 +276,7 @@ testParams_t params_unsolvable[] = {
         .pInputString = "123*(456*(1+2)\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "123*(456*(1+2)\0",
-        .pOutputString = {0},
+        //
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = 0, // There shouldn't be a result
     },
@@ -285,7 +284,7 @@ testParams_t params_unsolvable[] = {
         .pInputString = "123(\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "123(\0",
-        .pOutputString = {0},
+        //
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = 0, // There shouldn't be a result
     },
@@ -293,7 +292,7 @@ testParams_t params_unsolvable[] = {
         .pInputString = "(123,5)\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "(123,5)\0",
-        .pOutputString = {0},
+        //
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = 0, // There shouldn't be a result
     },
@@ -305,10 +304,10 @@ void test_unsolvable_solution(void) {
         setupTestStruct(&calcCore, &params_unsolvable[i]);
         calcCoreAddInput(&calcCore, &params_unsolvable[i]);
         int8_t state = calc_solver(&calcCore);
-        calcCoreGetBuffer(&calcCore, &params_unsolvable[i]);
+        calcCoreGetBuffer(&calcCore, pOutputString);
 
         TEST_ASSERT_EQUAL_STRING(params_unsolvable[i].pExpectedString,
-                                 params_unsolvable[i].pOutputString);
+                                 pOutputString);
         teardownTestStruct(&calcCore);
 
         // Check that an equal amount of mallocs and free's happened
@@ -332,7 +331,7 @@ testParams_t long_expression[] = {
         .pCursor = {0, 0, 0},
         .pExpectedString =
             "1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1\0",
-        .pOutputString = {0},
+        //
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = 32,
     },
@@ -344,9 +343,10 @@ void test_solvable_long_expression(void) {
         setupTestStruct(&calcCore, &long_expression[i]);
         calcCoreAddInput(&calcCore, &long_expression[i]);
         int8_t state = calc_solver(&calcCore);
-        calcCoreGetBuffer(&calcCore, &long_expression[i]);
+        calcCoreGetBuffer(&calcCore, pOutputString);
+
         TEST_ASSERT_EQUAL_STRING(long_expression[i].pExpectedString,
-                                 long_expression[i].pOutputString);
+                                 pOutputString);
         teardownTestStruct(&calcCore);
 
         // Check that an equal amount of mallocs and free's happened
@@ -369,7 +369,7 @@ testParams_t logic_expression_test_params[] = {
         .pInputString = "n0,f)\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "NAND(0x0,0xf)\0",
-        .pOutputString = {0},
+        //
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_HEX},
         .expectedResult = 15,
         .numberFormat.fixedPointDecimalPlace = 32,
@@ -386,7 +386,7 @@ testParams_t logic_expression_test_params[] = {
         .pInputString = "n0,f,f)\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "NAND(0x0,0xf,0xf)\0",
-        .pOutputString = {0},
+        //
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_HEX},
         .expectedResult = 0,
         .numberFormat.fixedPointDecimalPlace = 32,
@@ -422,10 +422,10 @@ void test_logic_operations(void) {
         setupTestStruct(&calcCore, &logic_expression_test_params[i]);
         calcCoreAddInput(&calcCore, &logic_expression_test_params[i]);
         int8_t state = calc_solver(&calcCore);
-        calcCoreGetBuffer(&calcCore, &logic_expression_test_params[i]);
+        calcCoreGetBuffer(&calcCore, pOutputString);
+
         TEST_ASSERT_EQUAL_STRING(
-            logic_expression_test_params[i].pExpectedString,
-            logic_expression_test_params[i].pOutputString);
+            logic_expression_test_params[i].pExpectedString, pOutputString);
         // Convert the results to string:
         char resultStringDec[MAX_STR_LEN] = {0};
         convertResult(resultStringDec, calcCore.result,

@@ -26,7 +26,7 @@ testParams_t base_conversion_params[] = {
         .pInputString = "123i\0",
         .pCursor = {0, 0, 0, 0},
         .pExpectedString = "0x7b\0",
-        .pOutputString = {0},
+
         .inputBase =
             {
                 [0] = inputBase_DEC,
@@ -40,7 +40,7 @@ testParams_t base_conversion_params[] = {
         .pInputString = "123i\0",
         .pCursor = {0, 0, 0, 2},
         .pExpectedString = "0x7b\0",
-        .pOutputString = {0},
+
         .inputBase =
             {
                 [0] = inputBase_DEC,
@@ -54,7 +54,7 @@ testParams_t base_conversion_params[] = {
         .pInputString = "123i\0",
         .pCursor = {0, 0, 0, 4},
         .pExpectedString = "0x7b\0",
-        .pOutputString = {0},
+
         .inputBase =
             {
                 [0] = inputBase_DEC,
@@ -68,7 +68,7 @@ testParams_t base_conversion_params[] = {
         .pInputString = "123i\0",
         .pCursor = {0, 0, 0, 4},
         .pExpectedString = "0b1111011\0",
-        .pOutputString = {0},
+
         .inputBase =
             {
                 [0] = inputBase_DEC,
@@ -82,7 +82,7 @@ testParams_t base_conversion_params[] = {
         .pInputString = "123+789i\0",
         .pCursor = {0, 0, 0, 0, 0, 0, 0, 0},
         .pExpectedString = "123+0x315\0",
-        .pOutputString = {0},
+
         .inputBase =
             {
                 [0] = inputBase_DEC, // 1
@@ -100,7 +100,7 @@ testParams_t base_conversion_params[] = {
         .pInputString = "123+789i\0",
         .pCursor = {0, 0, 0, 0, 0, 0, 0, 8},
         .pExpectedString = "0x7b+789\0",
-        .pOutputString = {0},
+
         .inputBase =
             {
                 [0] = inputBase_DEC, // 1
@@ -123,10 +123,10 @@ void test_base_conversion(void) {
         setupTestStruct(&calcCore, &base_conversion_params[i]);
         calcCoreAddInput(&calcCore, &base_conversion_params[i]);
         int8_t state = calc_solver(&calcCore);
-        calcCoreGetBuffer(&calcCore, &base_conversion_params[i]);
+        calcCoreGetBuffer(&calcCore, pOutputString);
 
         TEST_ASSERT_EQUAL_STRING(base_conversion_params[i].pExpectedString,
-                                 base_conversion_params[i].pOutputString);
+                                 pOutputString);
         teardownTestStruct(&calcCore);
 
         // Check that an equal amount of mallocs and free's happened
@@ -208,7 +208,7 @@ testParams_t leading_zeros_test_params[] = {
         .pInputString = "0123+056\0",
         .pCursor = {0, 0, 0, 0},
         .pExpectedString = "0123+056\0",
-        .pOutputString = {0},
+
         .expectedResult = 123 + 56,
         .numberFormat.fixedPointDecimalPlace = 16,
         .numberFormat.inputBase = inputBase_DEC,
@@ -220,7 +220,7 @@ testParams_t leading_zeros_test_params[] = {
         .pInputString = "012.8000+07e.ab85\0",
         .pCursor = {0, 0, 0, 0},
         .pExpectedString = "0x012.8000+0x07e.ab85\0",
-        .pOutputString = {0},
+
         .expectedResult =
             0x912b85, // See
                       // https://chummersone.github.io/qformat.html#converter
@@ -246,10 +246,10 @@ void test_leading_zeros(void) {
         }
         calcCoreAddInput(&calcCore, &leading_zeros_test_params[i]);
         int8_t state = calc_solver(&calcCore);
-        calcCoreGetBuffer(&calcCore, &leading_zeros_test_params[i]);
+        calcCoreGetBuffer(&calcCore, pOutputString);
 
         TEST_ASSERT_EQUAL_STRING(leading_zeros_test_params[i].pExpectedString,
-                                 leading_zeros_test_params[i].pOutputString);
+                                 pOutputString);
         teardownTestStruct(&calcCore);
 
         // Check that an equal amount of mallocs and free's happened
@@ -273,7 +273,6 @@ testParams_t output_formatting[] = {
         .pInputString = "123\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "123\0",
-        .pOutputString = {0},
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = 123,
         .numberFormat.fixedPointDecimalPlace = 32,
@@ -291,7 +290,7 @@ testParams_t output_formatting[] = {
         .pInputString = "123\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "123\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = 123,
         .numberFormat.fixedPointDecimalPlace = 32,
@@ -310,7 +309,7 @@ testParams_t output_formatting[] = {
         .pInputString = "123\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "123\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = (float)123,
         .numberFormat.fixedPointDecimalPlace = 32,
@@ -329,7 +328,7 @@ testParams_t output_formatting[] = {
         .pInputString = "123\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "123\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = (double)123,
         .numberFormat.fixedPointDecimalPlace = 32,
@@ -350,7 +349,7 @@ testParams_t output_formatting[] = {
         .pInputString = "123.12\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "123.12\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = 0x42f63d71, // see
         // https://www.h-schmidt.net/FloatConverter/IEEE754.html
@@ -369,7 +368,7 @@ testParams_t output_formatting[] = {
         .pInputString = "123.12\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "123.12\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = 0x405EC7AE147AE148, // see
         // https://www.binaryconvert.com/convert_double.html
@@ -388,7 +387,7 @@ testParams_t output_formatting[] = {
         .pInputString = "123.12\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "123.12\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = 0x42f63d71, // see
         // https://www.h-schmidt.net/FloatConverter/IEEE754.html
@@ -407,7 +406,7 @@ testParams_t output_formatting[] = {
         .pInputString = "123.12\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "123.12\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = 0x405EC7AE147AE148, // see
         // https://www.binaryconvert.com/convert_double.html
@@ -428,7 +427,7 @@ testParams_t output_formatting[] = {
         .pInputString = "123.12\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "123.12\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = 0x42f63d71, // see
         // https://www.h-schmidt.net/FloatConverter/IEEE754.html
@@ -447,7 +446,7 @@ testParams_t output_formatting[] = {
         .pInputString = "123.12\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "123.12\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = 0x405EC7AE147AE148, // see
         // https://www.h-schmidt.net/FloatConverter/IEEE754.html
@@ -466,7 +465,7 @@ testParams_t output_formatting[] = {
         .pInputString = "23.1+100.02\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "23.1+100.02\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = 0x405EC7AE147AE148, // see
         // https://www.binaryconvert.com/convert_double.html
@@ -487,7 +486,7 @@ testParams_t output_formatting[] = {
         .pInputString = "12.312*10.0\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "12.312*10.0\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
         .expectedResult = 0x405EC7AE147AE147, // see
         // https://www.binaryconvert.com/convert_double.html
@@ -527,10 +526,10 @@ void test_format_conversion(void) {
         setupTestStruct(&calcCore, &output_formatting[i]);
         calcCoreAddInput(&calcCore, &output_formatting[i]);
         int8_t state = calc_solver(&calcCore);
-        calcCoreGetBuffer(&calcCore, &output_formatting[i]);
+        calcCoreGetBuffer(&calcCore, pOutputString);
 
         TEST_ASSERT_EQUAL_STRING(output_formatting[i].pExpectedString,
-                                 output_formatting[i].pOutputString);
+                                 pOutputString);
         // Convert the results to string:
         char resultStringDec[MAX_STR_LEN] = {0};
         convertResult(resultStringDec, calcCore.result,

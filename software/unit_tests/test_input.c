@@ -26,105 +26,105 @@ testParams_t params_addInput[] = {
         .pInputString = "123\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "123\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
     },
     {
         .pInputString = "1234\b\0",
         .pCursor = {0, 0, 0, 0, 0},
         .pExpectedString = "123\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
     },
     {
         .pInputString = "123\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "0x123\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_HEX},
     },
     {
         .pInputString = "1010\0",
         .pCursor = {0, 0, 0},
         .pExpectedString = "0b1010\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_BIN},
     },
     {
         .pInputString = "123+\0",
         .pCursor = {0, 0, 0, 2},
         .pExpectedString = "1+23\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
     },
     {
         .pInputString = "123+n123\0",
         .pCursor = {0},
         .pExpectedString = "123+NAND(123\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
     },
     {
         .pInputString = "123+n123)\0",
         .pCursor = {0, 0, 0, 0, 4, 0, 0, 0, 0},
         .pExpectedString = "NAND(123+123)\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
     },
     {
         .pInputString = "123\b\0",
         .pCursor = {0, 0, 0, 1},
         .pExpectedString = "13\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
     },
     {
         .pInputString = "1n3\b\0",
         .pCursor = {0, 0, 0, 1},
         .pExpectedString = "13\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
     },
     {
         .pInputString = "1n3\b\0",
         .pCursor = {0, 0, 0, 2},
         .pExpectedString = "NAND(3\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
     },
     {
         .pInputString = "1n3\b\0",
         .pCursor = {0, 0, 0, 3},
         .pExpectedString = "1NAND(3\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
     },
     {
         .pInputString = "123+n456*(12+45))\0",
         .pCursor = {0},
         .pExpectedString = "123+NAND(456*(12+45))\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
     },
     {
         .pInputString = "1234\0",
         .pCursor = {0, 0, 0, 5},
         .pExpectedString = "4123\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
     },
     {
         .pInputString = "1\0",
         .pCursor = {0},
         .pExpectedString = "\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_NONE},
     },
     {
         .pInputString = ".\0",
         .pCursor = {0},
         .pExpectedString = ".\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
     },
 };
@@ -135,9 +135,9 @@ void test_addRemoveInput(void) {
     for (int i = 0; i < numTests; i++) {
         setupTestStruct(&calcCore, &params_addInput[i]);
         calcCoreAddInput(&calcCore, &params_addInput[i]);
-        calcCoreGetBuffer(&calcCore, &params_addInput[i]);
+        calcCoreGetBuffer(&calcCore, pOutputString);
         TEST_ASSERT_EQUAL_STRING(params_addInput[i].pExpectedString,
-                                 params_addInput[i].pOutputString);
+                                 pOutputString);
         teardownTestStruct(&calcCore);
 
         // Check that an equal amount of mallocs and free's happened
@@ -154,28 +154,28 @@ testParams_t params_addNegativeInput[] = {
         .pInputString = "q\0",
         .pCursor = {0},
         .pExpectedString = "\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
     },
     {
         .pInputString = "q\0",
         .pCursor = {0},
         .pExpectedString = "\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_BIN},
     },
     {
         .pInputString = "q\0",
         .pCursor = {0},
         .pExpectedString = "\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_HEX},
     },
     {
         .pInputString = "12\0",
         .pCursor = {0, 200},
         .pExpectedString = "21\0",
-        .pOutputString = {0},
+
         .inputBase = {[0 ... MAX_STR_LEN - 1] = inputBase_DEC},
     },
 };
@@ -186,10 +186,10 @@ void test_addInvalidInput(void) {
     for (int i = 0; i < numTests; i++) {
         setupTestStruct(&calcCore, &params_addNegativeInput[i]);
         calcCoreAddInput(&calcCore, &params_addNegativeInput[i]);
-        calcCoreGetBuffer(&calcCore, &params_addNegativeInput[i]);
+        calcCoreGetBuffer(&calcCore, pOutputString);
 
         TEST_ASSERT_EQUAL_STRING(params_addNegativeInput[i].pExpectedString,
-                                 params_addNegativeInput[i].pOutputString);
+                                 pOutputString);
         teardownTestStruct(&calcCore);
 
         // Check that an equal amount of mallocs and free's happened

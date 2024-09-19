@@ -19,7 +19,6 @@
 typedef struct testParams {
     char pInputString[MAX_STR_LEN];
     char pExpectedString[MAX_STR_LEN];
-    char pOutputString[MAX_STR_LEN];
     int pCursor[MAX_STR_LEN];
     inputBase_t inputBase[MAX_STR_LEN];
     SUBRESULT_INT expectedResult;
@@ -28,7 +27,8 @@ typedef struct testParams {
     char pResultStringBin[MAX_STR_LEN];
     char pResultStringHex[MAX_STR_LEN];
 } testParams_t;
-
+//! Output string buffer
+extern char pOutputString[MAX_STR_LEN];
 /* -------------------------------------------
  * ----------- FUNCTION PROTOTYPES -----------
  * -------------------------------------------*/
@@ -39,4 +39,4 @@ void teardownTestStruct(calcCoreState_t *pCoreState);
 
 // Function to add the input to the calc core.
 void calcCoreAddInput(calcCoreState_t *pCoreState, testParams_t *pTestParams);
-void calcCoreGetBuffer(calcCoreState_t *pCoreState, testParams_t *pTestParams);
+void calcCoreGetBuffer(calcCoreState_t *pCoreState, char *pOutputString);

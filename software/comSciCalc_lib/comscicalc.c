@@ -1762,14 +1762,15 @@ calc_funStatus_t calc_printBuffer(calcCoreState_t *pCalcCoreState,
                 // entry must be either nothing, a comma, or an
                 // operator.
                 int depth = calc_findDepthOfPointer(pCurrentListEntry);
-                char prevEntryChar =
-                    ((inputListEntry_t *)(pCurrentListEntry->pPrevious))
-                        ->entry.c;
+
                 if (pCurrentListEntry->pPrevious != NULL) {
                     if (previousInputType == INPUT_TYPE_NUMBER) {
                         calc_recordSyntaxIssuePos(pSyntaxIssuePos,
                                                   numCharsWritten);
                     } else if (previousInputType == INPUT_TYPE_EMPTY) {
+                        char prevEntryChar =
+                            ((inputListEntry_t *)(pCurrentListEntry->pPrevious))
+                                ->entry.c;
                         if (prevEntryChar != '(' &&
                             !(prevEntryChar == ',' && depth > 0)) {
                             calc_recordSyntaxIssuePos(pSyntaxIssuePos,
