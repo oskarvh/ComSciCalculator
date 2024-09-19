@@ -1936,10 +1936,6 @@ uint8_t calc_getCursorLocation(calcCoreState_t *pCalcCoreState) {
             numChars += 1;
         }
         pCurrentListEntry = pCurrentListEntry->pPrevious;
-        if (pCurrentListEntry == NULL) {
-            // Cap the cursor position here
-            // pCalcCoreState->cursorPosition = cursorCounter;
-        }
         cursorCounter++;
     }
     return numChars;
