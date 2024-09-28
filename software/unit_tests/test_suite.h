@@ -24,3 +24,4 @@ extern void test_leading_zeros(void);
 extern void test_solvable_long_expression(void);
 extern void test_format_conversion(void);
 extern void test_logic_operations(void);
+extern void test_comms(void);

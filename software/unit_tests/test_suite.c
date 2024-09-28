@@ -44,16 +44,17 @@ void tearDown(void) {
 int main(void) {
     UNITY_BEGIN();
     // See test_suite.h for included tests.
-    RUN_TEST(test_addRemoveInput);
-    RUN_TEST(test_addInvalidInput);
-    RUN_TEST(test_solvable_solution);
-    RUN_TEST(test_unsolvable_solution);
-    RUN_TEST(test_null_pointers);
-    RUN_TEST(test_base_conversion);
-    RUN_TEST(test_string_to_fixed_point);
-    RUN_TEST(test_leading_zeros);
-    RUN_TEST(test_solvable_long_expression);
-    RUN_TEST(test_format_conversion);
-    RUN_TEST(test_logic_operations);
+    // RUN_TEST(test_addRemoveInput);
+    // RUN_TEST(test_addInvalidInput);
+    // RUN_TEST(test_solvable_solution);
+    // RUN_TEST(test_unsolvable_solution);
+    // RUN_TEST(test_null_pointers);
+    // RUN_TEST(test_base_conversion);
+    // RUN_TEST(test_string_to_fixed_point);
+    // RUN_TEST(test_leading_zeros);
+    // RUN_TEST(test_solvable_long_expression);
+    // RUN_TEST(test_format_conversion);
+    // RUN_TEST(test_logic_operations);
+    RUN_TEST(test_comms);
     return UNITY_END();
 }

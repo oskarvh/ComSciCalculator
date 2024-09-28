@@ -63,7 +63,7 @@ Field | Accepted value(s) | Description
 SOM    | `0x1B5F9F` |   Start Of Message: This is a fixed value and <br>indicates the start of a message if prior <br>message has been terminated, or if timeout has been reached. 
 ML | 0-255 | Message Length: Body length in Bytes
 MT | `0x01` Data Transfer <br> `0x02` ACK <br>`0x04` NACK <br> `0x08` Retransmission <br>`0xF0` Reserved|Message Type: Type(s) of messages. A combination (OR) of the types are available. <br>Data Transfer: Transfer of data. Data will be forwarded to the link layer. <br>ACK: Acknowledgement. <br>NACK: Negative Acknowledgement.<br>Retransmission: This message is a retransmission of a previous message.
-Settings | `0x000001` Use Checksum<br>`0x000002` Use CRC<br>`0x0000X0` Timeout<br>`0x000X00` Retries<br>`0xFF9004` Reserved<br> | Settings: These fields are bitwise ORed, and indicate protocol layer settings 
+Settings | `0x000001` Use Checksum<br>`0x000002` Use CRC<br>`0x000XX0` Timeout<br>`0x0XX000` Retries<br>`0xF00004` Reserved<br> | Settings: These fields are bitwise ORed, and indicate protocol layer settings 
 Body|Any|Data packets
 Checksum|Any|Checksum (algorithm TBD)
 CRC|Any|CRC (algorithm TBD)
@@ -106,20 +106,15 @@ E.g. 50 ms is multiplier 5 and base 10 ms.
 *Table 2. Timeout bases and multipliers*
 Timeout setting value | Timeout
 |:------------------- | :-----------:|
-Bits 0-3: `0x0`         | base: 1 ms
-Bits 0-3: `0x1`         |base: 10 ms
-Bits 0-3: `0x2`         |base: 100 ms
-Bits 0-3: `0x3`         |base: 1000 ms
-Bits 4-15: `0x1`        |multiplier: 1
-Bits 4-15: `0x2`        |multiplier: 2
-Bits 4-15: `0x3`        |multiplier: 3
-Bits 4-15: `0x4`        |multiplier: 4
-Bits 4-15: `0x5`        |multiplier: 5
-Bits 4-15: `0x6`        |multiplier: 6
-Bits 4-15: `0x7`        |multiplier: 7
-Bits 4-15: `0x8`        |multiplier: 8
-Bits 4-15: `0x9`        |multiplier: 9
-Bits 4-15: `0xA-0xC`    |Reserved
+Bits 0-2: `0x0`         | base: 1 ms
+Bits 0-2: `0x1`         |base: 10 ms
+Bits 0-2: `0x2`         |base: 100 ms
+Bits 0-2: `0x3`         |base: 1000 ms
+Bits 3-15: `0x1`        |multiplier: 1
+Bits 3-15: `0x2`        |multiplier: 2
+Bits 3-15: `0x3`        |multiplier: 3
+Bits 3-15: `0x4`        |multiplier: 4
+and so on...
 
 The timeout is on a per message basis, so the transmitter tells how long it will wait for an acknowledgement. There is no algorithm for setting this rate based on retransmission, other than it should be set to as low as possible without causing retransmissions. 
 

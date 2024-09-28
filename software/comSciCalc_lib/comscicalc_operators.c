@@ -647,11 +647,13 @@ int8_t calc_not(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
 
 int8_t calc_leftshift(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
                       int num_args, inputType_t *pArgs) {
+    // TODO
     return function_solved;
 }
 
 int8_t calc_rightshift(SUBRESULT_INT *pResult, numberFormat_t numberFormat,
                        int num_args, inputType_t *pArgs) {
+    // TODO
     return function_solved;
 }
 

@@ -4,6 +4,12 @@ The computer scientist calculator is a modern take on the HP 16C.
 It was born out of frustration of the terrible windows calculator, 
 and since it's aimed at EE's, it also has to have hardware. 
 
+## TODO list:
+* Implement bit shift functions
+* Implement duplicate bitwise functions to include either 2 or more functions
+  * E.g., I want to support `1&2` along with `AND(1,2,3,4)`. These can be different functions.
+  * The latter `AND()` function should be selecable via the menu, and `&` should be selectable from the 
+
 ## Status of project
 The software is mostly being worked on at the moment. A few iterations 
 of the hardware has been made, but nothing has been ordered yet because some components are hard to get at the moment, along with the continuous change of heart when it comes to the hardware specs. 

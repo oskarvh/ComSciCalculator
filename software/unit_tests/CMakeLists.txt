@@ -28,6 +28,14 @@ target_include_directories(comscicalc_lib PUBLIC
     m
 )
 
+add_library(comscicalc_comms STATIC
+    ${CMAKE_CURRENT_LIST_DIR}/../comms/comscicalc_comms.c
+)
+
+target_include_directories(comscicalc_comms PUBLIC
+    ${CMAKE_CURRENT_LIST_DIR}/../comms/
+)
+
 # Add the unity library
 include_directories(${CMAKE_CURRENT_LIST_DIR}/../Unity)
 
@@ -47,6 +55,7 @@ file(GLOB src_files
     ${CMAKE_CURRENT_LIST_DIR}/test_calc_static.c
     ${CMAKE_CURRENT_LIST_DIR}/test_format.c
     ${CMAKE_CURRENT_LIST_DIR}/test_utils.c
+    ${CMAKE_CURRENT_LIST_DIR}/test_comms.c
 )
 
 #add_definitions("-DVERBOSE")
@@ -64,6 +73,7 @@ target_include_directories(
 target_link_libraries(
     comscicalc_unit_tests
     comscicalc_lib
+    comscicalc_comms
     unity
     m
 )

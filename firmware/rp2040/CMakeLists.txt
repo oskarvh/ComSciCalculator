@@ -28,6 +28,7 @@ set(COMMON_SRC_DIRECTORY "${CMAKE_SOURCE_DIR}/../common")
 set(COMSCICALC_SRC_DIRECTORY "${CMAKE_SOURCE_DIR}/../../software/comSciCalc_lib")
 set(DISPLAY_SRC_DIRECTORY "${CMAKE_SOURCE_DIR}/../../software/display")
 set(HW_SRC_DIRECTORY "${CMAKE_SOURCE_DIR}/hardware")
+set(COMMS_SRC_DIRECTORY "${CMAKE_SOURCE_DIR}/../../software/comms")
 
 
 # Initialize the SDK
@@ -61,6 +62,18 @@ add_compile_definitions(EVE_SCK=2)
 add_compile_definitions(EVE_MOSI=3)
 add_compile_definitions(EVE_MISO=0)
 add_compile_definitions(EVE_BACKLIGHT_PWM=127)
+
+# Add the comms library
+add_library(comscicalc_comms STATIC
+    ${COMMS_SRC_DIRECTORY}/comscicalc_comms.c
+)
+target_link_libraries(
+    comscicalc_comms 
+    PUBLIC 
+)
+target_include_directories(comscicalc_comms PUBLIC 
+    ${COMMS_SRC_DIRECTORY}/
+)
 
 # Add FT81x/EVE display driver as a library
 add_library(FT81X STATIC 

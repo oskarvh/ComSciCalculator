@@ -146,8 +146,9 @@ static void calcCoreTask(void *p) {
                             if (strcmp(escapeSeq, "[D") == 0) {
                                 // Backward/left
                                 if (calcState.pListEntrypoint != NULL) {
-                                    // Only increase if we have an actual entry point
-                                    calcState.cursorPosition += 1;    
+                                    // Only increase if we have an actual entry
+                                    // point
+                                    calcState.cursorPosition += 1;
                                 }
                             }
                             // Here there's a USB espace char, and something
