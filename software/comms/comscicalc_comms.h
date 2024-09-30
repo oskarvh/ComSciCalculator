@@ -29,7 +29,7 @@ SOFTWARE.
 
 // Standard library
 #include <stdint.h>
-
+#include <stdbool.h>
 // Extended library
 
 /*
@@ -74,6 +74,8 @@ SOFTWARE.
 #define HEADER_FAULT -1
 #define NOK -2
 #define NULL_PTR -3
+#define CHECKSUM_ERROR -4
+#define CRC_ERROR -5
 /**@}*/
 
 //! Macro to retrieve the timeout settings in millisec from settings
@@ -93,7 +95,7 @@ typedef enum {
     ack = 0x02,
     nack = 0x04,
     retransmission = 0x08,
-}messageTypes_t;
+} messageTypes_t;
 
 /**
  * @brief Internal options struct. 
@@ -105,7 +107,7 @@ typedef struct comms_options {
     //! Length of the received message
     uint8_t msgLen;
     //! Message type
-    messageTypes_t messageType;
+    uint8_t messageType;
     //! Use Checksum
     bool bUseChecksum;
     //! Use CRC
@@ -115,6 +117,34 @@ typedef struct comms_options {
     //! Retries
     uint8_t retries;
 }comms_options_t;
+
+/**
+ * @brief Link layer mesage type enumeration
+ */
+typedef enum {
+    //! Undefined
+    not_defined = -1,
+    //! Data input
+    data_input = 1,
+    //! Request for state
+    state_request = 2,
+    //! State
+    state = 3,
+    //! Data section. For writing to memory
+    write_section = 4,
+    //! Data section. For reading memory
+    read_section = 5,
+} linkLayerDataype_t;
+
+/**
+ * @brief Link layer header
+ */
+typedef struct linkLayerHeader
+{
+    //! Message type
+    int32_t messageType;
+} linkLayerHeader_t;
+
 
 /**
  * @brief Communication protocol header
@@ -141,6 +171,10 @@ typedef struct comms_header {
  * FUNCTION PROTOTYPES
  */
 /**
+ * @brief Initialize the comms
+ */
+void initComms(void);
+/**
  * @brief Decode a protocol layer message
  * @param pMsg Pointer to incoming data, i.e. message to be decoded
  * @param msgLen Length of data
@@ -148,7 +182,7 @@ typedef struct comms_header {
  * @param pOptions Pointer to options struct, written to
  * @return Status
  */
-int8_t protocol_decode_msg(char *pMsg, char *pData, comms_options_t *pOptions);
+int8_t protocol_decode_msg(void *pMsg, void *pData, comms_options_t *pOptions);
 /**
  * @brief Encode a protocol layer message
  * @param pOutgoing Pointer to the outgoing buffer
@@ -156,4 +190,11 @@ int8_t protocol_decode_msg(char *pMsg, char *pData, comms_options_t *pOptions);
  * @param pOptions Pointer to options struct, read from
  * @return Status
  */
-int8_t protocol_encode_msg(char *pOutgoing, char *pMsg, comms_options_t *pOptions);
+int8_t protocol_encode_msg(void *pOutgoing, void *pMsg, comms_options_t *pOptions);
+
+/**
+ * @brief Get link layer data type
+ * @param pData Pointer to the (beginning of the) link layer data
+ * @return Data type (linkLayerMessageType)
+ */
+inline linkLayerHeader_t link_get_data_type(void *pData);

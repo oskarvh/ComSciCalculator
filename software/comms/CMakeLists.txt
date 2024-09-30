@@ -7,6 +7,7 @@ project(comscicalc_comms)
 
 add_library(comscicalc_comms STATIC
     comscicalc_comms.c
+    crc.c
 )
 
 target_include_directories(comscicalc_comms

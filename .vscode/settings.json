@@ -35,7 +35,9 @@
         "task.h": "c",
         "queue.h": "c",
         "cascadia_20_l2.h": "c",
-        "comic_sans_ms_38_l2.h": "c"
+        "comic_sans_ms_38_l2.h": "c",
+        "test_suite.h": "c",
+        "comscicalc_comms.h": "c"
     },
     "cmake.configureOnOpen": true
 }

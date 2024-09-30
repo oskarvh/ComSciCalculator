@@ -30,6 +30,7 @@ target_include_directories(comscicalc_lib PUBLIC
 
 add_library(comscicalc_comms STATIC
     ${CMAKE_CURRENT_LIST_DIR}/../comms/comscicalc_comms.c
+    ${CMAKE_CURRENT_LIST_DIR}/../comms/crc.c
 )
 
 target_include_directories(comscicalc_comms PUBLIC

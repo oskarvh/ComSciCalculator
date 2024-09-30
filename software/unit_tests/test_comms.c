@@ -11,15 +11,16 @@
 #include "comscicalc_comms.h"
 #include "test_suite.h"
 
-void test_comms(void) {
+void test_comms_protocol_layer(void) {
     // Create a buffer used to "send" the message
+    initComms();
     char pBuf[8 + 255 + 16] = {0};
     char pMsg[8] = "Testing";
     comms_options_t options = {
         .msgLen = 8,
         .messageType = ack,
         .bUseChecksum = false,
-        .bUseCRC = false,
+        .bUseCRC = true,
         .timeout_ms = 200,
         .retries = 5,
     };
@@ -31,7 +32,7 @@ void test_comms(void) {
         .msgLen = 0,
         .messageType = 0,
         .bUseChecksum = false,
-        .bUseCRC = false,
+        .bUseCRC = true,
         .timeout_ms = 0,
         .retries = 0,
     };

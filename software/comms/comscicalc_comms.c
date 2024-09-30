@@ -27,11 +27,22 @@ SOFTWARE.
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <math.h>
 
 // Extended library
 
 // Project includes
 #include "comscicalc_comms.h"
+#include "crc.h"
+
+void initComms(void){
+    // Initialize the CRC table
+    crcInit();
+}
+
+/*
+ * PROTOCOL LAYER FUNCTIONS
+ */
 
 // Function to sanity check the header
 bool check_header(comms_header_t *pHeader){
@@ -46,10 +57,14 @@ bool check_header(comms_header_t *pHeader){
     return true;
 }
 
-int8_t protocol_decode_msg(char *pMsg, char *pData, comms_options_t *pOptions){
+int8_t protocol_decode_msg(void *pMsg, void *pData, comms_options_t *pOptions){
     // This function decodes and parses a message pointed to by pMsg, 
     // with length msgLen
-    
+    if(pMsg == NULL){
+        return NULL_PTR;
+    }
+    uint16_t totalPacketLen = 8;
+    uint8_t status = OK;
     // The header comes first
     comms_header_t *pHeader = malloc(sizeof(comms_header_t));
     memcpy(pHeader, pMsg, sizeof(comms_header_t));
@@ -58,25 +73,40 @@ int8_t protocol_decode_msg(char *pMsg, char *pData, comms_options_t *pOptions){
         // There something wrong with the header. 
         return HEADER_FAULT;
     }
-    printf("settings = 0x%llx\r\n", pHeader->settings);
     pOptions->msgLen = pHeader->ml;
     pOptions->messageType = pHeader->mt;
     pOptions->timeout_ms = GET_TIMEOUT_MS(pHeader->settings);
     pOptions->retries = GET_RETRIES(pHeader->settings);
     
     // Handle the data portion
-    memcpy(pData, &(pMsg[8]), pHeader->ml);
-
+    if(pHeader->ml > 0){
+        if(pData == NULL){
+            status = NULL_PTR;
+        }
+        else{
+            memcpy(pData, &(pMsg[8]), pHeader->ml);
+            totalPacketLen += pHeader->ml;
+        }
+    }
+    
     // Check the CRC and checksum
     if(pHeader->settings & ST_USE_CHECKSUM_BITMASK == ST_USE_CHECKSUM_BITMASK){
         // Check the checksum
         pOptions->bUseChecksum = true;
+        totalPacketLen += 4;
+        // TODO, compare calculated checksum to received checksum, and set status accordingly
     }
-    if(pHeader->settings & ST_USE_CRC_BITMASK == ST_USE_CRC_BITMASK){
+    if((pHeader->settings & ST_USE_CRC_BITMASK) == ST_USE_CRC_BITMASK){
         // Check the CRC
         pOptions->bUseCRC = true;
+        uint32_t calculatedCrc = crcFast(pMsg, totalPacketLen);
+        uint32_t receivedCrc = 0;
+        memcpy(&receivedCrc, &(pMsg[totalPacketLen]), sizeof(uint32_t));
+        if(receivedCrc != calculatedCrc){
+            status = CRC_ERROR;
+        }
     }
-    return OK;
+    return status;
 }
 
 /**
@@ -125,7 +155,7 @@ static uint32_t constructSettings(uint16_t timeout_ms, uint8_t retries, bool bUs
     return settingsField;
 }
 
-int8_t protocol_encode_msg(char *pOutgoing, char *pMsg, comms_options_t *pOptions){
+int8_t protocol_encode_msg(void *pOutgoing, void *pMsg, comms_options_t *pOptions){
     // Constructs a protocol message to be placed in pOutgoing. 
     // Local variable to keep track of the outgoing message. 
     char *pData = pOutgoing;
@@ -139,6 +169,7 @@ int8_t protocol_encode_msg(char *pOutgoing, char *pMsg, comms_options_t *pOption
         .ml = pOptions->msgLen,
         .settings = constructSettings(pOptions->timeout_ms, pOptions->retries, pOptions->bUseChecksum, pOptions->bUseCRC),
     };
+    uint16_t totalPacketLen = 8; 
     // Copy the header over to the data
     memcpy(pData, &header, 8);
     pData = &(pData[8]);
@@ -146,21 +177,31 @@ int8_t protocol_encode_msg(char *pOutgoing, char *pMsg, comms_options_t *pOption
     // Copy over the data itself
     if(pMsg != NULL && pOptions->msgLen > 0){
         memcpy(pData, pMsg, pOptions->msgLen);
-        pData = &(pData[4+pOptions->msgLen]);
+        pData = &(pData[pOptions->msgLen]);
+        totalPacketLen += pOptions->msgLen;
     }
 
     if(pOptions->bUseChecksum){
         // TODO: Calculate the checksum and add it
+        pData = &(pData[4]);
+        totalPacketLen += 4;
     }
     if(pOptions->bUseCRC){
         // TODO: Calculate CRC and add it
+        pOptions->bUseCRC = true;
+        uint32_t crc = crcFast(pOutgoing, totalPacketLen);
+        memcpy(pData, &crc, sizeof(uint32_t));
+        pData = &(pData[4]);
     }
     return OK;
 }
 
-// int8_t protocol_receive_msg(QueueHandle_t phyRxQueue){
-//     // Initially, we will wait for the queue to be not empty
-    
-//     return OK;
-// }
+/*
+ * LINK LAYER FUNCTIONS
+ */
 
+inline linkLayerHeader_t link_get_data_type(void *pData){
+    // Since pData points to the header, and it 32 bit aligned, 
+    // just cast the pointer type to linkLayerHeader_t and read out the type
+    return (*((linkLayerHeader_t*)pData));
+}
