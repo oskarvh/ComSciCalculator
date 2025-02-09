@@ -8,6 +8,3 @@
 	path = software/FreeRTOS-Kernel
 	url = git@github.com:FreeRTOS/FreeRTOS-Kernel.git
 	branch = V10.6.1
-[submodule "firmware/rp2040/pico-sdk"]
-	path = firmware/rp2040/pico-sdk
-	url = git@github.com:raspberrypi/pico-sdk.git
