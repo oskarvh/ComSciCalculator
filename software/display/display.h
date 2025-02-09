@@ -160,7 +160,7 @@ SOFTWARE.
 #define MAGENTA 0xff00ff
 #define PURPLE 0x4b0082 // 0x800080
 #define WHITE 0xffffff
-#define BLACK 0x000000
+#define     BLACK 0x000000
 #define LIGHT_GRAY 0x707070
 #define GRAY 0x303030
 #define DARK_GRAY 0x101010

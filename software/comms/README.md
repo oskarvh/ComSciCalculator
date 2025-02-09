@@ -209,3 +209,10 @@ Data here can be, per default, any one of the following types:
 * New program
   * There is space in the flash for custom programs, accessible via the menu
   * This command sends the binary data and where to store it, along with metadata such that the program can be accessible via the menu. 
+
+# Integration
+The protocol can be used as a HIL interface for testing as well as a GUI implementation. While the GUI part is kept agnostic to the GUI framework, python mappings to the protocol functions shall be created such that pytest can be used as the test framework. 
+That also enables a low effort python GUI implementation. 
+
+In python, `ctypes` seem to be the standard binding framework for C functions, as it’s part of the standard python library/distribution. 
+
