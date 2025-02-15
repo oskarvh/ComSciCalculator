@@ -37,12 +37,10 @@ SOFTWARE.
 #define LOGGER_LEVEL_DEBUG (0x02)
 
 /**
- * @brief Prints logger statements to stdout, or UART if TIVAWARE is defined.
+ * @brief Prints logger statements to stdout or UART (if embedded).
  *
- * @note The UART printing uses a FreeRTOS critical section protection.
- *
- * @param pCalcCoreState Pointer to an allocated core state variable.
- * @param LOG_LEVEL The log level of this message.
+ * @param log_level The log level of this message.
+ * @param msg The message to print, with optional format specifiers.
  * @return None.
  * @warning This uses critical section to protect the shared resources,
  * hence it should not be used in project with critical interrupt timings.

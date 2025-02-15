@@ -21,7 +21,7 @@
 #include "comscicalc_operators.h"
 
 // Debug:
-#include "uart_logger.h"
+#include "logger.h"
 
 // Standard library
 #include <stdarg.h>

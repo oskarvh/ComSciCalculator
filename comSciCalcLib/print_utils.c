@@ -34,7 +34,7 @@ SOFTWARE.
 #include "print_utils.h"
 
 // Included utils
-#include "uart_logger.h"
+#include "logger.h"
 
 // Standard library
 #include <math.h>

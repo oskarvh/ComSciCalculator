@@ -34,7 +34,7 @@ SOFTWARE.
 // Comscicalc includes
 #include "comscicalc.h"
 #include "display.h"
-#include "uart_logger.h"
+#include "logger.h"
 
 // C includes
 #include <string.h>

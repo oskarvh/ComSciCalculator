@@ -50,7 +50,7 @@ SOFTWARE.
 //#include "pico/stdio_usb.h"
 
 // comscicalc
-#include "uart_logger.h"
+#include "logger.h"
 
 // FW common, used for callback linking.
 #include "firmware_common.h"

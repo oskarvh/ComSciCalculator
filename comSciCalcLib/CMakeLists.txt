@@ -9,15 +9,11 @@ add_library(comscicalc_lib STATIC
     comscicalc.c
     comscicalc_operators.c
     print_utils.c
-    uart_logger.c
+    ../common/uart_logger.c
 )
 
 target_include_directories(comscicalc_lib
     PUBLIC
     .
+    ../common
 )
-
-#target_link_libraries(comscicalc_lib
-#    PUBLIC
-#
-#)

@@ -33,10 +33,7 @@ SOFTWARE.
 // Comscicalc entry points
 #include "firmware_common.h"
 
-#if defined(RP2040)
-// RP2040
 #include "rp2040_utils.h"
-#endif
 
 /**
  * @brief This hook is called by FreeRTOS when an stack overflow error is

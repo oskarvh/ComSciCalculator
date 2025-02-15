@@ -37,17 +37,9 @@ SOFTWARE.
 #include <stdarg.h>
 
 // Logger header
-#include "uart_logger.h"
+#include "logger.h"
 
-// FreeRTOS, if tivaware is used
-#if defined(TIVAWARE)
-#include "FreeRTOS.h"
-#include "task.h"
-#elif defined(EK_RA4M3) || defined(COMSCICALC_CM_V0)
-#include "FreeRTOS.h"
-#include "renesas_utils.h"
-#include "task.h"
-#elif defined(RP2040)
+#if defined(RP2040)
 #include "rp2040_utils.h"
 #else
 #include <stdio.h>
@@ -66,27 +58,17 @@ void logger(int8_t log_level, char *msg, ...) {
     if (log_level > LOG_LEVEL) {
         return;
     }
-#if (defined(TIVAWARE) || defined(EK_RA4M3) || defined(COMSCICALC_CM_V0)) ||   \
-    defined(RP2040)
-#if defined(TIVAWARE)
-    // Enter critical section, only if non-ISR UART is used.
-    // taskENTER_CRITICAL();
-#endif
-
+#if defined(RP2040)
     // Print using UART instead
     va_list vaArgP;
     va_start(vaArgP, msg);
+    // Print the message, UARTvprintf is defined in rp2040_utils
     UARTvprintf(msg, vaArgP);
     va_end(vaArgP);
-
-#if defined(TIVAWARE)
-    // Exit critical section, only if non-ISR UART is used.
-    // taskEXIT_CRITICAL();
-#endif
 #else
     va_list argp;
     va_start(argp, msg);
     vprintf(msg, argp);
     va_end(argp);
-#endif //(defined(TIVAWARE) || defined(EK_RA4M3) || defined(COMSCICALC_CM_V0))
+#endif 
 }

@@ -5,3 +5,4 @@ utils/fontConverter/output_files/
 utils/fontConverter/input_files/
 firmware/rp2040/build
 software/unit_tests/build
+build

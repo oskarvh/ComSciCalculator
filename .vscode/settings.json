@@ -15,27 +15,11 @@
     },
     "cmake.buildBeforeRun": true,
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
-    "cmake.sourceDirectory": "/home/oskar/git/ComSciCalculator/firmware/rp2040",
-    "cmake.buildDirectory": "/home/oskar/git/ComSciCalculator/firmware/rp2040/build",
+    "cmake.sourceDirectory": "/home/oskar/git/ComSciCalculator",
+    "cmake.buildDirectory": "/home/oskar/git/ComSciCalculator/build",
     "files.associations": {
-        "binary_info.h": "c",
-        "stdlib.h": "c",
-        "eve.h": "c",
-        "firmware_common.h": "c",
-        "spi.h": "c",
-        "eve_target_rp2040.h": "c",
-        "pin_map.h": "c",
-        "uart_logger.h": "c",
-        "stdio_uart.h": "c",
-        "stdio.h": "c",
-        "driver.h": "c",
-        "freertos.h": "c",
-        "event_groups.h": "c",
-        "stdint.h": "c",
-        "task.h": "c",
-        "queue.h": "c",
-        "cascadia_20_l2.h": "c",
-        "comic_sans_ms_38_l2.h": "c"
+        "CMakeLists.txt": "cmake"
     },
-    "cmake.configureOnOpen": true
+    "cmake.configureOnOpen": true,
+    "cmake.cacheInit": null
 }
