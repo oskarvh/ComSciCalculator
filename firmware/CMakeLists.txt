@@ -9,33 +9,24 @@ set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 include(FetchContent)
 set(FETCHCONTENT_QUIET FALSE)
 FetchContent_Declare(
-    ft81x_sdk
-    GIT_REPOSITORY "https://github.com/oskarvh/FT800-FT813"
-    GIT_TAG "5.x"
-    GIT_PROGRESS TRUE
-    GIT_SHALLOW TRUE
-)
-FetchContent_Declare(
     freertos_kernel
     GIT_REPOSITORY "https://github.com/FreeRTOS/FreeRTOS-Kernel.git"
     GIT_TAG "V10.6.1"
     GIT_PROGRESS TRUE
     GIT_SHALLOW TRUE
 )
-
-#FetchContent_MakeAvailable(ft81x_sdk)
-# Don't build the FreeRTOS kernel, just make populate the directory
+FetchContent_Declare(
+    ft81x_sdk
+    GIT_REPOSITORY "https://github.com/oskarvh/FT800-FT813"
+    GIT_TAG "5.x"
+    GIT_PROGRESS TRUE
+    GIT_SHALLOW TRUE
+)
+# Fetch the content without building it
 FetchContent_Populate(freertos_kernel)
 FetchContent_Populate(ft81x_sdk)
-
 message(STATUS "ft81x_sdk source dir: ${ft81x_sdk_SOURCE_DIR}")
 message(STATUS "freertos_kernel source dir: ${freertos_kernel_SOURCE_DIR}")
-set(FT81X_SDK_PATH ${ft81x_sdk_SOURCE_DIR})
-
-# Pull in the pico SDK, let it fetch itself.
-# set(PICO_SDK_FETCH_FROM_GIT TRUE)
-# include(${CMAKE_SOURCE_DIR}/firmware/pico_sdk_import.cmake)
-# message(STATUS "PICO_SDK_PATH: ${PICO_SDK_PATH}")
 
 ## ---------- PROJECT ----------
 # Define the project
@@ -48,6 +39,11 @@ endif()
 
 # Initialize the pico SDK
 pico_sdk_init()
+
+# Add the internal dependencies
+include(${CMAKE_SOURCE_DIR}/common/gui/CMakeLists.txt)
+include(${CMAKE_SOURCE_DIR}/comSciCalcLib/CMakeLists.txt)
+include(${CMAKE_SOURCE_DIR}/common/logger/CMakeLists.txt)
 
 ## ---------- SETTINGS ----------
 # Add debug
@@ -86,23 +82,89 @@ target_include_directories(freertos PUBLIC
     ${freertos_kernel_SOURCE_DIR}/portable/GCC/ARM_CM0/
 )
 
+add_library(
+    firmware_utils
+    ${CMAKE_SOURCE_DIR}/firmware/rp2040_utils.c
+    ${CMAKE_SOURCE_DIR}/firmware/pin_map.h
+)
+target_link_libraries(
+    firmware_utils
+    PUBLIC
+    pico_stdlib
+    hardware_spi
+    hardware_uart
+    logger
+)
+target_include_directories(firmware_utils PUBLIC 
+    ${CMAKE_SOURCE_DIR}/firmware/
+)
+pico_enable_stdio_usb(firmware_utils 1)
+
+# # Add definitions for the embedded GUI:
+# add_library(embedded_gui STATIC
+#     ${CMAKE_SOURCE_DIR}/common/gui/gui.c
+#     ${clay_SOURCE_DIR}/renderers/ft81x/clay_renderer_ft81x.c
+#     ${ft81x_sdk_SOURCE_DIR}/EVE_commands.c
+#     ${ft81x_sdk_SOURCE_DIR}/EVE_target.c
+#     ${CMAKE_SOURCE_DIR}/firmware/fonts/font_library.c
+# )
+# target_link_libraries(
+#     embedded_gui 
+#     PUBLIC 
+#     pico_stdlib
+#     hardware_spi
+#     firmware_utils
+# )
+# target_include_directories(embedded_gui PUBLIC
+#     ${CMAKE_SOURCE_DIR}/common/gui/
+#     ${clay_SOURCE_DIR}/
+#     ${clay_SOURCE_DIR}/renderers/ft81x/
+#     ${ft81x_sdk_SOURCE_DIR}/
+#     ${ft81x_sdk_SOURCE_DIR}/EVE_targets/
+#     ${CMAKE_SOURCE_DIR}/firmware/fonts/
+# )
+
+# Add definitions for the common firmware functions:
+add_library(firmware_common STATIC
+    ${CMAKE_SOURCE_DIR}/firmware/firmware_common.c
+    ${CMAKE_SOURCE_DIR}/firmware/display.c
+    ${CMAKE_SOURCE_DIR}/common/gui/gui.c
+    ${CMAKE_SOURCE_DIR}/firmware/fonts/font_library.c
+    #${clay_SOURCE_DIR}/renderers/ft81x/clay_renderer_ft81x.c
+    ${ft81x_sdk_SOURCE_DIR}/EVE_commands.c
+    ${ft81x_sdk_SOURCE_DIR}/EVE_target.c
+)
+target_link_libraries(
+    firmware_common
+    PUBLIC
+    freertos
+    comscicalc_lib
+    logger
+    firmware_utils
+)
+target_include_directories(firmware_common PUBLIC
+    ${CMAKE_SOURCE_DIR}/common/gui/
+    ${CMAKE_SOURCE_DIR}/firmware/fonts/
+    ${ft81x_sdk_SOURCE_DIR}/
+    ${ft81x_sdk_SOURCE_DIR}/EVE_targets/
+    ${clay_SOURCE_DIR}/
+    ${clay_SOURCE_DIR}/renderers/ft81x/
+)
+
+
 add_executable(
     firmware_main 
     ${CMAKE_SOURCE_DIR}/firmware/main.c
-    ${CMAKE_SOURCE_DIR}/firmware/firmware_common.c
-    ${CMAKE_SOURCE_DIR}/firmware/rp2040_utils.c
-    ${CMAKE_SOURCE_DIR}/common/logger/logger.c
 )
 target_link_libraries(
     firmware_main 
     PUBLIC
-    pico_stdlib
-    hardware_spi
+    firmware_common
     freertos
 )
 target_include_directories(firmware_main PUBLIC 
     ${CMAKE_SOURCE_DIR}/firmware/
-    ${CMAKE_SOURCE_DIR}/common/logger/
+    ${freertos_kernel_SOURCE_DIR}/include/
 )
 
 pico_enable_stdio_usb(firmware_main 1)

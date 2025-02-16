@@ -145,27 +145,27 @@ SOFTWARE.
 //! Padding between lines
 #define MENU_OPTION_LINE_TEXT_PADDING 12
 
-/**
- * @defgroup ColorDefinitions Definitions for the colors used in the display
- * @{
- */
-#define COLORWHEEL_LEN 7
-#define RED 0xff0000
-#define ORANGE 0xff7f00
-#define GREEN 0x00ff00
-#define BLUE 0x0000ff
-#define BLUE_1 0x5dade2
-#define BLUE_2 0x4c7efc
-#define YELLOW 0xffff00
-#define MAGENTA 0xff00ff
-#define PURPLE 0x4b0082 // 0x800080
-#define WHITE 0xffffff
-#define BLACK 0x000000
-#define LIGHT_GRAY 0x707070
-#define GRAY 0x303030
-#define DARK_GRAY 0x101010
-#define TURQOISE 0x00fff7
-/**@}*/
+// /**
+//  * @defgroup ColorDefinitions Definitions for the colors used in the display
+//  * @{
+//  */
+// #define COLORWHEEL_LEN 7
+// #define RED 0xff0000
+// #define ORANGE 0xff7f00
+// #define GREEN 0x00ff00
+// #define BLUE 0x0000ff
+// #define BLUE_1 0x5dade2
+// #define BLUE_2 0x4c7efc
+// #define YELLOW 0xffff00
+// #define MAGENTA 0xff00ff
+// #define PURPLE 0x4b0082 // 0x800080
+// #define WHITE 0xffffff
+// #define BLACK 0x000000
+// #define LIGHT_GRAY 0x707070
+// #define GRAY 0x303030
+// #define DARK_GRAY 0x101010
+// #define TURQOISE 0x00fff7
+// /**@}*/
 
 //! Maximum length of printed input buffer in decimal. Maximum is
 //! -9,223,372,036,854,775,808 with a decimal (and \0)
@@ -304,16 +304,6 @@ uint8_t printMenuOptionString(displayState_t *pDisplayState, char *pString,
                               uint16_t x1, uint16_t y1, uint16_t x2,
                               uint16_t linePadding, bool rightJustification,
                               bool print);
-
-/**
- * @brief Starts the display list, clear local buffers and clears color buffers
- */
-void startDisplaylist(void);
-
-/**
- * @brief End the display list by sending display and swap DL
- */
-void endDisplayList(void);
 
 void testDisplay(void);
 

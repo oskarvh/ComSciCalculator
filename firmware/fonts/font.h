@@ -83,15 +83,4 @@ typedef struct font {
     uint32_t fontTableSize;
 }font_t;
 
-/**
- * @brief Struct for holding a collection of fonts.
- * It only holds a large and a small format of a font, which
- * is to be used for displaying settings, and displaying on the
- * main screen space (i.e. calculations etc).
- */
-typedef struct font_collection{
-    font_t *pSmallFont;
-    font_t *pLargeFont;
-}font_collection_t;
-
 #endif /* FONTS_FONT_H_ */

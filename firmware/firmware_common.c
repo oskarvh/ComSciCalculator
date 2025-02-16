@@ -60,14 +60,16 @@ QueueHandle_t uartReceiveQueue;
 xSemaphoreHandle displayStateSemaphore;
 //! Event group which triggers a display update.
 EventGroupHandle_t displayTriggerEvent;
+//! Event group to handle USB read events
+EventGroupHandle_t usbReadEvent;
 
-// Timer ISR
+// Hardware Timer ISR
 void Timer1HzIntHandler(void) {
     // Set the cursor event.
     xEventGroupSetBitsFromISR(displayTriggerEvent, DISPLAY_EVENT_CURSOR, NULL);
 }
 
-// Timer ISR
+// Hardware Timer ISR
 void Timer60HzIntHandler(void) {
     // For now, empty ISR
 }
@@ -85,8 +87,7 @@ static void calcCoreTask(void *p) {
     // Initialize the calculator core
     if (calc_coreInit(&calcState) != calc_funStatus_SUCCESS) {
         // There is an error with the calculator state.
-        while (1)
-            ;
+        while (1);
     }
 
     // TODO: Initialize based on what was saved in flash
@@ -304,51 +305,100 @@ static void calcCoreTask(void *p) {
     }
 }
 
+
 /**
- * @brief Initialize the FT810 EVE driver and SPI interface
+ * @brief Callback for when a character is available in the USB buffer
  * @return Nothing
  */
-static void initDisplay(void) {
-    // Initialize the SPI and subsequently the display
-    EVE_init_spi();
-    EVE_init();
-    while (EVE_busy())
-        ;
+bool stdio_callback(void) {
+    xEventGroupSetBits(usbReadEvent, USB_NEW_DATA_IN);
 }
 
-void displayTestThread(void *p) {
-    // Init UART to enable the logger
-    if (!initUart()) {
-        // Something went wrong with initializing UART.
-        while (1)
-            ;
+/**
+ * @brief Task that handles reading the USB data
+ * @return Nothing
+ */
+static void usbReadTask(void *p) {
+    // At the start of this task, read all buffered data to clear out the buffer:
+    while(rp2040_read_usb(10) != USB_READ_TIMEOUT);
+    // First, wait for the USB read event to happen
+    // Loop forever
+    while (1) {
+        // Pend on the uartReadEvent
+        uint32_t eventbits = xEventGroupWaitBits(
+            usbReadEvent, USB_NEW_DATA_IN, pdTRUE, pdFALSE, portMAX_DELAY);
+        if (eventbits & USB_NEW_DATA_IN) {
+            // read the buffer and add to the queue
+            int rxChar = USB_READ_TIMEOUT;
+            do {
+                rxChar = rp2040_read_usb(100); // Read the input character
+
+                // Put it into the uartReceiveQueue
+                if (rxChar != USB_READ_TIMEOUT) {
+                    // hooray, there is a character in the rx buffer
+                    // which is now read!
+                    // Push that to the queue.
+                    // But first, convert it to an 8 bit char
+                    char c = (char)rxChar;
+                    if (c == '\b') {
+                        // Hack: If a backspace is sent, then replace it with
+                        // 127 which is backspace here.
+                        c = 127;
+                    }
+                    if (!xQueueSendToBack(uartReceiveQueue, (void *)&c,
+                                          (TickType_t)0)) {
+                        while (1)
+                            ;
+                    }
+                }
+            } while (rxChar != USB_READ_TIMEOUT);
+        }
     }
-    logger(LOGGER_LEVEL_DEBUG, "DISPLAY TEST: UART STARTED\r\n");
-    // Init the SPI
-    if (!initSpi()) {
-        // Something went wrong with initializing UART.
-        while (1)
-            ;
-    }
-    logger(LOGGER_LEVEL_DEBUG, "DISPLAY TEST: SPI STARTED\r\n");
-    // Initialize the display driver
-    initDisplay();
-    logger(LOGGER_LEVEL_DEBUG, "DEBUG: DISPLAYED INITIALIZED\r\n");
-    // Call the display test function.
-    testDisplay();
 }
+
 
 // Main thread.
 // This is a simple thread that is responsible
 // to start other threads, and init the hardware
 void mainThread(void *p) {
+    // ------------------ INITIALIZE UART/USB ------------------
     // Create the queue for the UART receive queue:
     uartReceiveQueue = xQueueCreate(100, sizeof(char));
     if (uartReceiveQueue == NULL) {
         while (1)
             ;
     }
+    // Initialize UART.
+    // Initialize the USB data in event group
+    usbReadEvent = xEventGroupCreate();
+    TaskHandle_t usbReadTaskHandle = NULL;
+    xTaskCreate(
+        usbReadTask,          // Function that implements the task.
+        "USB_READ_TASK",      // Text name for the task.
+        300,                  // Stack size in words, not bytes.
+        (void *)1,            // Parameter passed into the task.
+        tskIDLE_PRIORITY + 1, // Priority at which the task is created.
+        &usbReadTaskHandle    // Used to pass out the created task's handle.
+    );
+    initUart((void *)stdio_callback);
+    logger(LOGGER_LEVEL_DEBUG, "DEBUG: UART INIT'D\r\n");
 
+    // ------------------ INITIALIZE SPI ------------------
+    // Initialize SPI.
+    // NOTE: This is MCU specific, so the initSpi function must be
+    // linked in based on which MCU is built.
+    initSpi();
+    logger(LOGGER_LEVEL_DEBUG, "DEBUG: SPI INIT'D\r\n");
+
+    // ------------------ INITIALIZE TIMERS ------------------
+    // Initialize timers.
+    // NOTE: This is MCU specific, so the initTimer function must be
+    // linked in based on which MCU is built.
+    initTimer(Timer60HzIntHandler, Timer1HzIntHandler);
+    logger(LOGGER_LEVEL_DEBUG, "DEBUG: TIMER INIT'D\r\n");
+
+
+    // ------------------ INITIALIZE DISPLAY ------------------
     // Create the binary semaphore to protect the display state
     displayStateSemaphore = xSemaphoreCreateBinary();
     if (displayStateSemaphore == NULL) {
@@ -360,45 +410,10 @@ void mainThread(void *p) {
     // and the display task
     displayTriggerEvent = xEventGroupCreate();
 
-    // Initialize UART.
-    // NOTE: This is MCU specific, so the initUart function must be
-    // linked in based on which MCU is built.
-    if (!initUart()) {
-        // Something went wrong with initializing UART.
-        while (1)
-            ;
-    }
-    logger(LOGGER_LEVEL_DEBUG, "DEBUG: UART INIT'D\r\n");
-
-    // Initialize SPI.
-    // NOTE: This is MCU specific, so the initSpi function must be
-    // linked in based on which MCU is built.
-    if (!initSpi()) {
-        // Something went wrong with initializing offboard SPI.
-        while (1)
-            ;
-    }
-    logger(LOGGER_LEVEL_DEBUG, "DEBUG: SPI INIT'D\r\n");
-    // Initialize timers.
-    // NOTE: This is MCU specific, so the initTimer function must be
-    // linked in based on which MCU is built.
-    if (!initTimer()) {
-        // Something went wrong with initializing UART.
-        while (1)
-            ;
-    }
-    logger(LOGGER_LEVEL_DEBUG, "DEBUG: TIMER INIT'D\r\n");
-    // Initialize the FT810 EVE display driver.
-    // Note, this is using the FT810 driver functions,
-    // which will initialize SPI. Ensure the implementation
-    // does not do this twice.
-    initDisplay();
-    logger(LOGGER_LEVEL_DEBUG, "DEBUG: DISPLAYED INIT'D\r\n");
     // Initialize the displaystate variable
     initDisplayState(&displayState);
 
     TaskHandle_t screenTaskHandle = NULL;
-    TaskHandle_t calcCoreTaskHandle = NULL;
     // Create the task that handles the display
     xTaskCreate(displayTask,          // Function that implements the task.
                 "DISPLAY",            // Text name for the task.
@@ -407,7 +422,10 @@ void mainThread(void *p) {
                 tskIDLE_PRIORITY + 1, // Priority at which the task is created.
                 &screenTaskHandle // Used to pass out the created task's handle.
     );
-    logger(LOGGER_LEVEL_DEBUG, "DEBUG: DISPLAY TASK CREATED\r\n");
+    logger(LOGGER_LEVEL_DEBUG, "DEBUG: DISPLAYED INIT'D\r\n");
+
+    // ------------------ INITIALIZE CALC CORE ------------------
+    TaskHandle_t calcCoreTaskHandle = NULL;
     // Create the task that handles the calculator core.
     xTaskCreate(
         calcCoreTask,       // Function that implements the task.
@@ -422,7 +440,7 @@ void mainThread(void *p) {
     // Start by giving the semaphore, as the semaphore needs to initialize once
     xSemaphoreGive(displayStateSemaphore);
 
-    // Wait 1 second before starting the timers.
+    // Wait 0.1 second before starting the timers.
     vTaskDelay(100 / portTICK_PERIOD_MS);
 
     // Now that the tasks have been created, start the timers.

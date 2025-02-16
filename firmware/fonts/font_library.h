@@ -34,6 +34,6 @@ SOFTWARE.
 //! Maximum length of the font library table
 #define MAX_LEN_FONT_LIBRARY_TABLE 10
 
-extern font_collection_t *pFontLibraryTable[MAX_LEN_FONT_LIBRARY_TABLE];
+extern font_t *pFontLibraryTable[MAX_LEN_FONT_LIBRARY_TABLE];
 
 #endif /* FONTS_FONT_LIBRARY_H_ */

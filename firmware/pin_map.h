@@ -1,10 +1,6 @@
 #ifndef PIN_MAP_H
 #define PIN_MAP_H
 
-#include "hardware/spi.h"
-#include "hardware/uart.h"
-#include "pico/stdlib.h"
-
 /* ------------ DEVICE MAPPINGS ------------ */
 // SPI0, used for connecting to LED
 #define SPI0_MISO_PIN 0

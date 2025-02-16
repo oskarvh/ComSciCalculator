@@ -40,7 +40,30 @@ SOFTWARE.
 #include "logger.h"
 
 #if defined(RP2040)
-#include "rp2040_utils.h"
+#include "pico/stdio_usb.h"
+#include "pico/printf.h"
+#include "pico/stdio.h"
+#include "pico/stdio/driver.h"
+void out_char_driver(char c, void *arg) {
+    ((stdio_driver_t *)arg)->out_chars(&c, 1);
+}
+
+void UARTvprintf(const char *pcString, va_list vaArgP) {
+    void *pDriver = &stdio_usb;
+    // printf("IN LOGGER");
+
+    vfctprintf(out_char_driver, pDriver, pcString, vaArgP);
+
+    // int stringLen = vsnprintf(NULL, 0, pcString, vaArgP);
+    // if (stringLen > 0) {
+    //     char *strBuf = malloc(stringLen * sizeof(char));
+    //     if (strBuf != NULL) {
+    //         vsprintf(strBuf, pcString, vaArgP);
+    //         usb_puts(UART0, strBuf);
+    //     }
+    //     free(strBuf);
+    // }
+}
 #else
 #include <stdio.h>
 #endif

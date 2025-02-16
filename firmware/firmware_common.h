@@ -38,6 +38,10 @@ extern QueueHandle_t uartReceiveQueue;
 extern xSemaphoreHandle displayStateSemaphore;
 //! Event group which triggers a display update.
 extern EventGroupHandle_t displayTriggerEvent;
+//! Event group to handle USB read events
+extern EventGroupHandle_t usbReadEvent;
+//! USB event data in event flag
+#define USB_NEW_DATA_IN 1 << 0
 
 /**
  * @brief Main thread. Calls init functions and starts

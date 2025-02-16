@@ -12,6 +12,9 @@ option(BUILD_TESTS "Build the tests" OFF)
 
 
 if(BUILD_ALL OR BUILD_FIRMWARE)
+    # Note: For some reason the pico sdk needs to be imported 
+    # at a top level for the toolchain to work properly.
+    # Not sure why, but it works.
     message(STATUS "Building firmware")
     set(PICO_SDK_FETCH_FROM_GIT TRUE)
     include(${CMAKE_SOURCE_DIR}/firmware/pico_sdk_import.cmake)

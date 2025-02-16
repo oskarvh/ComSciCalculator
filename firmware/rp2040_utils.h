@@ -40,8 +40,9 @@ bool mcuInit(void);
 
 /**
  * @brief Init the UART(s) on the RP2040
+ * @param pCallbackFun Callback function for when a character is available
  */
-bool initUart(void);
+bool initUart(void* pCallbackFun);
 
 /**
  * @brief Init the offboard SPI.
@@ -52,7 +53,7 @@ bool initSpi(void);
 /**
  * @brief Init the HW timer used for cursor blinking etc.
  */
-bool initTimer(void);
+bool initTimer(void* p60HzCallback, void* p1HzCallback);
 
 /**
  * @brief Start the HW timer used for cursor blinking etc.
@@ -65,3 +66,13 @@ void startTimer(void);
  * @param vaArgP String formatting string
  */
 void UARTvprintf(const char *pcString, va_list vaArgP);
+
+//! USB read timeout abstraction
+#define USB_READ_TIMEOUT PICO_ERROR_TIMEOUT
+
+/**
+ * @brief Function for reading a character from USB
+ * @param tmout Timeout in microseconds
+ * @return The read character or error code
+ */
+int rp2040_read_usb(uint32_t timeout_us);

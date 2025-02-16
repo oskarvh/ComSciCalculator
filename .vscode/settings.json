@@ -18,7 +18,10 @@
     "cmake.sourceDirectory": "/home/oskar/git/ComSciCalculator",
     "cmake.buildDirectory": "/home/oskar/git/ComSciCalculator/build",
     "files.associations": {
-        "CMakeLists.txt": "cmake"
+        "CMakeLists.txt": "cmake",
+        "string_view": "c",
+        "gui.h": "c",
+        "clay.h": "c"
     },
     "cmake.configureOnOpen": true,
     "cmake.cacheInit": null
