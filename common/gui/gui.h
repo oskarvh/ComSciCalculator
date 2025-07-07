@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-
+#include <stdint.h>
 /**
  * @defgroup ColorDefinitions Definitions for the colors used in the display
  * @{
@@ -62,5 +62,7 @@ void mainScreen(
     char* pDecText, 
     char* pBinText,
     char* pSettingsText,
-    uint8_t fontId
+    uint8_t fontId,
+    float width,
+    float height
     );

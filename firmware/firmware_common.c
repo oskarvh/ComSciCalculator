@@ -310,7 +310,7 @@ static void calcCoreTask(void *p) {
  * @brief Callback for when a character is available in the USB buffer
  * @return Nothing
  */
-bool stdio_callback(void) {
+void stdio_callback(void) {
     xEventGroupSetBits(usbReadEvent, USB_NEW_DATA_IN);
 }
 
@@ -380,7 +380,7 @@ void mainThread(void *p) {
         tskIDLE_PRIORITY + 1, // Priority at which the task is created.
         &usbReadTaskHandle    // Used to pass out the created task's handle.
     );
-    initUart((void *)stdio_callback);
+    initUart(stdio_callback);
     logger(LOGGER_LEVEL_DEBUG, "DEBUG: UART INIT'D\r\n");
 
     // ------------------ INITIALIZE SPI ------------------

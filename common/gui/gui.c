@@ -42,6 +42,7 @@ const Clay_Color COLOR_LIGHT = (Clay_Color) {224, 215, 210, 255};
 const Clay_Color COLOR_RED = (Clay_Color) {168, 66, 28, 255};
 const Clay_Color COLOR_ORANGE = (Clay_Color) {225, 138, 50, 255};
 const Clay_Color COLOR_BLACK = (Clay_Color) {0, 0, 0, 255};
+const Clay_Color COLOR_WHITE = (Clay_Color) {255, 255, 255, 255};
 
 // // Layout config is just a struct that can be declared statically, or inline
 // Clay_LayoutConfig sidebarItemLayout = {
@@ -52,7 +53,8 @@ const Clay_Color COLOR_BLACK = (Clay_Color) {0, 0, 0, 255};
 // inline void SidebarItemComponent() {
 //     CLAY(CLAY_LAYOUT(sidebarItemLayout), CLAY_RECTANGLE({ .color = COLOR_ORANGE })) {}
 // }
-
+#define SETTINGS_HEIGHT_PX 25
+#define FRAME_WIDTH_PX 1
 
 void mainScreen(
     char* pInputText, 
@@ -60,7 +62,9 @@ void mainScreen(
     char* pDecText, 
     char* pBinText,
     char* pSettingsText,
-    uint8_t fontId
+    uint8_t fontId,
+    float windowWidth,
+    float windowHeight
     )
 {
     // Convert chars to clay strings
@@ -69,18 +73,85 @@ void mainScreen(
     Clay_String decText = {.chars = pDecText, .length = strlen(pDecText)};
     Clay_String binText = {.chars = pBinText, .length = strlen(pBinText)};
     Clay_String settingsText = {.chars = pSettingsText, .length = strlen(pSettingsText)};
-    CLAY(
-        CLAY_ID("OuterContainer"),
-        CLAY_LAYOUT({.sizing = {CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0)}, .padding = CLAY_PADDING_ALL(16), .childGap = 16}),
-        CLAY_RECTANGLE({ .color = COLOR_BLACK})
-        ){
-            CLAY(
-                CLAY_ID("SettingsContainer"),
-                CLAY_LAYOUT({.sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(20)}}),
-                CLAY_RECTANGLE({ .color = COLOR_BLACK})
-            ){
-                CLAY_TEXT(settingsText, CLAY_TEXT_CONFIG({ .fontId = fontId, .textColor = COLOR_LIGHT}));
+    
+    CLAY({
+        .id = CLAY_ID("OuterContainer"),
+        .layout = {.layoutDirection = CLAY_TOP_TO_BOTTOM, .sizing = {CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0)}, .padding = CLAY_PADDING_ALL(FRAME_WIDTH_PX)},
+        .backgroundColor = COLOR_RED,
+        }){
+            CLAY({
+                .id = CLAY_ID("SettingsContainer"),
+                .layout ={.sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(SETTINGS_HEIGHT_PX)}, .padding = CLAY_PADDING_ALL(FRAME_WIDTH_PX)},
+                .backgroundColor = COLOR_WHITE
+            }){
+                CLAY({
+                    .id = CLAY_ID("Settings"),
+                    .layout ={.sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(SETTINGS_HEIGHT_PX)}},
+                    .backgroundColor = COLOR_BLACK
+                }){
+                    CLAY_TEXT(settingsText, CLAY_TEXT_CONFIG({ .fontId = fontId, .textColor = COLOR_LIGHT}));
+                }
             }
+            
+            CLAY({
+                .id = CLAY_ID("InputTextContainer"),
+                .layout ={.sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(windowHeight/2 - SETTINGS_HEIGHT_PX)}, .padding = CLAY_PADDING_ALL(FRAME_WIDTH_PX)},
+                .backgroundColor = COLOR_WHITE
+            }){
+                CLAY({
+                    .id = CLAY_ID("InputText"),
+                    .layout ={.sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0)}},
+                    .backgroundColor = COLOR_BLACK
+                }){
+                    CLAY_TEXT(inputText, CLAY_TEXT_CONFIG({ .fontId = fontId, .textColor = COLOR_LIGHT, .textAlignment = CLAY_TEXT_ALIGN_RIGHT}));
+                }
+            }
+            CLAY({
+                .id = CLAY_ID("binaryOutputContainer"),
+                .layout ={.sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0)}, .padding = CLAY_PADDING_ALL(FRAME_WIDTH_PX)},
+                .backgroundColor = COLOR_WHITE
+            }){
+                CLAY({
+                    .id = CLAY_ID("binaryOutput"),
+                    .layout ={.sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0)}},
+                    .backgroundColor = COLOR_BLACK
+                }){
+                    CLAY_TEXT(binText, CLAY_TEXT_CONFIG({ .fontId = fontId, .textColor = COLOR_LIGHT}));
+                }
+            }
+            CLAY({
+                .id = CLAY_ID("hexDecContainer"),
+                .layout ={.layoutDirection = CLAY_LEFT_TO_RIGHT , .sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0)}},
+                .backgroundColor = COLOR_WHITE
+            }){
+                CLAY({
+                    .id = CLAY_ID("decTextContainer"),
+                    .layout ={.sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0)}, .padding = CLAY_PADDING_ALL(FRAME_WIDTH_PX)},
+                    .backgroundColor = COLOR_WHITE
+                }){
+                    CLAY({
+                        .id = CLAY_ID("decText"),
+                        .layout ={.sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0)}},
+                        .backgroundColor = COLOR_BLACK
+                    }){
+                        CLAY_TEXT(decText, CLAY_TEXT_CONFIG({ .fontId = fontId, .textColor = COLOR_LIGHT}));
+                    }
+                }
+                CLAY({
+                    .id = CLAY_ID("hexTextContainer"),
+                    .layout ={.sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0)}, .padding = CLAY_PADDING_ALL(FRAME_WIDTH_PX)},
+                    .backgroundColor = COLOR_WHITE
+                }){
+                    CLAY({
+                        .id = CLAY_ID("hexText"),
+                        .layout ={.sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0)}},
+                        .backgroundColor = COLOR_BLACK
+                    }){
+                        CLAY_TEXT(hexText, CLAY_TEXT_CONFIG({ .fontId = fontId, .textColor = COLOR_LIGHT}));
+                    }
+                }
+            }
+
         }
 }
 

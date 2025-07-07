@@ -27,6 +27,12 @@ SOFTWARE.
 #include <stdio.h>
 #include <string.h>
 
+// Clay is a bit funny in that it pulls in the c files and attaches them on
+// top instead of linking through .h files.
+#define CLAY_IMPLEMENTATION
+#include "clay_renderer_ft81x.c"
+#include "gui.c"
+
 #include "EVE.h"
 #include "EVE_config.h"
 
@@ -35,12 +41,7 @@ SOFTWARE.
 #include "print_utils.h"
 #include "logger.h"
 
-// Clay is a bit funny in that it pulls in the c files and attaches them on
-// top instead of linking through .h files.
-#define CLAY_IMPLEMENTATION
-#include "clay.h"
-#include "clay_renderer_ft81x.c"
-#include "gui.h"
+
 
 //! Binary result string buffer
 char pBinRes[MAX_PRINTED_BUFFER_LEN_BIN] = {0};
@@ -719,17 +720,52 @@ static void displayMainScreen(displayState_t *pDisplayState, bool writeCursor){
     convertResult(pHexRes, result, &(pDisplayState->inputOptions),
                   inputBase_HEX);
     
+    char pStatusString[60] = {0};
+    // Get the string and length depending on the base:
+    const char *pBaseString =
+        baseDisplayStrings[pDisplayState->inputOptions.inputBase];
+    uint8_t baseStringLen = strlen(pBaseString);
+
+    // Get the string and length depending on the input format:
+    const char *pInputFormatString =
+        formatDisplayStrings[pDisplayState->inputOptions.inputFormat];
+    uint8_t inputFormatStringLen = strlen(pInputFormatString);
+
+    // Display the bit width. Note: for fixed point, it's shown in Q notation
+    char bitWidthString[7] = {0}; // Worst case scenario is 100.28\0
+    if (pDisplayState->inputOptions.inputFormat == INPUT_FMT_FIXED) {
+        // Fixed point require Q notation.
+        uint8_t numBits = pDisplayState->inputOptions.numBits;
+        uint8_t decimalBits =
+            getEffectiveFixedPointDecimalPlace(&(pDisplayState->inputOptions));
+        // Work out the Q notation:
+        uint8_t integerBits = numBits - decimalBits;
+        sprintf(bitWidthString, "%u.%u", integerBits, decimalBits);
+    } else {
+        // Just get the bit width as int and convert to string
+        sprintf(bitWidthString, "%u", pDisplayState->inputOptions.numBits);
+    }
+
+    // Get the string and length depending on the output format:
+    const char *pOutputFormatString =
+        formatDisplayStrings[pDisplayState->inputOptions.outputFormat];
+    uint8_t outputFormatStringLen = strlen(pOutputFormatString);
+    sprintf(pStatusString, "%s  BITS:%s  INPUT:%s  OUTPUT:%s\0", pBaseString,
+            bitWidthString, pInputFormatString, pOutputFormatString);
     uint8_t fontId = pDisplayState->fontIdx;
 
     // Start the layout routine
     Clay_BeginLayout();
+    Clay_Context* context = Clay_GetCurrentContext();
     mainScreen(
         pDisplayState->printedInputBuffer,
         pHexRes,
         pDecRes,
         pBinRes,
-        "Settings",
-        fontId
+        pStatusString,
+        fontId,
+        800,//context->layoutDimensions.width,
+        460//context->layoutDimensions.height
     );
     Clay_RenderCommandArray renderCommands = Clay_EndLayout();
     Clay_ft81x_Render(renderCommands);
@@ -742,9 +778,7 @@ static void displayMainScreen(displayState_t *pDisplayState, bool writeCursor){
  */
 static void displayMenu(displayState_t *pDisplayState) {
     Clay_BeginLayout();
-    CLAY(CLAY_ID("OuterContainer"), CLAY_LAYOUT({ .sizing = {CLAY_SIZING_GROW(0), CLAY_SIZING_GROW(0)}, .padding = CLAY_PADDING_ALL(16), .childGap = 16 }), CLAY_RECTANGLE({ .color = {250,250,255,255} })) {
-
-    }
+    
     Clay_RenderCommandArray renderCommands = Clay_EndLayout();
     Clay_ft81x_Render(renderCommands);
 }

@@ -21,7 +21,9 @@
         "CMakeLists.txt": "cmake",
         "string_view": "c",
         "gui.h": "c",
-        "clay.h": "c"
+        "clay.h": "c",
+        "font_library.h": "c",
+        "rp2040_utils.h": "c"
     },
     "cmake.configureOnOpen": true,
     "cmake.cacheInit": null

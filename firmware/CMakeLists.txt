@@ -100,29 +100,6 @@ target_include_directories(firmware_utils PUBLIC
 )
 pico_enable_stdio_usb(firmware_utils 1)
 
-# # Add definitions for the embedded GUI:
-# add_library(embedded_gui STATIC
-#     ${CMAKE_SOURCE_DIR}/common/gui/gui.c
-#     ${clay_SOURCE_DIR}/renderers/ft81x/clay_renderer_ft81x.c
-#     ${ft81x_sdk_SOURCE_DIR}/EVE_commands.c
-#     ${ft81x_sdk_SOURCE_DIR}/EVE_target.c
-#     ${CMAKE_SOURCE_DIR}/firmware/fonts/font_library.c
-# )
-# target_link_libraries(
-#     embedded_gui 
-#     PUBLIC 
-#     pico_stdlib
-#     hardware_spi
-#     firmware_utils
-# )
-# target_include_directories(embedded_gui PUBLIC
-#     ${CMAKE_SOURCE_DIR}/common/gui/
-#     ${clay_SOURCE_DIR}/
-#     ${clay_SOURCE_DIR}/renderers/ft81x/
-#     ${ft81x_sdk_SOURCE_DIR}/
-#     ${ft81x_sdk_SOURCE_DIR}/EVE_targets/
-#     ${CMAKE_SOURCE_DIR}/firmware/fonts/
-# )
 
 # Add definitions for the common firmware functions:
 add_library(firmware_common STATIC
@@ -130,7 +107,6 @@ add_library(firmware_common STATIC
     ${CMAKE_SOURCE_DIR}/firmware/display.c
     ${CMAKE_SOURCE_DIR}/common/gui/gui.c
     ${CMAKE_SOURCE_DIR}/firmware/fonts/font_library.c
-    #${clay_SOURCE_DIR}/renderers/ft81x/clay_renderer_ft81x.c
     ${ft81x_sdk_SOURCE_DIR}/EVE_commands.c
     ${ft81x_sdk_SOURCE_DIR}/EVE_target.c
 )
