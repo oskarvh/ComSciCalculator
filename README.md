@@ -11,20 +11,29 @@ A list of the dependencies are shown below, divided into common dependencies, so
 Apart from the non-source-code (e.g. compilers, python etc), all dependencies are pulled in either via git submodules (`git clone --recurse-submodules git@github.com:oskarvh/ComSciCalculator.git`), or at build time using CMake's `FetchContent` module.
 
 ### Common Dependencies
-- CMake version 3.27.7 or newer
-- clang-format version 14.0.0 (formatting)
-- Doxygen 1.9.6 (building docs)
-### Firmware Dependencies
+The common dependencies needs to be installed separately. 
+- CMake version 3.27.7 or newer (`apt install cmake`)
+- clang-format version 14.0.0 (`sudo apt install clang-format`)
+- Doxygen 1.9.6 (`sudo apt install doxygen`)
+- arm-none-eabi-gcc: Arm GNU Toolchain 13.3.1 or other compatible with rp2040 (`sudo apt install cmake gcc-arm-none-eabi libnewlib-arm-none-eabi build-essential`)
+- CMake Tools (not required, but recommended if using VSCode)
+- Python 3.10 or newer
 
+### Firmware Dependencies
+- `arm-none-eabi` Compiler for the rp2040 (`sudo apt install gcc-arm-none-eabi libnewlib-arm-none-eabi build-essential`). Dependencies vary on system, see the [RPi Pico User Guide](https://datasheets.raspberrypi.com/pico/getting-started-with-pico.pdf)
+- [OpenOCD for RP2040](https://github.com/raspberrypi/openocd) OpenOCD for RP2040. Unfortunately, the rp2040 requires its own installation of OpenOCD. See [this guide](https://github.com/SuperChange001/pico_debug_with_swd) for installation.
+These dependencies are downloaded via CMake.
 - [RP2040 Pico-SDK library](https://github.com/raspberrypi/pico-sdk) (included as a submodule)
-- arm-none-eabi-gcc: Arm GNU Toolchain 13.3.1 or other compatible with rp2040
 - [Clay](https://github.com/oskarvh/clay) Forked Clay (C Layout) library with support for FT81x (included as submodule). Used both for PC and embedded GUI
 - [FT800-FT813 library](https://github.com/RudolphRiedel/FT800-FT813) (included as a submodule)
 - ComSciCalc Hardware
+
 ### Software Dependencies
+These dependencies should be linked via CMake files and/or submodules.
 - [Clay](https://github.com/oskarvh/clay) Forked Clay (C Layout) library with support for FT81x (included as submodule). Used both for PC and embedded GUI
-- COMPILER TBD
+
 ### Test Dependencies
+These dependencies are either included via Python or via submodules.
 - Pytest
 - [Unity](git@github.com:ThrowTheSwitch/Unity.git) Unity test tool (to be deprecated)
 ## BUILD

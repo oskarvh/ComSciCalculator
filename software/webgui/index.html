@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Hello WASI World</title>
+</head>
+<body>
+  <h1>WASI Hello World</h1>
+  <pre id="output"></pre>
+
+  <script type="module">
+    import { WASI } from 'https://cdn.jsdelivr.net/npm/@wasmer/wasi@latest/lib/index.esm.js';
+    import { WasmFs } from 'https://cdn.jsdelivr.net/npm/@wasmer/wasmfs@latest/lib/index.esm.js';
+
+    async function run() {
+      const outputElement = document.getElementById('output');
+
+      // Create a virtual filesystem
+      const wasmFs = new WasmFs();
+
+      // Hook stdout to append to output element
+      wasmFs.fs.writeSync = (fd, buffer, offset, length, position) => {
+        if (fd === 1 || fd === 2) { // stdout or stderr
+          const text = new TextDecoder().decode(buffer.subarray(offset, offset + length));
+          outputElement.textContent += text;
+          return length;
+        }
+        return 0;
+      };
+
+      const wasi = new WASI({
+        args: [],
+        env: {},
+        bindings: {
+          ...WASI.defaultBindings,
+          fs: wasmFs.fs,
+        },
+      });
+
+      try {
+        const response = await fetch('build/index.wasm');
+        const wasmBytes = await response.arrayBuffer();
+
+        const { instance } = await WebAssembly.instantiate(wasmBytes, {
+          wasi_snapshot_preview1: wasi.wasiImport,
+        });
+
+        wasi.start(instance);
+      } catch (err) {
+        outputElement.textContent = 'Error: ' + err;
+      }
+    }
+
+    run();
+  </script>
+</body>
+</html>

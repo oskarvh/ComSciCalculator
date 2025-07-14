@@ -12,7 +12,7 @@
             "type": "cortex-debug",
             "servertype": "openocd",
             // This may need to be "arm-none-eabi-gdb" for some previous builds
-            "gdbPath" : "arm-none-eabi-gdb",//"gdb-multiarch",
+            "gdbPath" : "${userHome}/.pico-sdk/toolchain/14_2_Rel1/bin/arm-none-eabi-gdb",//"gdb-multiarch",
             "device": "RP2040",
             "configFiles": [
                 "interface/cmsis-dap.cfg",
