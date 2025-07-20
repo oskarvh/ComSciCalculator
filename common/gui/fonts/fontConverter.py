@@ -2,6 +2,7 @@ import freetype
 import os
 import glob
 import datetime
+import re
 
 HEADER = """
 /*
@@ -43,7 +44,7 @@ font_t font_<filename> = {
 """
 
 
-def convertFontToC(font_path: str, font_size: int = 24):
+def convert_font_to_c_code(font_path: str, font_size: int = 24):
     """
     Converts a TTF font to a C source file with bitmap data and glyph metadata,
     with support for the FT81x format, found here: https://www.ftdichip.com/Support/Documents/ProgramGuides/FT81X_Series_Programmer_Guide.pdf
@@ -90,11 +91,8 @@ def convertFontToC(font_path: str, font_size: int = 24):
         if bitmap.width > max_width:
             max_width = bitmap.width
 
-
         # Write bitmap into final buffer
         bitmap_data.extend(bitmap.buffer)
-
-        
     
     # Ft81x font header data
     ft81x_bitmap_data = {
@@ -143,12 +141,86 @@ def convertFontToC(font_path: str, font_size: int = 24):
         c_file.write(footer)
     
 
-
-
 def find_ttf_files_in_script_dir():
+    """
+    Finds all TTF files in the same directory as this script.
+    """
     script_dir = os.path.dirname(os.path.abspath(__file__))
     ttf_files = glob.glob(os.path.join(script_dir, "*.ttf"))
     return ttf_files
+
+def include_fonts_in_library():
+    """
+    Includes all the generated font headers in the fonts library file.
+    """
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    all_header_files = glob.glob(os.path.join(script_dir, "*.h"))
+    # all_header_files now contain all the .h files in this directory, 
+    # Filter out the ones that are font files (those that match the pattern 
+    # *_<size>_L<format>.h)
+    font_header_files = []
+    for file in all_header_files:
+        if re.search(r".*_\d+_L\d+\.h$", file):
+            font_header_files.append(file)
+    font_library_file = script_dir + "/font_library/font_library.c"
+    # Replace the section starting with 
+    # ""// <START INCLUDE FONTS>"" and ending with ""// <END INCLUDE FONTS>"" 
+    # with the new includes
+    includes = "// <START INCLUDE FONTS>\n"
+    for font_header in font_header_files:
+        font_header_basename = os.path.basename(font_header)
+        includes += f'#include "../{font_header_basename}"\n'
+    includes += "// <END INCLUDE FONTS>\n"
+    with open(font_library_file, "r") as f:
+        font_library_content = f.read()
+    font_library_content = re.sub(
+        r"// <START INCLUDE FONTS>.*// <END INCLUDE FONTS>", 
+        includes, 
+        font_library_content, 
+        flags=re.DOTALL
+    )
+    
+
+    # Update the pFontLibraryTable array
+    pFontLibraryTable_entries = []
+    for font_header in font_header_files:
+        # Extract the font_t variable name from the header file name
+        with open(font_header, "r") as f:
+            content = f.read()
+            match = re.search(r"font_t font_(\w+)", content)
+            if match:
+                font_var_name = f"&font_{match.group(1)}"
+                pFontLibraryTable_entries.append(font_var_name)
+    # Find the "MAX_LEN_FONT_LIBRARY_TABLE" definition in the font_library.h file
+    with open(script_dir + "/font_library/font_library.h", "r") as f:
+        font_library_h_content = f.read()
+    max_len_match = re.search(r"#define MAX_LEN_FONT_LIBRARY_TABLE (\d+)", font_library_h_content)
+
+    # construct the new pFontLibraryTable array
+    pFontLibraryTable_array = "// <START FONT DEFINITIONS>\n"
+    pFontLibraryTable_array += "font_t* pFontLibraryTable[MAX_LEN_FONT_LIBRARY_TABLE] = {\n"
+    for i in range(int(max_len_match.group(1))):
+        if i < len(pFontLibraryTable_entries):
+            pFontLibraryTable_array += f"    [{i}] = {pFontLibraryTable_entries[i]},\n"
+        else:
+            pFontLibraryTable_array += f"    [{i}] = NULL,\n"
+    #remove the last comma
+    if pFontLibraryTable_array.endswith(",\n"):
+        pFontLibraryTable_array = pFontLibraryTable_array[:-2] + "\n"
+    pFontLibraryTable_array += "};\n"
+    pFontLibraryTable_array += "// <END FONT DEFINITIONS>\n"
+
+    # Replace the existing pFontLibraryTable array in the font_library_content
+    font_library_content = re.sub(
+        r"// <START FONT DEFINITIONS>.*// <END FONT DEFINITIONS>", 
+        pFontLibraryTable_array, 
+        font_library_content, 
+        flags=re.DOTALL
+    )
+
+    with open(font_library_file, "w") as f:
+        f.write(font_library_content)
+    print(f"Updated {font_library_file} with {len(font_header_files)} fonts.")
 
 
 if __name__ == "__main__":
@@ -157,4 +229,9 @@ if __name__ == "__main__":
     print(f"Converting the following font files: {ttf_files}")
     for ttf_file in ttf_files:
         print(f"Converting {ttf_file}")
-        convertFontToC(ttf_file)
+        convert_font_to_c_code(font_path = ttf_file, font_size=24)
+
+    # Update the font library to include the new fonts
+    include_fonts_in_library()
+
+    print("Font conversion complete. Font library updated.")
