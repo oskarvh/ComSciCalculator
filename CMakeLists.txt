@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 option(BUILD_ALL "Build everything" OFF)
 option(BUILD_FIRMWARE "Build the firmware" ON)
+option(BUILD_WEBGUI "Build the web GUI" ON)
 option(BUILD_SOFTWARE "Build the software" OFF)
 option(BUILD_TESTS "Build the tests" OFF)
 
@@ -27,6 +28,11 @@ endif()
 if(BUILD_ALL OR BUILD_SOFTWARE)
     message(STATUS "Building software")
     add_subdirectory("software")
+endif()
+
+if(BUILD_ALL OR BUILD_WEBGUI)
+    message(STATUS "Building webgui")
+    add_subdirectory("software/webgui")
 endif()
 
 if(BUILD_ALL OR BUILD_TESTS)

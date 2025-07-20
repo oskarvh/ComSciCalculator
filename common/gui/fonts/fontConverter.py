@@ -162,7 +162,18 @@ def include_fonts_in_library():
     for file in all_header_files:
         if re.search(r".*_\d+_L\d+\.h$", file):
             font_header_files.append(file)
+
     font_library_file = script_dir + "/font_library/font_library.c"
+    font_library_template_file = script_dir + "/font_library/font_library_template.c"
+    # Copy the template file to the font library file if it doesn't exist
+    if not os.path.exists(font_library_file):
+        if os.path.exists(font_library_template_file):
+            with open(font_library_template_file, "r") as f:
+                template_content = f.read()
+            with open(font_library_file, "w") as f:
+                f.write(template_content)
+        else:
+            raise FileNotFoundError(f"Font library file {font_library_file} does not exist and no template found at {font_library_template_file}")
     # Replace the section starting with 
     # ""// <START INCLUDE FONTS>"" and ending with ""// <END INCLUDE FONTS>"" 
     # with the new includes

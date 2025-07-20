@@ -1,10 +1,75 @@
 cmake_minimum_required(VERSION 3.27)
 project(webgui C)
 
-
-
 set(CMAKE_C_STANDARD 99)
 
+# ========================================================================
+# SETUP
+# ========================================================================
+# Find system Python interpreter
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+
+# Paths
+set(VENV_DIR "${CMAKE_SOURCE_DIR}/software/webgui/.venv")
+set(VENV_PYTHON "${VENV_DIR}/bin/python")
+set(REQUIREMENTS_FILE "${CMAKE_SOURCE_DIR}/software/webgui/requirements.txt")
+set(SETUP_HTML_SCRIPT "${CMAKE_SOURCE_DIR}/software/webgui/setup_html.py")
+
+# Step 1: Create venv if it doesn't exist
+if(NOT EXISTS "${VENV_PYTHON}")
+    message(STATUS "Creating Python virtual environment at ${VENV_DIR}")
+    execute_process(
+        COMMAND ${Python3_EXECUTABLE} -m venv "${VENV_DIR}"
+        RESULT_VARIABLE VENV_CREATE_RESULT
+    )
+    if(NOT VENV_CREATE_RESULT EQUAL 0)
+        message(FATAL_ERROR "Failed to create Python virtual environment.")
+    endif()
+endif()
+
+# Step 2: Install requirements.txt
+if(EXISTS "${REQUIREMENTS_FILE}")
+    message(STATUS "Installing Python dependencies from ${REQUIREMENTS_FILE}")
+    execute_process(
+        COMMAND "${VENV_PYTHON}" -m pip install --upgrade pip
+        RESULT_VARIABLE PIP_UPGRADE_RESULT
+    )
+    if(NOT PIP_UPGRADE_RESULT EQUAL 0)
+        message(WARNING "Failed to upgrade pip.")
+    endif()
+
+    execute_process(
+        COMMAND "${VENV_PYTHON}" -m pip install -r "${REQUIREMENTS_FILE}"
+        RESULT_VARIABLE PIP_INSTALL_RESULT
+    )
+    if(NOT PIP_INSTALL_RESULT EQUAL 0)
+        message(FATAL_ERROR "Failed to install Python packages from requirements.txt.")
+    endif()
+else()
+    message(WARNING "No requirements.txt file found at ${REQUIREMENTS_FILE}")
+endif()
+
+# Step 3: Execute the setup_html.py script with the venv python
+if(EXISTS "${SETUP_HTML_SCRIPT}")
+    message(STATUS "Running setup_html.py with virtual environment python...")
+    execute_process(
+        COMMAND "${VENV_PYTHON}" "${SETUP_HTML_SCRIPT}"
+        RESULT_VARIABLE SETUP_HTML_RESULT
+        OUTPUT_VARIABLE SETUP_HTML_OUTPUT
+        ERROR_VARIABLE SETUP_HTML_ERROR
+    )
+    if(NOT SETUP_HTML_RESULT EQUAL 0)
+        message(FATAL_ERROR "setup_html.py failed: ${SETUP_HTML_ERROR}")
+    else()
+        message(STATUS "setup_html.py output: ${SETUP_HTML_OUTPUT}")
+    endif()
+else()
+    message(WARNING "setup_html.py script not found at ${SETUP_HTML_SCRIPT}")
+endif()
+
+# ========================================================================
+# BUILD
+# ========================================================================
 add_executable(webgui main.c)
 
 target_compile_options(webgui PUBLIC)
