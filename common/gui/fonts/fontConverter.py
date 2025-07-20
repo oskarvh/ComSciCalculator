@@ -19,7 +19,7 @@ HEADER = """
 
 // Standard library
 #include <stdint.h>
-#include "font.h"
+#include "font_library/font.h"
 
 const uint8_t <filename> [<NUMBYTES>] = 
 

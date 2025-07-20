@@ -23,7 +23,8 @@
         "gui.h": "c",
         "clay.h": "c",
         "font_library.h": "c",
-        "rp2040_utils.h": "c"
+        "rp2040_utils.h": "c",
+        "hack-regular_24_l2.h": "c"
     },
     "cmake.configureOnOpen": true,
     "cmake.cacheInit": null
