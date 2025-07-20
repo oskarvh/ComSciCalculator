@@ -11,3 +11,4 @@ software/webgui/external
 common/gui/fonts/*.h
 common/gui/fonts/.venv/
 common/gui/fonts/*.ttf
+common/gui/fonts/font_library/font_library.c
