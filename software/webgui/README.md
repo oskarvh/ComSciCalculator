@@ -8,22 +8,21 @@ The web gui has a few core functions:
 
 
 ## Setup
-Run the setup script: `./script/setup.sh`. This adds the [wasi-sdk](https://github.com/WebAssembly/wasi-sdk/) to `external`. 
-
-Note that this will fetch the compiler and linker required by the build.
+Install the dependencies, and run the build instructions from the build section.
 
 ### Dependencies
 - **CMake** (version 3.20 or higher)
-- **curl** (for downloading the WASI SDK)
 - A POSIX-compatible shell (Linux/macOS). Windows users can use Git Bash or WSL.
 - **Python3** (for running the web server)
+- **clang** (version 18 or higher) Compiler for wasm. Install via e.g., `apt install clang`
+- **lld** (version 18 or higher) Linker to use alongside clang. Install via e.g., `apt install lld`
 
 
 ## Build
 
 To build and compile the webassembly file:
 ```bash
-cmake -B build -DCMAKE_TOOLCHAIN_FILE=cmake/wasi-toolchain.cmake
+cmake -B build -DCMAKE_TOOLCHAIN_FILE=cmake/wasm-toolchain.cmake
 cmake --build build
 ```
 

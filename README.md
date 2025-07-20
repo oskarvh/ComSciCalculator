@@ -17,7 +17,7 @@ The common dependencies needs to be installed separately.
 - Doxygen 1.9.6 (`sudo apt install doxygen`)
 - arm-none-eabi-gcc: Arm GNU Toolchain 13.3.1 or other compatible with rp2040 (`sudo apt install cmake gcc-arm-none-eabi libnewlib-arm-none-eabi build-essential`)
 - CMake Tools (not required, but recommended if using VSCode)
-- Python 3.10 or newer
+- Python 3.10 or newer, with venv support (`apt install python3.<version>-venv`)
 
 ### Firmware Dependencies
 - `arm-none-eabi` Compiler for the rp2040 (`sudo apt install gcc-arm-none-eabi libnewlib-arm-none-eabi build-essential`). Dependencies vary on system, see the [RPi Pico User Guide](https://datasheets.raspberrypi.com/pico/getting-started-with-pico.pdf)
