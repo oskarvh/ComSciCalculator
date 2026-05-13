@@ -108,7 +108,7 @@ void UpdateDrawFrame(
                                 (Clay_Vector2){ mouseWheelX, mouseWheelY },
                                 deltaTime);
     Clay_BeginLayout();
-    mainScreen(inputText, hexText, decText, binText, settingsText, 0, width, height);
+    mainScreen(inputText, hexText, decText, binText, settingsText, 0, 24, width, height);
     renderCommands = Clay_EndLayout();
 }
 

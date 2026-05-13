@@ -335,7 +335,7 @@ function renderLoopHTML() {
                     element.className = 'text';
                     let textColor = config.textColor;
                     let fontSize = Math.round(config.fontSize.value * GLOBAL_FONT_SCALING_FACTOR);
-                    element.style.color = `rgba(${textColor.r.value}, ${textColor.g.value}, ${textColor.b.value}, ${textColor.a.value})`;
+                    element.style.color = `rgba(${textColor.r.value}, ${textColor.g.value}, ${textColor.b.value}, ${textColor.a.value / 255})`;
                     element.style.fontFamily = fontsById[config.fontId.value];
                     element.style.fontSize = fontSize + 'px';
                     element.style.pointerEvents = customData.disablePointerEvents.value ? 'none' : 'all';

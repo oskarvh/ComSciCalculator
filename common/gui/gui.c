@@ -54,12 +54,13 @@ const Clay_Color COLOR_WHITE = (Clay_Color) {255, 255, 255, 255};
 #define FRAME_WIDTH_PX 1
 
 void mainScreen(
-    char* pInputText, 
-    char* pHexText, 
-    char* pDecText, 
+    char* pInputText,
+    char* pHexText,
+    char* pDecText,
     char* pBinText,
     char* pSettingsText,
     uint8_t fontId,
+    uint16_t fontSize,
     float windowWidth,
     float windowHeight
     )
@@ -86,7 +87,7 @@ void mainScreen(
                     .layout ={.sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIXED(SETTINGS_HEIGHT_PX)}},
                     .backgroundColor = COLOR_BLACK
                 }){
-                    CLAY_TEXT(settingsText, CLAY_TEXT_CONFIG({ .fontId = fontId, .textColor = COLOR_LIGHT}));
+                    CLAY_TEXT(settingsText, CLAY_TEXT_CONFIG({ .fontId = fontId, .fontSize = fontSize, .textColor = COLOR_LIGHT}));
                 }
             }
             
@@ -100,7 +101,7 @@ void mainScreen(
                     .layout ={.sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0)}},
                     .backgroundColor = COLOR_BLACK
                 }){
-                    CLAY_TEXT(inputText, CLAY_TEXT_CONFIG({ .fontId = fontId, .textColor = COLOR_LIGHT, .textAlignment = CLAY_TEXT_ALIGN_RIGHT}));
+                    CLAY_TEXT(inputText, CLAY_TEXT_CONFIG({ .fontId = fontId, .fontSize = fontSize, .textColor = COLOR_LIGHT, .textAlignment = CLAY_TEXT_ALIGN_RIGHT}));
                 }
             }
             CLAY({
@@ -113,7 +114,7 @@ void mainScreen(
                     .layout ={.sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0)}},
                     .backgroundColor = COLOR_BLACK
                 }){
-                    CLAY_TEXT(binText, CLAY_TEXT_CONFIG({ .fontId = fontId, .textColor = COLOR_LIGHT}));
+                    CLAY_TEXT(binText, CLAY_TEXT_CONFIG({ .fontId = fontId, .fontSize = fontSize, .textColor = COLOR_LIGHT}));
                 }
             }
             CLAY({
@@ -131,7 +132,7 @@ void mainScreen(
                         .layout ={.sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0)}},
                         .backgroundColor = COLOR_BLACK
                     }){
-                        CLAY_TEXT(decText, CLAY_TEXT_CONFIG({ .fontId = fontId, .textColor = COLOR_LIGHT}));
+                        CLAY_TEXT(decText, CLAY_TEXT_CONFIG({ .fontId = fontId, .fontSize = fontSize, .textColor = COLOR_LIGHT}));
                     }
                 }
                 CLAY({
@@ -144,7 +145,7 @@ void mainScreen(
                         .layout ={.sizing = {.width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0)}},
                         .backgroundColor = COLOR_BLACK
                     }){
-                        CLAY_TEXT(hexText, CLAY_TEXT_CONFIG({ .fontId = fontId, .textColor = COLOR_LIGHT}));
+                        CLAY_TEXT(hexText, CLAY_TEXT_CONFIG({ .fontId = fontId, .fontSize = fontSize, .textColor = COLOR_LIGHT}));
                     }
                 }
             }

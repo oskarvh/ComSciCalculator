@@ -57,12 +57,13 @@ SOFTWARE.
  * @return Nothing
  */
 void mainScreen(
-    char* pInputText, 
-    char* pHexText, 
-    char* pDecText, 
+    char* pInputText,
+    char* pHexText,
+    char* pDecText,
     char* pBinText,
     char* pSettingsText,
     uint8_t fontId,
+    uint16_t fontSize,
     float width,
     float height
     );
