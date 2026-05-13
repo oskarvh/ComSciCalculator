@@ -246,3 +246,4 @@ target_include_directories(gui PUBLIC
     ${clay_SOURCE_DIR}/
     ${CMAKE_SOURCE_DIR}/common/gui/
 )
+

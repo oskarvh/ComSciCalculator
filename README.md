@@ -19,7 +19,7 @@ The common dependencies needs to be installed separately.
 - CMake Tools (not required, but recommended if using VSCode)
 - Python 3.10 or newer, with venv support (`apt install python3.<version>-venv`)
 
-### Firmware Dependencies
+### Firmware DependenciesV
 - `arm-none-eabi` Compiler for the rp2040 (`sudo apt install gcc-arm-none-eabi libnewlib-arm-none-eabi build-essential`). Dependencies vary on system, see the [RPi Pico User Guide](https://datasheets.raspberrypi.com/pico/getting-started-with-pico.pdf)
 - [OpenOCD for RP2040](https://github.com/raspberrypi/openocd) OpenOCD for RP2040. Unfortunately, the rp2040 requires its own installation of OpenOCD. See [this guide](https://github.com/SuperChange001/pico_debug_with_swd) for installation.
 These dependencies are downloaded via CMake.
@@ -99,7 +99,6 @@ An operator can have one or several arguments.
 This section contains stuff that needs doing. 
 - Finish the documentation
 - Restructure the repo to align with the structure in this readme.
-- Pull in CLay and switch out the old GUI to that. 
 
 
 ---

@@ -8,8 +8,11 @@ software/unit_tests/build
 build
 software/webgui/build
 software/webgui/external
+software/webgui/fonts
 software/webgui/.venv
+software/webgui/index.html
 common/gui/fonts/*.h
 common/gui/fonts/.venv/
 common/gui/fonts/*.ttf
 common/gui/fonts/font_library/font_library.c
+common/gui/fonts/font_library/fonts.json

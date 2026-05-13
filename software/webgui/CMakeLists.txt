@@ -10,10 +10,18 @@ set(CMAKE_C_STANDARD 99)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
 # Paths
-set(VENV_DIR "${CMAKE_SOURCE_DIR}/software/webgui/.venv")
+set(VENV_DIR "${CMAKE_SOURCE_DIR}/.venv")
 set(VENV_PYTHON "${VENV_DIR}/bin/python")
 set(REQUIREMENTS_FILE "${CMAKE_SOURCE_DIR}/software/webgui/requirements.txt")
 set(SETUP_HTML_SCRIPT "${CMAKE_SOURCE_DIR}/software/webgui/setup_html.py")
+if(NOT EXISTS "${REQUIREMENTS_FILE}")
+    # If we're building from this directory, the path is different
+    set(REQUIREMENTS_FILE "${CMAKE_SOURCE_DIR}/requirements.txt")
+endif()
+if(NOT EXISTS "${SETUP_HTML_SCRIPT}")
+    # If we're building from this directory, the path is different
+    set(SETUP_HTML_SCRIPT "${CMAKE_SOURCE_DIR}/requirements.txt")
+endif()
 
 # Step 1: Create venv if it doesn't exist
 if(NOT EXISTS "${VENV_PYTHON}")
@@ -70,6 +78,12 @@ endif()
 # ========================================================================
 # BUILD
 # ========================================================================
+# If the compiler isn't set to clang, skip the build
+if(NOT CMAKE_C_COMPILER_ID STREQUAL "Clang")
+    message(WARNING "C compiler is not Clang. Skipping webgui build.")
+    return()
+endif()
+
 add_executable(webgui main.c)
 
 target_compile_options(webgui PUBLIC)

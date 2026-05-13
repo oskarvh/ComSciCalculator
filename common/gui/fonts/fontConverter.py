@@ -3,6 +3,7 @@ import os
 import glob
 import datetime
 import re
+import json
 
 HEADER = """
 /*
@@ -233,14 +234,45 @@ def include_fonts_in_library():
         f.write(font_library_content)
     print(f"Updated {font_library_file} with {len(font_header_files)} fonts.")
 
+def generate_font_json(font_path:str, font_size: int):
+    
+    font_metadata = []
+    orig_font_name = os.path.splitext(os.path.basename(font_path))[0]
+    font_name = orig_font_name.replace("-", "_").replace(" ", "_")
+    font_metadata.append({
+        "font_dir": font_path,
+        "font_name": font_name,
+        "original_font_name": orig_font_name,
+        "font_size": font_size, 
+        "file": os.path.basename(font_path)
+    })
+    json_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "font_library/fonts.json")
+    # If the file exists, load it and append to it
+    if os.path.exists(json_path):
+        with open(json_path, "r") as f:
+            existing_data = json.load(f)
+    else:
+        # create th directory and file if it doesn't exist
+        os.makedirs(os.path.dirname(json_path), exist_ok=True)
+        existing_data = []
+    font_metadata = existing_data + font_metadata
+    with open(json_path, "w") as f:
+        json.dump(font_metadata, f, indent=4)
+    print(f"Generated font metadata JSON at {json_path}")
 
 if __name__ == "__main__":
     # Locate the fonts in this folder
     ttf_files = find_ttf_files_in_script_dir()
     print(f"Converting the following font files: {ttf_files}")
+    # Remove the font_library/fonts.json file if it exists
+    json_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "font_library/fonts.json")
+    if os.path.exists(json_path):
+        os.remove(json_path)
+        print(f"Removed existing font metadata JSON at {json_path}")
     for ttf_file in ttf_files:
         print(f"Converting {ttf_file}")
         convert_font_to_c_code(font_path = ttf_file, font_size=24)
+        generate_font_json(font_path = ttf_file, font_size=24)
 
     # Update the font library to include the new fonts
     include_fonts_in_library()

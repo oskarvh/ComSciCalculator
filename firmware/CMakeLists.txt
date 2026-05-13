@@ -4,6 +4,12 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 
+message(STATUS "Building firmware")
+set(PICO_SDK_FETCH_FROM_GIT TRUE)
+set(PICO_SDK_FETCH_FROM_GIT_TAG "2.1.1")
+include(${CMAKE_SOURCE_DIR}/firmware/pico_sdk_import.cmake)
+message(STATUS "PICO_SDK_PATH: ${PICO_SDK_PATH}")
+
 ## ---------- DEPENDENCIES ----------
 # Pull in dependencies
 include(FetchContent)
