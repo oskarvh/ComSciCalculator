@@ -296,6 +296,10 @@ SUBRESULT_INT promoteOrder(SUBRESULT_INT subresult, uint8_t currentOrder,
         // Lowest order, do nothing.
         // Cannot be here if all input is not already int.
         return subresult;
+    } else {
+        // Should never happen.
+        logger(LOGGER_LEVEL_ERROR, "Should never happen!\r\n");
+        return -1; // Error
     }
 }
 
@@ -333,6 +337,7 @@ uint8_t processInputArgs(inputType_t *pArgs, uint8_t numArgs,
                                               higestOrderFormat, numberFormat);
         }
     }
+    return higestOrderFormat;
 }
 
 /* ------ CALCULATOR OPERATOR FUNCTIONS ------ */

@@ -76,6 +76,24 @@ else()
 endif()
 
 # ========================================================================
+# DEPENDENCIES
+# ========================================================================
+include(FetchContent)
+set(FETCHCONTENT_QUIET FALSE)
+FetchContent_Declare(
+    clay
+    GIT_REPOSITORY "https://github.com/oskarvh/clay.git"
+    GIT_TAG        "ft81x_support"
+    GIT_PROGRESS   TRUE
+    GIT_SHALLOW    TRUE
+)
+FetchContent_Populate(clay)
+
+set(COMMON_GUI_DIR    "${CMAKE_CURRENT_SOURCE_DIR}/../../common/gui")
+set(COMSCICALC_DIR    "${CMAKE_CURRENT_SOURCE_DIR}/../../comSciCalcLib")
+set(LOGGER_DIR        "${CMAKE_CURRENT_SOURCE_DIR}/../../common/logger")
+
+# ========================================================================
 # BUILD
 # ========================================================================
 # If the compiler isn't set to clang, skip the build
@@ -84,7 +102,35 @@ if(NOT CMAKE_C_COMPILER_ID STREQUAL "Clang")
     return()
 endif()
 
-add_executable(webgui main.c)
+add_executable(webgui
+    main.c
+    ${COMMON_GUI_DIR}/gui.c
+    ${COMSCICALC_DIR}/comscicalc.c
+    ${COMSCICALC_DIR}/comscicalc_operators.c
+    ${COMSCICALC_DIR}/print_utils.c
+    ${LOGGER_DIR}/logger.c
+)
+
+set_target_properties(webgui PROPERTIES OUTPUT_NAME "index" SUFFIX ".wasm")
+
+# Silence the logger entirely at compile time so vprintf / fd_write are DCE'd
+target_compile_definitions(webgui PRIVATE "LOG_LEVEL=-1")
+
+# comSciCalcLib has pre-existing unused-variable / format warnings — suppress
+# them only for those files so -Werror doesn't break our build
+set_source_files_properties(
+    ${COMSCICALC_DIR}/comscicalc.c
+    ${COMSCICALC_DIR}/comscicalc_operators.c
+    ${COMSCICALC_DIR}/print_utils.c
+    PROPERTIES COMPILE_FLAGS
+        "-Wno-unused-variable -Wno-unused-value -Wno-format -Wno-unused-but-set-variable"
+)
 
 target_compile_options(webgui PUBLIC)
-target_include_directories(webgui PUBLIC .)
+target_include_directories(webgui PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${COMMON_GUI_DIR}
+    ${COMSCICALC_DIR}
+    ${LOGGER_DIR}
+    ${clay_SOURCE_DIR}
+)

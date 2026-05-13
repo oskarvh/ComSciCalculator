@@ -31,9 +31,6 @@ This is due to small differences in the GUI layout between the two platforms; fo
 may have embedded buttons, while the hardware version has physical buttons.
 */
 
-#ifndef GUI_H_ 
-#define GUI_H_  
-
 #include <string.h>
 #include "clay.h"
 #include "gui.h"
@@ -154,7 +151,3 @@ void mainScreen(
 
         }
 }
-
-
-
-#endif // GUI_H_

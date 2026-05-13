@@ -9,17 +9,19 @@ const CLAY_RENDER_COMMAND_TYPE_SCISSOR_END = 6;
 const CLAY_RENDER_COMMAND_TYPE_CUSTOM = 7;
 const GLOBAL_FONT_SCALING_FACTOR = 0.8;
 let renderCommandSize = 0;
-let scratchSpaceAddress = 8;
-let heapSpaceAddress = 0;
+let renderCommandArrayAddress = 0;
 let memoryDataView;
 let textDecoder = new TextDecoder("utf-8");
 let previousFrameTime;
 let fontsById = [
-    'Quicksand',
-    'Calistoga',
-    'Quicksand',
-    'Quicksand',
-    'Quicksand',
+    'Inconsolata-Regular',
+    'Hack-Regular',
+    'Monocraft',
+    'ComicMono',
+    'SourceCodePro-Regular',
+    'IBMPlexMono-Regular',
+    'VictorMono-Regular',
+    'JetBrainsMono-Regular',
 ];
 let elementCache = {};
 let imageCache = {};
@@ -130,13 +132,6 @@ let renderCommandDefinition = {
     ]
 };
 
-// Function for creating the memory arena:
-function createMainArena(arenaStructAddress, arenaMemoryAddress) {
-    let memorySize = instance.exports.Clay_MinMemorySize();
-    // Last arg is address to store return value
-    instance.exports.Clay_CreateArenaWithCapacityAndMemory(arenaStructAddress, memorySize, arenaMemoryAddress);
-}
-
 // Function to check if two arrays are different
 function MemoryIsDifferent(one, two, length) {
     for (let i = 0; i < length; i++) {
@@ -196,9 +191,8 @@ function readStructAtAddress(address, definition) {
 
 // HTML render loop
 function renderLoopHTML() {
-    //let capacity = memoryDataView.getInt32(scratchSpaceAddress, true);
-    let length = memoryDataView.getInt32(scratchSpaceAddress + 4, true);
-    let arrayOffset = memoryDataView.getUint32(scratchSpaceAddress + 8, true);
+    let length = memoryDataView.getInt32(renderCommandArrayAddress + 4, true);
+    let arrayOffset = memoryDataView.getUint32(renderCommandArrayAddress + 8, true);
     let scissorStack = [{ nextAllocation: { x: 0, y: 0 }, element: htmlRoot, nextElementIndex: 0 }];
     let previousId = 0;
     for (let i = 0; i < length; i++, arrayOffset += renderCommandSize) {
@@ -404,18 +398,28 @@ function renderLoopHTML() {
 
 // Main renderloop
 function renderLoop(currentTime) {
-    const elapsed = currentTime - previousFrameTime;
+    // Refresh DataView in case WASM memory grew since last frame
+    memoryDataView = new DataView(instance.exports.memory.buffer);
+
+    const elapsed = previousFrameTime ? currentTime - previousFrameTime : 0;
     previousFrameTime = currentTime;
 
-    instance.exports.UpdateDrawFrame(scratchSpaceAddress, window.innerWidth, window.innerHeight, 0, 0, window.mousePositionXThisFrame, window.mousePositionYThisFrame, window.touchDown, window.mouseDown, 0, 0, window.dKeyPressedThisFrame, elapsed / 1000);
-    
+    instance.exports.UpdateDrawFrame(
+        window.innerWidth, window.innerHeight,
+        0, 0,
+        window.mousePositionXThisFrame, window.mousePositionYThisFrame,
+        window.touchDown ? 1 : 0, window.mouseDown ? 1 : 0,
+        window.arrowKeyDownPressedThisFrame ? 1 : 0,
+        window.arrowKeyUpPressedThisFrame ? 1 : 0,
+        elapsed / 1000
+    );
+
     renderLoopHTML();
 
     requestAnimationFrame(renderLoop);
-    window.mouseDownThisFrame = false;
+    window.mouseDown = false;
     window.arrowKeyUpPressedThisFrame = false;
     window.arrowKeyDownPressedThisFrame = false;
-    window.dKeyPressedThisFrame = false;
 }
 
 // Helper function for fetching the size of structs
@@ -459,36 +463,69 @@ async function init() {
     window.htmlRoot = document.body.appendChild(document.createElement('div'));
     window.canvasRoot = document.body.appendChild(document.createElement('canvas'));
     window.canvasContext = window.canvasRoot.getContext("2d");
-    // Initialize the positions of the HIDs
+
     window.mousePositionXThisFrame = 0;
     window.mousePositionYThisFrame = 0;
-    window.mouseWheelXThisFrame = 0;
-    window.mouseWheelYThisFrame = 0;
     window.touchDown = false;
+    window.mouseDown = false;
     window.arrowKeyDownPressedThisFrame = false;
     window.arrowKeyUpPressedThisFrame = false;
 
-    // Add the listeners for keypresses
+    // Keyboard → calculator input
     document.addEventListener("keydown", (event) => {
-        if (event.key === "ArrowDown") {
+        if (!window.instance) return;
+        if (event.key === "Backspace") {
+            window.instance.exports.Backspace();
+            event.preventDefault();
+        } else if (event.key === "Tab") {
+            window.instance.exports.CycleBase();
+            event.preventDefault();
+        } else if (event.key === "ArrowDown") {
             window.arrowKeyDownPressedThisFrame = true;
-        }
-        if (event.key === "ArrowUp") {
+        } else if (event.key === "ArrowUp") {
             window.arrowKeyUpPressedThisFrame = true;
-        }
-        if (event.key === "d") {
-            window.dKeyPressedThisFrame = true;
+        } else if (event.key.length === 1) {
+            window.instance.exports.AddInput(event.key.charCodeAt(0));
         }
     });
 
-    // Implement the measureText function
+    // Minimal WASI shim — logger is disabled at compile time so these are never called,
+    // but the module import table still requires them to be present.
+    const wasiImports = {
+        wasi_snapshot_preview1: {
+            fd_write:             () => 0,
+            fd_read:              () => 0,
+            fd_close:             () => 0,
+            fd_seek:              () => 0,
+            fd_fdstat_get:        () => 0,
+            fd_fdstat_set_flags:  () => 0,
+            path_open:            () => 52,
+            proc_exit:            () => {},
+            args_get:             () => 0,
+            args_sizes_get:       (argc, argv_buf_size) => {
+                memoryDataView.setUint32(argc, 0, true);
+                memoryDataView.setUint32(argv_buf_size, 0, true);
+                return 0;
+            },
+            environ_get:          () => 0,
+            environ_sizes_get:    (count, size) => {
+                memoryDataView.setUint32(count, 0, true);
+                memoryDataView.setUint32(size, 0, true);
+                return 0;
+            },
+            clock_time_get:       () => 0,
+            clock_res_get:        () => 0,
+            sched_yield:          () => 0,
+            random_get:           () => 0,
+        }
+    };
+
     const importObject = {
         clay: {
             measureTextFunction: (addressOfDimensions, textToMeasure, addressOfConfig, userData) => {
                 let stringLength = memoryDataView.getUint32(textToMeasure, true);
                 let pointerToString = memoryDataView.getUint32(textToMeasure + 4, true);
                 let textConfig = readStructAtAddress(addressOfConfig, textConfigDefinition);
-                let textDecoder = new TextDecoder("utf-8");
                 let text = textDecoder.decode(memoryDataView.buffer.slice(pointerToString, pointerToString + stringLength));
                 let sourceDimensions = getTextDimensions(text, `${Math.round(textConfig.fontSize.value * GLOBAL_FONT_SCALING_FACTOR)}px ${fontsById[textConfig.fontId.value]}`);
                 memoryDataView.setFloat32(addressOfDimensions, sourceDimensions.width, true);
@@ -502,28 +539,33 @@ async function init() {
                 }
             },
         },
+        ...wasiImports,
     };
 
-    // Import the wasm file:
     const { instance } = await WebAssembly.instantiateStreaming(
         fetch("build/index.wasm"), importObject
     );
-    // Initialize clay
-    memoryDataView = new DataView(new Uint8Array(instance.exports.memory.buffer).buffer);
-    scratchSpaceAddress = instance.exports.__heap_base.value;
-    let clayScratchSpaceAddress = instance.exports.__heap_base.value + 1024;
-    heapSpaceAddress = instance.exports.__heap_base.value + 2048;
-    let arenaAddress = scratchSpaceAddress + 8;
+
     window.instance = instance;
-    createMainArena(arenaAddress, heapSpaceAddress);
-    memoryDataView.setFloat32(instance.exports.__heap_base.value, window.innerWidth, true);
-    memoryDataView.setFloat32(instance.exports.__heap_base.value + 4, window.innerHeight, true);
-    instance.exports.Clay_Initialize(arenaAddress, instance.exports.__heap_base.value);
-    instance.exports.SetScratchMemory(clayScratchSpaceAddress);
+    memoryDataView = new DataView(instance.exports.memory.buffer);
+
+    // Run global C constructors (initialises malloc heap, stack canary, etc.)
+    if (instance.exports.__wasm_call_ctors) {
+        instance.exports.__wasm_call_ctors();
+    }
+
+    // Check Clay's minimum memory requirement before initializing
+    const clayMinMemory = instance.exports.Clay_MinMemorySize();
+    console.log(`Clay_MinMemorySize = ${clayMinMemory} bytes (${(clayMinMemory/1024/1024).toFixed(2)} MB)`);
+
+    // Initialise Clay + calculator entirely from C
+    instance.exports.Init(window.innerWidth, window.innerHeight);
+
+    // Cache the address of the static renderCommands struct
+    renderCommandArrayAddress = instance.exports.GetRenderCommandArrayAddr();
     renderCommandSize = getStructTotalSize(renderCommandDefinition);
-    
-    // Run the render loop
-    renderLoop();
+
+    requestAnimationFrame(renderLoop);
 }
 
 // Initialize

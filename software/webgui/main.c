@@ -1,92 +1,117 @@
 #define CLAY_IMPLEMENTATION
 #include "clay.h"
+#include "gui.h"
+#include "comscicalc.h"
+#include <string.h>
 
-typedef struct {
-    void* memory;
-    uintptr_t offset;
-} Arena;
+// 4 MB static arena for Clay — avoids any JS-side arena management
+#define CLAY_MEMORY_SIZE (6 * 1024 * 1024)
+static uint8_t clayMemory[CLAY_MEMORY_SIZE];
 
-Arena frameArena = {};
+// Written every frame by UpdateDrawFrame; JS reads it via GetRenderCommandArrayAddr
+static Clay_RenderCommandArray renderCommands;
 
-double windowWidth = 1024, windowHeight = 768;
+// Calculator state
+static calcCoreState_t calcState;
 
-uint32_t ACTIVE_RENDERER_INDEX = 0;
+#define INPUT_TEXT_LEN  512
+#define RESULT_TEXT_LEN 128
 
-CLAY_WASM_EXPORT("SetScratchMemory") void SetScratchMemory(void * memory) {
-    frameArena.memory = memory;
+static char inputText[INPUT_TEXT_LEN]  = "0";
+static char hexText[RESULT_TEXT_LEN]   = "0x0";
+static char decText[RESULT_TEXT_LEN]   = "0";
+static char binText[RESULT_TEXT_LEN]   = "0b0";
+static char settingsText[32]           = "DEC";
+
+static const char *const baseNames[3] = { "DEC", "HEX", "BIN" };
+
+static void refreshDisplayStrings(void) {
+    int16_t syntaxIssuePos = -1;
+    calc_funStatus_t status = calc_printBuffer(
+        &calcState, inputText, INPUT_TEXT_LEN, &syntaxIssuePos);
+    if (status != calc_funStatus_SUCCESS || inputText[0] == '\0') {
+        inputText[0] = '0';
+        inputText[1] = '\0';
+    }
+    convertResult(decText, calcState.result, &calcState.numberFormat, inputBase_DEC);
+    convertResult(hexText, calcState.result, &calcState.numberFormat, inputBase_HEX);
+    convertResult(binText, calcState.result, &calcState.numberFormat, inputBase_BIN);
+
+    const char *name = baseNames[calcState.numberFormat.inputBase];
+    size_t n = strlen(name);
+    for (size_t i = 0; i <= n; i++) settingsText[i] = name[i];
 }
 
-CLAY_WASM_EXPORT("UpdateDrawFrame") Clay_RenderCommandArray UpdateDrawFrame(float width, float height, float mouseWheelX, float mouseWheelY, float mousePositionX, float mousePositionY, bool isTouchDown, bool isMouseDown, bool arrowKeyDownPressedThisFrame, bool arrowKeyUpPressedThisFrame, bool dKeyPressedThisFrame, float deltaTime) {
-    frameArena.offset = 0;
-    windowWidth = width;
-    windowHeight = height;
-    Clay_SetLayoutDimensions((Clay_Dimensions) { width, height });
-    Clay_ScrollContainerData scrollContainerData = Clay_GetScrollContainerData(Clay_GetElementId(CLAY_STRING("OuterScrollContainer")));
-    Clay_LayoutElementHashMapItem *perfPage = Clay__GetHashMapItem(Clay_GetElementId(CLAY_STRING("PerformanceOuter")).id);
-    // NaN propagation can cause pain here
-    float perfPageYOffset = perfPage->boundingBox.y + scrollContainerData.scrollPosition->y;
-    if (deltaTime == deltaTime && (ACTIVE_RENDERER_INDEX == 1 || (perfPageYOffset < height && perfPageYOffset + perfPage->boundingBox.height > 0))) {
-        animationLerpValue += deltaTime;
-        if (animationLerpValue > 1) {
-            animationLerpValue -= 2;
-        }
-    }
+// Called once from JS after the WASM module is loaded
+CLAY_WASM_EXPORT("Init")
+void Init(float width, float height) {
+    Clay_Arena arena = Clay_CreateArenaWithCapacityAndMemory(
+        sizeof(clayMemory), clayMemory);
+    Clay_Initialize(arena, (Clay_Dimensions){width, height},
+                    (Clay_ErrorHandler){0});
 
-    // if (dKeyPressedThisFrame) {
-    //     debugModeEnabled = !debugModeEnabled;
-    //     Clay_SetDebugModeEnabled(debugModeEnabled);
-    // }
-    Clay_SetCullingEnabled(ACTIVE_RENDERER_INDEX == 1);
-    Clay_SetExternalScrollHandlingEnabled(ACTIVE_RENDERER_INDEX == 0);
+    calc_coreInit(&calcState);
+    calcState.numberFormat.inputBase    = inputBase_DEC;
+    calcState.numberFormat.numBits      = 64;
+    calcState.numberFormat.sign         = false;
+    calcState.numberFormat.inputFormat  = INPUT_FMT_INT;
+    calcState.numberFormat.outputFormat = INPUT_FMT_INT;
 
-    Clay__debugViewHighlightColor = (Clay_Color) {105,210,231, 120};
-
-    Clay_SetPointerState((Clay_Vector2) {mousePositionX, mousePositionY}, isMouseDown || isTouchDown);
-
-    // if (!isMouseDown) {
-    //     scrollbarData.mouseDown = false;
-    // }
-
-    if (isMouseDown && !scrollbarData.mouseDown && Clay_PointerOver(Clay_GetElementId(CLAY_STRING("ScrollBar")))) {
-        scrollbarData.clickOrigin = (Clay_Vector2) { mousePositionX, mousePositionY };
-        scrollbarData.positionOrigin = *scrollContainerData.scrollPosition;
-        scrollbarData.mouseDown = true;
-    } else if (scrollbarData.mouseDown) {
-        if (scrollContainerData.contentDimensions.height > 0) {
-            Clay_Vector2 ratio = (Clay_Vector2) {
-                scrollContainerData.contentDimensions.width / scrollContainerData.scrollContainerDimensions.width,
-                scrollContainerData.contentDimensions.height / scrollContainerData.scrollContainerDimensions.height,
-            };
-            if (scrollContainerData.config.vertical) {
-                scrollContainerData.scrollPosition->y = scrollbarData.positionOrigin.y + (scrollbarData.clickOrigin.y - mousePositionY) * ratio.y;
-            }
-            if (scrollContainerData.config.horizontal) {
-                scrollContainerData.scrollPosition->x = scrollbarData.positionOrigin.x + (scrollbarData.clickOrigin.x - mousePositionX) * ratio.x;
-            }
-        }
-    }
-
-    if (arrowKeyDownPressedThisFrame) {
-        if (scrollContainerData.contentDimensions.height > 0) {
-            scrollContainerData.scrollPosition->y = scrollContainerData.scrollPosition->y - 50;
-        }
-    } else if (arrowKeyUpPressedThisFrame) {
-        if (scrollContainerData.contentDimensions.height > 0) {
-            scrollContainerData.scrollPosition->y = scrollContainerData.scrollPosition->y + 50;
-        }
-    }
-
-    Clay_UpdateScrollContainers(isTouchDown, (Clay_Vector2) {mouseWheelX, mouseWheelY}, deltaTime);
-    bool isMobileScreen = windowWidth < 750;
-    if (debugModeEnabled) {
-        isMobileScreen = windowWidth < 950;
-    }
-    return CreateLayout(isMobileScreen, animationLerpValue < 0 ? (animationLerpValue + 1) : (1 - animationLerpValue));
-    //----------------------------------------------------------------------------------
+    refreshDisplayStrings();
 }
 
-int main(void)
+// Called from JS on each keypress
+CLAY_WASM_EXPORT("AddInput")
+void AddInput(int32_t charCode) {
+    calc_addInput(&calcState, (char)charCode);
+    calc_solver(&calcState);
+    refreshDisplayStrings();
+}
+
+CLAY_WASM_EXPORT("Backspace")
+void Backspace(void) {
+    calc_removeInput(&calcState);
+    calc_solver(&calcState);
+    refreshDisplayStrings();
+}
+
+// Tab cycles DEC → HEX → BIN → DEC
+CLAY_WASM_EXPORT("CycleBase")
+void CycleBase(void) {
+    calcState.numberFormat.inputBase =
+        (inputBase_t)((calcState.numberFormat.inputBase + 1) % 3);
+    calc_updateBase(&calcState);
+    calc_solver(&calcState);
+    refreshDisplayStrings();
+}
+
+// JS calls this once after Init to know where to read render commands
+CLAY_WASM_EXPORT("GetRenderCommandArrayAddr")
+Clay_RenderCommandArray *GetRenderCommandArrayAddr(void) {
+    return &renderCommands;
+}
+
+// Called every animation frame from JS
+CLAY_WASM_EXPORT("UpdateDrawFrame")
+void UpdateDrawFrame(
+    float width, float height,
+    float mouseWheelX, float mouseWheelY,
+    float mousePositionX, float mousePositionY,
+    bool isTouchDown, bool isMouseDown,
+    bool arrowKeyDownPressedThisFrame, bool arrowKeyUpPressedThisFrame,
+    float deltaTime)
 {
-    puts("Hello");
+    Clay_SetLayoutDimensions((Clay_Dimensions){ width, height });
+    Clay_SetPointerState((Clay_Vector2){ mousePositionX, mousePositionY },
+                         isMouseDown || isTouchDown);
+    Clay_UpdateScrollContainers(isTouchDown,
+                                (Clay_Vector2){ mouseWheelX, mouseWheelY },
+                                deltaTime);
+    Clay_BeginLayout();
+    mainScreen(inputText, hexText, decText, binText, settingsText, 0, width, height);
+    renderCommands = Clay_EndLayout();
+}
+
+int main(void) {
     return 0;
 }

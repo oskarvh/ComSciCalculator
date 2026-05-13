@@ -154,6 +154,11 @@ uint64_t strtofp(const char *pString, bool sign, uint16_t decimalPlace,
         }
         return (integerPart << decimalPlace) | decimalPart;
     }
+    else {
+        // Should never happen.
+        logger(LOGGER_LEVEL_ERROR, "Should never happen!\r\n");
+        return -1; // Error
+    }
 }
 
 void fptostr(char *pString, uint64_t fp, bool sign, uint16_t decimalPlace,
@@ -235,7 +240,7 @@ void fptostr(char *pString, uint64_t fp, bool sign, uint16_t decimalPlace,
         if (fractPart != 0) {
             for (int i = decimalPlace - 1; i >= 0; i -= 4) {
                 // Get the bit at the current index.
-                uint64_t mask = 0xfULL << i - 3;
+                uint64_t mask = 0xfULL << (i - 3);
                 uint64_t currentBits = (fractPart & mask);
                 uint64_t bitsLeftMask = (1ULL << (i - 3)) - 1;
                 sprintf(pStringFractPart++, "%llX", currentBits);
